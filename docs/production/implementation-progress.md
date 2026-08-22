@@ -307,10 +307,19 @@ rollback yet — see "Not done" below for exactly where it stops.
       right model, and that trade-off is the operator's judgement, not the policy's.
       Thresholds are configurable (`FUEL_PREDICTOR_PROMOTION_*`).
       Tests: `tests/test_model_promotion_policy.py`, 12 cases.
+- [x] `MemoryProbe` — `infrastructure/system_memory_probe.py`. Reports *available* rather than
+      *free* memory: free excludes reclaimable page cache, so on a healthy server it reads far lower
+      than what an allocation could actually obtain and would reject activations that were perfectly
+      safe. Holds back a configurable safety margin so an activation cannot consume the last of the
+      machine's memory and starve the request currently being served — protecting the model already
+      running is the entire point of the capacity check. Clamps at zero, because a negative value
+      would compare as less than any requirement and silently invert the check into always-allow.
+      Tests: `tests/test_system_memory_probe.py`, 3 cases.
 - [ ] **Not done** — the remaining Phase 2 scope, roughly in dependency order:
-      1. Real `ModelArtifactLoader` (isolated ONNX/skops loading — needs `onnxruntime`/`skops` as new
-         dependencies, not added yet) and `MemoryProbe`. `SmokeTestRunner` is done —
-         `DeterministicSmokeTestRunner` works against any loaded model.
+      1. Real `ModelArtifactLoader` — isolated ONNX/skops loading. **This is the one remaining
+         blocker that needs new dependencies** (`onnxruntime`, `skops`); they were deliberately not
+         installed because the machine's C: drive was down to ~3.7 GB free and onnxruntime is large.
+         Check disk space before starting. `SmokeTestRunner` and `MemoryProbe` are both done.
       2. The persistence + audit record for a completed validation (plan step 9).
       3. The production upload endpoint and its UI (the "Unggah Kandidat" and "Riwayat dan Rollback"
          nav items still deliberately absent from `rendering.NAVIGATION`), plus optional package
@@ -344,7 +353,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (173 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (176 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref

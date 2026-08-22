@@ -16,6 +16,7 @@ dependencies = [
     "jsonschema>=4.23,<5",
     "mlflow>=2.20,<4",
     "openpyxl>=3.1,<4",
+    "psutil>=5.9,<8",
     "psycopg[binary]>=3.2,<4",
     "pydantic-settings>=2.7,<3",
     "python-multipart>=0.0.20,<1",
@@ -31,6 +32,7 @@ dev = [
     "ruff>=0.11,<1",
     "types-jsonschema>=4.23,<5",
     "types-openpyxl>=3.1,<4",
+    "types-psutil>=5.9,<8",
 ]
 
 [tool.hatch.build.targets.wheel]
