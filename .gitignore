@@ -19,3 +19,4 @@ dist/
 
 # Claude Code harness runtime state, not project configuration.
 .claude/scheduled_tasks.lock
+.pipcache/

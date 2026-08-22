@@ -15,6 +15,7 @@ dependencies = [
     "jinja2>=3.1,<4",
     "jsonschema>=4.23,<5",
     "mlflow>=2.20,<4",
+    "onnxruntime>=1.20,<2",
     "openpyxl>=3.1,<4",
     "psutil>=5.9,<8",
     "psycopg[binary]>=3.2,<4",
@@ -22,6 +23,7 @@ dependencies = [
     "python-multipart>=0.0.20,<1",
     "sqlalchemy>=2.0,<3",
     "scikit-learn>=1.6,<2",
+    "skops>=0.11,<1",
     "uvicorn>=0.34,<1",
 ]
 

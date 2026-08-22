@@ -315,11 +315,27 @@ rollback yet — see "Not done" below for exactly where it stops.
       running is the entire point of the capacity check. Clamps at zero, because a negative value
       would compare as less than any requirement and silently invert the check into always-allow.
       Tests: `tests/test_system_memory_probe.py`, 3 cases.
+- [x] Real `ModelArtifactLoader` — `infrastructure/model_artifact_loader.py`. **The dependency
+      blocker is resolved**: `onnxruntime` and `skops` are installed (pip cache pointed at D: to
+      avoid filling C:, which is still tight at ~3.7 GB). Loads either trusted format, feeds features
+      in the manifest's declared order, and warms the model with one throwaway inference so the first
+      real request isn't the slow one — a warm-up failure is a load failure, which keeps the
+      currently-active model serving rather than swapping in something that cannot answer.
+      `trusted_skops_types` is an explicit allow-list rather than something inferred from the file:
+      `skops` refuses unknown types by default precisely so an untrusted package cannot make
+      production reconstruct arbitrary objects, and widening that is a security decision.
+      Tests: `tests/test_model_artifact_loader.py`, 9 cases using genuinely trained scikit-learn
+      models rather than stubs — a fake predictor cannot show that a real artefact round-trips and
+      answers correctly.
+      **A test initially passed for the wrong reason here too**: the untrusted-type test used a plain
+      `LinearRegression`, but every plain scikit-learn estimator is on skops' own trusted list, so
+      there was nothing to refuse and the assertion never exercised the guard. The fixture now builds
+      a pipeline carrying a user-defined callable — code the package brought with it, which is the
+      case that actually matters — and asserts the fixture really is untrusted before testing that it
+      is refused.
 - [ ] **Not done** — the remaining Phase 2 scope, roughly in dependency order:
-      1. Real `ModelArtifactLoader` — isolated ONNX/skops loading. **This is the one remaining
-         blocker that needs new dependencies** (`onnxruntime`, `skops`); they were deliberately not
-         installed because the machine's C: drive was down to ~3.7 GB free and onnxruntime is large.
-         Check disk space before starting. `SmokeTestRunner` and `MemoryProbe` are both done.
+      1. Wiring the validated-package pieces together into one ingestion flow (they exist
+         individually but nothing calls them in sequence yet).
       2. The persistence + audit record for a completed validation (plan step 9).
       3. The production upload endpoint and its UI (the "Unggah Kandidat" and "Riwayat dan Rollback"
          nav items still deliberately absent from `rendering.NAVIGATION`), plus optional package
@@ -353,7 +369,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (176 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (185 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref
