@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{% if error %}
+{{ ui.banner('danger', 'Prediksi massal belum dapat diproses', error) }}
+{% endif %}
+
+<section class="card">
+  {{ ui.steps(['Unduh template', 'Unggah', 'Diproses'], 2) }}
+  <p><a href="/api/v1/bulk-operation-predictions/template?format=xlsx">Unduh template Excel</a> ·
+    <a href="/api/v1/bulk-operation-predictions/template?format=csv">Unduh template CSV</a></p>
+  <form method="post" action="/prediksi-operasi-massal" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {{ ui.file_field('file', 'Berkas rencana operasi', '.csv,.xlsx', hint='Kolom wajib: kategori ANGBER, mode aktivitas, jarak total, dan sumber jarak. Jam lifting serta urutan pemberhentian bersifat opsional.') }}
+    <button type="submit">Buat prediksi massal</button>
+  </form>
+</section>
+
+{% endblock %}

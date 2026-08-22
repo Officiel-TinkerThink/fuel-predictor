@@ -15,15 +15,10 @@ from fuel_predictor.application.actual_fuel import (
     RecordActualFuelCommand,
 )
 from fuel_predictor.application.baseline_predictions import (
-    BaselineModelNotFoundError,
     BaselineTrainingError,
     TrainBaselineCandidate,
 )
 from fuel_predictor.application.bulk_actual_fuel import BulkActualFuel, BulkActualFuelResult
-from fuel_predictor.application.bulk_operation_predictions import (
-    BulkOperationPrediction,
-    BulkOperationPredictionResult,
-)
 from fuel_predictor.application.daily_operations import (
     DailyOperationNotFoundError,
 )
@@ -57,7 +52,6 @@ _DEMO_HISTORICAL_DATA = Path(__file__).resolve().parents[3] / "examples" / "riwa
 def build_form_router(
     import_historical_dataset: ImportHistoricalDataset,
     train_baseline_candidate: TrainBaselineCandidate,
-    bulk_operation_prediction: BulkOperationPrediction,
     record_actual_fuel: RecordActualFuel,
     bulk_actual_fuel: BulkActualFuel,
     get_prediction_performance: GetPredictionPerformance,
@@ -84,10 +78,6 @@ def build_form_router(
             media_type="text/csv; charset=utf-8",
             headers={"Content-Disposition": 'attachment; filename="riwayat-angber-demo.csv"'},
         )
-
-    @router.get("/prediksi-operasi-massal", response_class=HTMLResponse)
-    def show_bulk_prediction_form(request: Request) -> HTMLResponse:
-        return HTMLResponse(_render_bulk_prediction_form(csrf_token=_current_csrf(request)))
 
     @router.get("/bahan-bakar-aktual", response_class=HTMLResponse)
     def show_actual_fuel_form(request: Request) -> HTMLResponse:
@@ -178,31 +168,6 @@ def build_form_router(
                 status_code=status.HTTP_409_CONFLICT,
             )
         return HTMLResponse(_render_promotion_success(model), status_code=status.HTTP_200_OK)
-
-    @router.post("/prediksi-operasi-massal", response_class=HTMLResponse)
-    async def submit_bulk_prediction(
-        request: Request, file: UploadFile = _UPLOAD_FILE
-    ) -> HTMLResponse:
-        try:
-            result = bulk_operation_prediction.execute(
-                file.filename or "berkas-prediksi-operasi", await file.read()
-            )
-        except HistoricalDatasetImportError as error:
-            return HTMLResponse(
-                _render_bulk_prediction_form(_current_csrf(request), error.message),
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            )
-        except BaselineModelNotFoundError:
-            return HTMLResponse(
-                _render_bulk_prediction_form(
-                    _current_csrf(request),
-                    "Latih kandidat baseline dari dataset tervalidasi sebelum membuat prediksi massal.",
-                ),
-                status_code=status.HTTP_409_CONFLICT,
-            )
-        return HTMLResponse(
-            _render_bulk_prediction_success(result), status_code=status.HTTP_201_CREATED
-        )
 
     @router.post("/bahan-bakar-aktual", response_class=HTMLResponse)
     async def submit_actual_fuel(request: Request) -> HTMLResponse:
@@ -625,80 +590,6 @@ def _render_import_form(csrf_token: str, error: str | None = None) -> str:
     )
 
 
-def _render_bulk_prediction_form(csrf_token: str, error: str | None = None) -> str:
-    error_summary = ""
-    if error is not None:
-        error_summary = (
-            '<section class="errors" role="alert" aria-labelledby="error-title">'
-            '<h2 id="error-title">Prediksi massal belum dapat diproses</h2>'
-            f"<p>{escape(error)}</p></section>"
-        )
-    return _page(
-        "Prediksi Operasi Massal",
-        f"""
-        <main class="shell">
-          <header>
-            <p class="eyebrow">PERENCANAAN BAHAN BAKAR</p>
-            <h1>Prediksi Operasi Massal</h1>
-            <p class="lead">Unggah rencana operasi CSV atau Excel .xlsx. Baris yang valid tetap
-              diprediksi, sementara baris lain dikarantina bersama alasan koreksinya.</p>
-          </header>
-          {error_summary}
-          <p><a href="/api/v1/bulk-operation-predictions/template?format=xlsx">Unduh template Excel</a> ·
-            <a href="/api/v1/bulk-operation-predictions/template?format=csv">Unduh template CSV</a></p>
-          <form method="post" action="/prediksi-operasi-massal" enctype="multipart/form-data">
-            {_csrf_input(csrf_token)}
-            <div class="field">
-              <label for="file">Berkas rencana operasi</label>
-              <input id="file" name="file" type="file" accept=".csv,.xlsx" required>
-              <small>Kolom wajib: kategori ANGBER, mode aktivitas, jarak total, dan sumber jarak.
-                Jam lifting serta urutan pemberhentian bersifat opsional.</small>
-            </div>
-            <button type="submit">Buat prediksi massal</button>
-          </form>
-          <p><a href="/">Kembali ke operasi harian</a></p>
-        </main>
-        """,
-    )
-
-
-def _render_bulk_prediction_success(result: BulkOperationPredictionResult) -> str:
-    accepted_rows = "".join(
-        "<tr>"
-        f"<td>{escape(row.source.sheet_name)} {row.source.row_number}</td>"
-        f"<td>{escape(row.operation.operation_id)}</td>"
-        f"<td>{_format_decimal(row.prediction.estimated_fuel_requirement_liters)} L</td>"
-        f"<td>{_format_decimal(row.prediction.recommended_allocation_liters)} L</td>"
-        f"<td>{escape(row.prediction.model.model_version_id)}</td>"
-        "</tr>"
-        for row in result.accepted_rows
-    )
-    corrections = "".join(
-        "<li><strong>"
-        f"{escape(issue.source.sheet_name)} baris {issue.source.row_number}:</strong> "
-        f"{escape('; '.join(reason.message for reason in issue.reasons))}</li>"
-        for issue in result.correction_report
-    )
-    correction_section = (
-        f'<section class="corrections"><h2>Laporan koreksi</h2><ul>{corrections}</ul></section>'
-        if corrections
-        else ""
-    )
-    return _page(
-        "Prediksi Operasi Massal Selesai",
-        f"""
-        <main class="shell success">
-          <p class="success-mark" aria-hidden="true">✓</p>
-          <p class="eyebrow">PREDIKSI MASSAL SELESAI</p>
-          <h1>Rencana operasi sudah diproses</h1>
-          <p class="lead">{len(result.accepted_rows)} baris valid memperoleh ID operasi dan prediksi.
-            {len(result.correction_report)} baris dikarantina. {result.ignored_blank_row_count} baris kosong diabaikan.</p>
-          <table><thead><tr><th>Baris sumber</th><th>ID operasi</th><th>Estimasi kebutuhan BBM</th><th>Alokasi rekomendasi</th><th>Model</th></tr></thead><tbody>{accepted_rows}</tbody></table>
-          {correction_section}
-          <p><a class="button-link" href="/prediksi-operasi-massal">Prediksi berkas lain</a></p>
-        </main>
-        """,
-    )
 
 
 def _render_import_success(result: HistoricalDatasetImportResult, csrf_token: str) -> str:

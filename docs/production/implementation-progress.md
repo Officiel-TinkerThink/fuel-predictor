@@ -75,16 +75,23 @@ session (or a different model) can resume without re-deriving context.
       (`42,00`), where the original f-string pages trimmed trailing zeros (`42`, `43,2`) via Python's
       `:g` format. Existing tests asserting exact rendered numbers (`"43,2 km" in response.text`)
       caught this immediately — now trims trailing zeros while keeping thousands grouping.
-- [ ] **Not done**: redesigning bulk-prediction, actual-fuel (single + bulk), monitoring, and model
+- [x] Bulk-prediction upload page migrated — `delivery/bulk_prediction_pages.py` owns
+      `GET`/`POST /prediksi-operasi-massal`, replacing `_render_bulk_prediction_form` and
+      `_render_bulk_prediction_success` in `form.py` (deleted). New templates: `prediksi-massal.html`
+      (upload form, uses `ui.steps` and `ui.file_field`) and `prediksi-massal-selesai.html` (results
+      table + correction report). Verified end-to-end live (import → train → promote → bulk upload →
+      9-row results table with correctly trimmed decimals) since this exercises a different code path
+      (multipart `UploadFile`) than the plain-form prediction page did.
+- [ ] **Not done**: redesigning actual-fuel (single + bulk), monitoring, and model
       governance/comparison pages onto the Jinja design system. They still render through the
       f-string functions remaining in `delivery/form.py`, which live behind auth + capability checks
       and correctly carry CSRF tokens, but are visually and structurally unchanged from the MVP.
-      Suggested order: bulk prediction → actual fuel (single + bulk) → monitoring (needs the 3-way
+      Suggested order: actual fuel (single + bulk) → monitoring (needs the 3-way
       Kesehatan/Pergeseran/Kinerja split from the plan, currently one page) → model
-      governance/comparison. Follow the pattern in `prediction_pages.py` and `dashboard.py`: a new
-      `delivery/<name>.py` module, matching templates, then delete the old render functions from
-      `form.py` (don't leave both versions in place) and remove now-unused params from
-      `build_form_router`.
+      governance/comparison. Follow the pattern in `prediction_pages.py` / `bulk_prediction_pages.py`
+      / `dashboard.py`: a new `delivery/<name>.py` module, matching templates, then delete the old
+      render functions from `form.py` (don't leave both versions in place) and remove now-unused
+      params from `build_form_router` and its `main.py` call site.
 - [ ] Nav items the plan names but that don't exist yet, intentionally left out of
       `rendering.NAVIGATION` rather than linked to a placeholder: "Riwayat Prediksi", "Unggah
       Kandidat", "Riwayat dan Rollback", "Integrasi Agen". Add each back to `NAVIGATION` as its page
@@ -129,6 +136,12 @@ Indonesian operator guide, recovery runbook, and handoff drill.
   `javascript_tool` reliably drives the same form submission and is a fine substitute for verifying
   a page renders and behaves correctly end-to-end — it isn't a product bug, it's a tool/environment
   limitation. Don't burn time debugging the click itself; switch to `requestSubmit()` and move on.
+- Smoke-testing tip for scripted (`httpx`) sign-in flows outside pytest: the CSRF token in the
+  sign-in page's hidden field is a *pre-session* double-submit token, different from the session's
+  real `csrf_token` that every page renders once you're signed in. Posting `/masuk` with the
+  pre-session token works fine for signing in, but reusing that same value on later POSTs 403s.
+  Fetch any authenticated page (e.g. `/`) after sign-in and read its `csrf_token` hidden field
+  instead — that one value is stable for the whole session and works on every subsequent POST.
 - `git` was not initialized in this repository before this work started; it now is, on branch
   `production-plan`, with a `Baseline: local MVP before production work` commit before any change
   in this effort. That commit is the rollback point if something here needs to be reverted wholesale.

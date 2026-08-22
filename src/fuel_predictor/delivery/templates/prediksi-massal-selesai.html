@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{{ ui.banner('success', 'Rencana operasi sudah diproses', accepted_count ~ ' baris valid memperoleh ID operasi dan prediksi. ' ~ quarantined_count ~ ' baris dikarantina. ' ~ ignored_count ~ ' baris kosong diabaikan.') }}
+
+<section class="card">
+  {% if result.accepted_rows %}
+  <div class="table-wrap">
+    <table>
+      <caption>Baris berhasil diprediksi</caption>
+      <thead>
+        <tr><th>Baris sumber</th><th>ID operasi</th><th class="numeric">Estimasi kebutuhan BBM</th><th class="numeric">Alokasi rekomendasi</th><th>Model</th></tr>
+      </thead>
+      <tbody>
+        {% for row in result.accepted_rows %}
+        <tr>
+          <td>{{ row.source.sheet_name }} {{ row.source.row_number }}</td>
+          <td>{{ row.operation.operation_id }}</td>
+          <td class="numeric">{{ row.prediction.estimated_fuel_requirement_liters | angka }} L</td>
+          <td class="numeric">{{ row.prediction.recommended_allocation_liters | angka }} L</td>
+          <td>{{ row.prediction.model.model_version_id }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ ui.empty_state('Tidak ada baris yang berhasil diprediksi.') }}
+  {% endif %}
+</section>
+
+{% if result.correction_report %}
+<section class="card">
+  <h2>Laporan koreksi</h2>
+  <div class="table-wrap">
+    <table>
+      <caption>{{ result.correction_report | length }} baris dikarantina</caption>
+      <thead><tr><th>Baris sumber</th><th>Alasan</th></tr></thead>
+      <tbody>
+        {% for issue in result.correction_report %}
+        <tr>
+          <td>{{ issue.source.sheet_name }} {{ issue.source.row_number }}</td>
+          <td>{{ issue.reasons | map(attribute='message') | join('; ') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<p><a class="button button--secondary" href="/prediksi-operasi-massal">Prediksi berkas lain</a></p>
+
+{% endblock %}
