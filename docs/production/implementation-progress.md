@@ -167,9 +167,45 @@ done per the plan's own Phase 1 bullet list: accessibility/browser-level workflo
 
 ## Phase 2 — External model ingestion (ADR 0009, ADR 0010)
 
-Not started. This is the next major phase: JSON Schemas for the package manifest, the external
-packager, staged validation, atomic activation with `expected_current_version`, rollback, and the
-in-process model holder described in ADR 0010.
+Started. Landed the first slice: the manifest schema and its validation, which is plan validation
+steps 4-5 ("validate the manifest and input schema" / "confirm feature-contract and runtime
+compatibility"). Nothing in this slice touches an actual archive, ONNX/skops loading, activation, or
+rollback yet — see "Not done" below for exactly where it stops.
+
+- [x] Published JSON Schema for `manifest.json` — `schemas/model-package/manifest.schema.json`
+      (draft 2020-12), with a `README.md` alongside it explaining the split between schema-shape
+      validation (anyone, any language, can check this) and business-rule validation (only production
+      knows which feature-contract/runtime versions it currently supports). Every manifest field ADR
+      0009 lists is required; `model_format` is a two-value enum (`onnx`, `skops`) so Pickle/Joblib are
+      rejected at the schema level, not by a runtime `if`, and `additionalProperties: false` throughout
+      so an unrecognized field is a hard validation error rather than silently ignored. Watch the
+      `allOf` + `$ref` + `additionalProperties: false` combination if you extend this schema — JSON
+      Schema's `additionalProperties` only sees properties declared in the *same* schema object, not
+      ones pulled in through `$ref`, so that combination silently rejects everything from the
+      referenced schema. `category` metrics duplicate the `overall` metrics' properties directly for
+      exactly this reason instead of composing them.
+- [x] Domain shape — `domain/model_package.py` (`ModelPackageManifest`, `ModelFormat`,
+      `FeatureSchemaEntry`, `ManifestMetrics`, `ManifestCategoryMetrics`,
+      `ModelPackageValidationError` which collects every failure rather than raising on the first).
+- [x] Validation use case — `application/model_package_ingestion.py`'s `ParseModelPackageManifest`:
+      runs schema validation first (via the `ManifestSchemaValidator` port), then business rules
+      (feature-contract version recognized, runtime-compatibility version recognized, no duplicate
+      feature names, a checksum present for every required package member), then builds the typed
+      manifest. Adapter: `infrastructure/jsonschema_manifest_validator.py`'s
+      `JsonSchemaManifestValidator`, using the `jsonschema` library (new dependency, plus
+      `types-jsonschema` for mypy).
+      Tests: `tests/test_model_package_manifest.py`, 13 cases including "every simultaneous problem is
+      reported together, not just the first one" and the forbidden-format parametrized case.
+- [ ] **Not done** — everything after manifest validation: archive handling (size limits, path-traversal-safe
+      extraction, per-member checksum verification against the manifest, optional signature check),
+      `input-schema.json`/`reference-statistics.json`/`smoke-tests.json` schemas and validation, the
+      production upload endpoint, isolated ONNX/skops loading (needs `onnxruntime`/`skops` as new
+      dependencies — not added yet), deterministic smoke-test execution, metric-vs-policy comparison,
+      persistence + audit record, the external packager tool itself, the in-process active-model
+      holder with `expected_current_version` optimistic concurrency (ADR 0010), atomic activation,
+      post-activation health check, and rollback. This is most of Phase 2's actual scope — the
+      manifest-validation slice above is the foundation everything else builds on, not the bulk of the
+      work.
 
 ## Phase 3 — Operational monitoring
 
@@ -192,7 +228,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (87 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (100 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref
