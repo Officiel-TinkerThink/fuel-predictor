@@ -5,12 +5,19 @@ These are the first pages rendered through the new Jinja design system
 migrate incrementally; see docs/production/implementation-progress.md.
 """
 
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from fuel_predictor.application.identity import CreateUser, ListAuditRecords, ListUsers
 from fuel_predictor.application.model_lifecycle import GetModelGovernanceDashboard
 from fuel_predictor.application.monitoring import GetMonitoringDashboard
+from fuel_predictor.application.monitoring_runs import (
+    BackupRunRepository,
+    MonitoringFreshness,
+    MonitoringRunRepository,
+)
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.identity import IdentityValidationError, UserRole
@@ -29,7 +36,21 @@ def build_dashboard_router(
     list_users: ListUsers,
     list_audit_records: ListAuditRecords,
     guard: SecurityGuard,
+    monitoring_runs: MonitoringRunRepository,
+    backup_runs: BackupRunRepository,
+    monitoring_stale_after_hours: int = 26,
 ) -> APIRouter:
+    def _freshness() -> MonitoringFreshness:
+        latest = monitoring_runs.latest()
+        successful = monitoring_runs.latest_successful()
+        return MonitoringFreshness(
+            last_success=successful.finished_at if successful else None,
+            last_attempt=latest.finished_at if latest else None,
+            last_attempt_failed=latest is not None and not latest.succeeded,
+            stale_after_hours=monitoring_stale_after_hours,
+            now=datetime.now(UTC),
+        )
+
     router = APIRouter()
 
     @router.get("/", response_class=HTMLResponse)
@@ -52,6 +73,8 @@ def build_dashboard_router(
                 governance=governance,
                 is_healthy=len(critical_alerts) == 0,
                 critical_alert_count=len(critical_alerts),
+                freshness=_freshness(),
+                last_backup=backup_runs.latest(),
             )
         )
 

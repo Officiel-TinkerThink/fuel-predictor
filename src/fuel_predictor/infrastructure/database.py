@@ -245,6 +245,48 @@ class ModelPackageValidationRow(Base):
     artifact_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
 
 
+class MonitoringRunRow(Base):
+    """One completed scheduled monitoring run (Phase 3).
+
+    Stored so the UI and MCP read a precomputed summary instead of
+    recomputing drift and reconciliation inside a page request, and so
+    "when did monitoring last succeed?" has an answer even when the most
+    recent attempt failed.
+    """
+
+    __tablename__ = "monitoring_runs"
+
+    run_id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    finished_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    outcome: Mapped[str] = mapped_column(String(16), nullable=False)
+    trigger: Mapped[str] = mapped_column(String(32), nullable=False)
+    failure_reason: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    summary: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
+
+
+class BackupRunRow(Base):
+    """Outcome of the most recent backup attempt (Phase 3 / ADR 0012).
+
+    Recorded by the backup job rather than inferred: the application cannot
+    see whether an off-VM upload succeeded, and guessing would produce a
+    reassuring dashboard with no basis.
+    """
+
+    __tablename__ = "backup_runs"
+
+    run_id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    finished_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    outcome: Mapped[str] = mapped_column(String(16), nullable=False)
+    destination: Mapped[str] = mapped_column(String(512), nullable=False)
+    size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    failure_reason: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+
+
 class MonitoringAlertRow(Base):
     __tablename__ = "monitoring_alerts"
 

@@ -12,8 +12,18 @@
 <div class="grid grid--metrics">
   {{ ui.metric('Isu kualitas data', unresolved_data_quality_issue_count) }}
   {{ ui.metric('Aktual BBM tertunda', missing_actual_prediction_count, context='Lebih dari ' ~ missing_actual_after_days ~ ' hari sejak prediksi') }}
-  {{ ui.metric('Ketersediaan / latensi / disk', 'Belum tersedia', unavailable=true, context='Tersedia setelah Fase 3.') }}
-  {{ ui.metric('Cadangan (backup) terakhir', 'Belum tersedia', unavailable=true, context='Tersedia setelah Fase 6.') }}
+  {% if freshness.last_success is none %}
+  {{ ui.metric('Pemantauan terjadwal', 'Belum pernah berhasil', unavailable=true, context='Jalankan python -m fuel_predictor monitor.') }}
+  {% elif freshness.is_stale %}
+  {{ ui.metric('Pemantauan terjadwal', 'Kedaluwarsa', unavailable=true, context='Terakhir berhasil ' ~ (freshness.last_success | waktu)) }}
+  {% else %}
+  {{ ui.metric('Pemantauan terjadwal', freshness.status_text, context='Terakhir berhasil ' ~ (freshness.last_success | waktu)) }}
+  {% endif %}
+  {% if last_backup is none %}
+  {{ ui.metric('Cadangan (backup) terakhir', 'Belum pernah dijalankan', unavailable=true, context='Cadangan diatur pada Fase 6.') }}
+  {% else %}
+  {{ ui.metric('Cadangan (backup) terakhir', 'Berhasil' if last_backup.succeeded else 'Gagal', context=(last_backup.finished_at | waktu) ~ ' · ' ~ last_backup.destination) }}
+  {% endif %}
 </div>
 
 <section class="card">

@@ -103,6 +103,10 @@ from fuel_predictor.infrastructure.sqlalchemy_model_package_records import (
     SqlAlchemyModelPackageValidationRepository,
 )
 from fuel_predictor.infrastructure.sqlalchemy_monitoring import SqlAlchemyMonitoringRepository
+from fuel_predictor.infrastructure.sqlalchemy_monitoring_runs import (
+    SqlAlchemyBackupRunRepository,
+    SqlAlchemyMonitoringRunRepository,
+)
 from fuel_predictor.infrastructure.sqlalchemy_predictions import SqlAlchemyPredictionRepository
 from fuel_predictor.infrastructure.zip_model_package_archive import ZipModelPackageArchiveReader
 
@@ -204,6 +208,8 @@ def create_app(
     )
     if resolved_bootstrap_administrator is not None:
         ensure_bootstrap_administrator.execute(*resolved_bootstrap_administrator)
+    monitoring_run_repository = SqlAlchemyMonitoringRunRepository(session_factory)
+    backup_run_repository = SqlAlchemyBackupRunRepository(session_factory)
     validation_records = SqlAlchemyModelPackageValidationRepository(session_factory)
     artifact_store = FilesystemModelArtifactStore(root=settings.model_artifact_directory)
     validate_package = ValidateModelPackage(
@@ -279,6 +285,9 @@ def create_app(
             list_users,
             list_audit_records,
             guard,
+            monitoring_run_repository,
+            backup_run_repository,
+            settings.monitoring_stale_after_hours,
         )
     )
     app.include_router(
@@ -347,6 +356,9 @@ def create_app(
             get_monitoring_dashboard,
             get_prediction_performance,
             guard,
+            monitoring_run_repository,
+            backup_run_repository,
+            settings.monitoring_stale_after_hours,
         )
     )
     return app

@@ -48,7 +48,8 @@ session (or a different model) can resume without re-deriving context.
       fresh deployment can be signed into without a manual SQL step.
 - [x] Overview dashboard (`/`) — real data from `GetMonitoringDashboard` +
       `GetModelGovernanceDashboard`. Two fields are honestly `Belum tersedia` (scheduled-monitoring
-      status, backup status) because Phase 3 doesn't exist yet — do not fake these.
+      status, backup status) were honestly `Belum tersedia` until Phase 3 filled them in; they now
+      show real state.
 - [x] User administration (`/pengguna`) and audit log (`/audit`) pages, both on the new template
       system.
 - [x] Every remaining POST form in `delivery/form.py` (still the original f-string pages) now
@@ -423,9 +424,37 @@ The three remaining items above are genuinely optional or small UI wiring, not m
 
 ## Phase 3 — Operational monitoring
 
-Not started. Needs: scheduled `python -m fuel_predictor monitor` idempotent command, stored report
-summaries (so the overview page's two `Belum tersedia` fields become real), service-health/backup
-state, external alerting.
+- [x] Scheduled, idempotent monitoring execution — `python -m fuel_predictor monitor` (`__main__.py`)
+      and `RunScheduledMonitoring`. Idempotent because the dashboard is a pure read over current
+      state, so a scheduler retrying after a timeout records a second observation rather than
+      double-counting. Exits **non-zero on failure**, which is the signal the plan's failed-run
+      alerting depends on — a job that always exits zero cannot be monitored.
+- [x] Stored report summaries — `monitoring_runs` table (Alembic `20260822_10`). The UI reads a
+      precomputed summary instead of recomputing drift and reconciliation inside a page request,
+      which is what made the dashboard slow exactly when someone was watching it. Summaries hold
+      counts and verdicts, not whole row sets: the source tables already have the detail, and copying
+      it here would grow without bound.
+- [x] Service-health and backup state — `backup_runs` table plus `MonitoringFreshness`. Both the
+      overview and Kesehatan Sistem pages now show real monitoring freshness and last-backup outcome
+      in place of the `Belum tersedia` placeholders. A *failed* attempt does not by itself mark the
+      picture stale — the last good summary is still the best information available — but it is
+      surfaced separately so an operator sees monitoring is unhealthy even while the numbers look
+      fine. When the picture *is* stale, the page says so and names the command to run.
+      Backup outcomes are recorded by the backup job rather than inferred: the application cannot see
+      whether an off-VM upload succeeded, and guessing would produce a reassuring dashboard with no
+      basis. Writing those records is Phase 6 work (ADR 0012); the read side is ready for it.
+- [x] **Two real bugs found by exercising the CLI against a broken database**, both now covered by
+      regression tests:
+      1. When the database was unreachable, `RunScheduledMonitoring` caught the dashboard failure and
+         then *the write recording that failure also failed* — and that second exception escaped
+         uncaught, turning a handled failure into a crash. `_record` now tolerates a storage failure.
+      2. A run that completed but could not be persisted was reported as a success. That would leave
+         the dashboard showing a stale picture while the scheduler saw green and raised no alarm; it
+         is now reported as a failure.
+- [ ] **Not done**: external alerting with plain-language remediation. The state it needs is now
+      recorded (failed runs, stale monitoring, failed backups); what is missing is a delivery channel
+      — email or webhook — and the plan explicitly wants remediation wording, not just a notification.
+      The alert *content* already exists in `MonitoringAlert.message` and `MonitoringFreshness`.
 
 ## Phase 4 — MCP read-only launch
 
@@ -442,7 +471,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (216 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (228 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref

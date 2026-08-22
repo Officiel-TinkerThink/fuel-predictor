@@ -7,11 +7,18 @@ only names one "Kinerja Model" item and the two features serve the same
 question (is the model performing well) at different time horizons.
 """
 
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
 from fuel_predictor.application.actual_fuel import GetPredictionPerformance
 from fuel_predictor.application.monitoring import GetMonitoringDashboard
+from fuel_predictor.application.monitoring_runs import (
+    BackupRunRepository,
+    MonitoringFreshness,
+    MonitoringRunRepository,
+)
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
 
@@ -20,8 +27,22 @@ def build_monitoring_pages_router(
     get_monitoring_dashboard: GetMonitoringDashboard,
     get_prediction_performance: GetPredictionPerformance,
     guard: SecurityGuard,
+    monitoring_runs: MonitoringRunRepository,
+    backup_runs: BackupRunRepository,
+    monitoring_stale_after_hours: int = 26,
 ) -> APIRouter:
     router = APIRouter()
+
+    def _freshness() -> MonitoringFreshness:
+        latest = monitoring_runs.latest()
+        successful = monitoring_runs.latest_successful()
+        return MonitoringFreshness(
+            last_success=successful.finished_at if successful else None,
+            last_attempt=latest.finished_at if latest else None,
+            last_attempt_failed=latest is not None and not latest.succeeded,
+            stale_after_hours=monitoring_stale_after_hours,
+            now=datetime.now(UTC),
+        )
 
     @router.get("/pemantauan/kesehatan-sistem", response_class=HTMLResponse)
     def show_system_health(request: Request) -> HTMLResponse:
@@ -42,6 +63,8 @@ def build_monitoring_pages_router(
                 missing_actual_predictions=dashboard.missing_actual_predictions,
                 missing_actual_prediction_count=dashboard.missing_actual_prediction_count,
                 missing_actual_after_days=dashboard.missing_actual_after_days,
+                freshness=_freshness(),
+                last_backup=backup_runs.latest(),
             )
         )
 

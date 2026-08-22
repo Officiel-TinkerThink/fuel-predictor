@@ -49,6 +49,9 @@ class ApplicationSettings(BaseSettings):
     model_artifact_directory: Path = Path(".fuel_predictor/model-packages")
     supported_feature_contract_versions: str = "baseline-v1"
     supported_runtime_compatibility_versions: str = "onnxruntime-1.20,skops-0.11"
+    # A daily schedule with room for one missed run before the dashboard calls
+    # the picture stale, so a single transient failure is not alarming.
+    monitoring_stale_after_hours: int = Field(default=26, ge=1)
 
     @field_validator("database_url")
     @classmethod

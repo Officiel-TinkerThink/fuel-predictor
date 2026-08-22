@@ -64,10 +64,27 @@
     <dl class="detail-list">
       <dt>Kandidat menunggu tinjauan</dt><dd>{{ governance.candidate_models | length }}</dd>
       <dt>Data kualitas belum diperbaiki</dt><dd>{{ monitoring.unresolved_data_quality_issue_count }}</dd>
-      <dt>Pemantauan terjadwal</dt><dd>{{ ui.badge('Belum tersedia', 'neutral') }}</dd>
-      <dt>Cadangan (backup) terakhir</dt><dd>{{ ui.badge('Belum tersedia', 'neutral') }}</dd>
+      <dt>Pemantauan terjadwal</dt>
+      <dd>
+        {% if freshness.last_success is none %}{{ ui.badge('Belum pernah berhasil', 'danger') }}
+        {% elif freshness.is_stale %}{{ ui.badge('Kedaluwarsa', 'danger') }}
+        {% elif freshness.last_attempt_failed %}{{ ui.badge('Percobaan terakhir gagal', 'warning') }}
+        {% else %}{{ ui.badge('Terkini', 'success') }}{% endif %}
+        <span class="hint">{{ freshness.last_success | waktu }}</span>
+      </dd>
+      <dt>Cadangan (backup) terakhir</dt>
+      <dd>
+        {% if last_backup is none %}{{ ui.badge('Belum pernah dijalankan', 'danger') }}
+        {% elif last_backup.succeeded %}{{ ui.badge('Berhasil', 'success') }}
+        {% else %}{{ ui.badge('Gagal', 'danger') }}{% endif %}
+        {% if last_backup %}<span class="hint">{{ last_backup.finished_at | waktu }}</span>{% endif %}
+      </dd>
     </dl>
-    <p class="hint">Status pemantauan terjadwal dan cadangan tersedia setelah Fase 3 selesai.</p>
+    {% if freshness.is_stale %}
+    <p class="hint">Angka di atas berasal dari pemantauan terakhir yang berhasil dan mungkin sudah
+      tidak mencerminkan keadaan sekarang. Jalankan <code>python -m fuel_predictor monitor</code>
+      atau periksa penjadwal.</p>
+    {% endif %}
   </section>
 </div>
 
