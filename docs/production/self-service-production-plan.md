@@ -2,9 +2,11 @@
 
 ## Status
 
-Proposed implementation plan for taking the current local MVP to a small, self-service
-production deployment. This document does not replace the accepted ADRs. Any implementation
-that changes an accepted decision must add a superseding ADR first.
+Accepted implementation plan for taking the current local MVP to a small, self-service production
+deployment. The six decisions this plan originally deferred are now recorded as ADRs 0007-0012 and
+are summarised under [Recorded decisions](#recorded-decisions). This document does not replace the
+accepted ADRs. Any implementation that changes an accepted decision must add a superseding ADR
+first.
 
 ## Context
 
@@ -76,15 +78,16 @@ provider-managed proxy. The requirement is one maintained HTTPS entry point, not
 | Concern | Production choice | Notes |
 |---|---|---|
 | Application | Existing FastAPI modular monolith | Keep one deployable application. |
-| Human UI | Server-rendered templates with progressive enhancement | Avoid a second runtime service; use a coherent design system and local static assets. |
+| Human UI | Jinja2 server-rendered templates with progressive enhancement | ADR 0007. No second runtime, no build step, no CDN; local static assets only. |
 | API | Existing versioned REST API | UI and MCP call the same application use cases. |
 | Agent interface | Official Python MCP SDK mounted at `/mcp` | Use Streamable HTTP and scoped authorization. |
+| Human auth | Server-side sessions in PostgreSQL, `hashlib.scrypt` password hashing | ADR 0008. Opaque revocable sessions; no external identity provider. |
 | Persistence | PostgreSQL + SQLAlchemy + Alembic | Preserve ADR 0006 and existing repositories. |
-| Model registry | PostgreSQL metadata plus versioned artifacts | MLflow remains primarily in the external training environment. |
+| Model registry | PostgreSQL metadata plus versioned artifacts | ADR 0009 and ADR 0011. MLflow moves to the external training environment. |
 | Monitoring | Existing Evidently adapter plus scheduled application command | Store compact report summaries; do not run a separate Evidently server. |
-| HTTPS/static files | Existing gateway or Caddy | Automatic certificate renewal and one public origin. |
-| Packaging | Docker Compose | Application and PostgreSQL; add a proxy only when needed. |
-| Backup | Encrypted PostgreSQL dump and model/report archive | Copy off the VM and test restoration. |
+| HTTPS/static files | Caddy by default, or an existing gateway | ADR 0012. Automatic certificate renewal and one public origin. |
+| Packaging | Docker Compose | Application, PostgreSQL, and Caddy. |
+| Backup | `age`-encrypted `pg_dump` and model/report archive, uploaded with `rclone` | ADR 0012. Copy off the VM and rehearse restoration. |
 
 ## External training environment
 
@@ -461,13 +464,17 @@ The production plan is complete when:
 - production runs within the measured VM memory/disk envelope under model activation and monitoring
   workloads.
 
-## Decisions requiring follow-up ADRs
+## Recorded decisions
 
-Before implementation, record or supersede decisions for:
+The six decisions this plan deferred are recorded and accepted:
 
-1. production UI delivery approach and design-system dependency;
-2. human authentication/session strategy and MCP authorization provider;
-3. external model package format and trusted serialization formats;
-4. active-model hot-swap and rollback consistency guarantees;
-5. production MLflow topology after external training is introduced;
-6. production HTTPS gateway and backup destination.
+| # | Decision | ADR |
+|---|---|---|
+| 1 | UI delivery and design-system dependency | [0007](../adr/0007-server-rendered-ui-with-a-local-design-system.md) — Jinja2 templates, hand-authored CSS, no CDN or build step |
+| 2 | Human sessions and MCP authorization | [0008](../adr/0008-session-authentication-and-mcp-authorization.md) — server-side sessions, scrypt hashing, self-issued scoped agent credentials |
+| 3 | Model package and serialization formats | [0009](../adr/0009-external-model-package-format.md) — ZIP with manifest, ONNX preferred, `skops` fallback, Pickle rejected |
+| 4 | Hot-swap and rollback consistency | [0010](../adr/0010-active-model-hot-swap-and-rollback.md) — in-process holder, DB-arbitrated optimistic concurrency |
+| 5 | Production MLflow topology | [0011](../adr/0011-production-mlflow-topology.md) — remove the MLflow service once ingestion reaches parity |
+| 6 | HTTPS gateway and backup destination | [0012](../adr/0012-https-gateway-and-encrypted-backup.md) — Caddy by default, `age`-encrypted dumps via `rclone` |
+
+Implementation may proceed against these decisions. Changing one requires a superseding ADR.
