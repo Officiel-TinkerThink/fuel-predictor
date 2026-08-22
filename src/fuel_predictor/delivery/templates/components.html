@@ -104,6 +104,29 @@
 </div>
 {%- endmacro %}
 
+{% macro stop_sequence_field(values) -%}
+<fieldset class="stops-field" aria-describedby="stops-help">
+  <legend>Urutan pemberhentian</legend>
+  <p id="stops-help" class="hint">Masukkan lokasi sesuai urutan pelaksanaan. Sistem tidak akan
+    mengoptimalkan atau mengubah urutannya.</p>
+  <div id="stop-sequence">
+    {% for value in (values or ['', '']) %}
+    <div class="stop-row">
+      <div class="field">
+        <label>Pemberhentian <input name="stop_sequence" type="text" value="{{ value }}" autocomplete="off"></label>
+      </div>
+      <div class="stop-controls">
+        <button type="button" data-action="up" aria-label="Naikkan urutan pemberhentian {{ loop.index }}">↑</button>
+        <button type="button" data-action="down" aria-label="Turunkan urutan pemberhentian {{ loop.index }}">↓</button>
+        <button type="button" data-action="remove" aria-label="Hapus pemberhentian {{ loop.index }}">Hapus</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <button type="button" class="button button--secondary" id="add-stop">Tambah pemberhentian</button>
+</fieldset>
+{%- endmacro %}
+
 {% macro steps(labels, current) -%}
 <ol class="steps" aria-label="Tahapan">
   {% for label in labels %}

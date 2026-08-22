@@ -42,6 +42,7 @@ from fuel_predictor.delivery.authentication import (
 from fuel_predictor.delivery.dashboard import build_dashboard_router
 from fuel_predictor.delivery.form import build_form_router
 from fuel_predictor.delivery.http import build_router, register_error_handlers
+from fuel_predictor.delivery.prediction_pages import build_prediction_pages_router
 from fuel_predictor.delivery.rendering import STATIC_DIRECTORY
 from fuel_predictor.delivery.security import (
     SecurityGuard,
@@ -216,6 +217,13 @@ def create_app(
         )
     )
     app.include_router(
+        build_prediction_pages_router(
+            create_daily_operation,
+            generate_fuel_prediction,
+            guard,
+        )
+    )
+    app.include_router(
         build_router(
             create_daily_operation,
             get_daily_operation,
@@ -235,10 +243,8 @@ def create_app(
     )
     app.include_router(
         build_form_router(
-            create_daily_operation,
             import_historical_dataset,
             train_baseline_candidate,
-            generate_fuel_prediction,
             bulk_operation_prediction,
             record_actual_fuel,
             bulk_actual_fuel,

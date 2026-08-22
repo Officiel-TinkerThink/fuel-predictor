@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+<section class="card info-card">
+  <p>{{ message }}</p>
+  <p><a class="button button--secondary" href="{{ back_href }}">{{ back_label }}</a></p>
+</section>
+
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{{ ui.banner('success', 'Operasi harian berhasil dibuat', 'Gunakan ID ini untuk proses dan pencatatan berikutnya: ' ~ operation.operation_id ~ '.') }}
+
+{% if operation.route_distance_manual_fallback %}
+{{ ui.banner('warning', 'Jarak manual dipakai', 'Penyedia rute tidak tersedia saat perencanaan. Jarak total manual dipakai untuk estimasi ini.') }}
+{% endif %}
+
+<section class="card">
+  <dl class="detail-list">
+    <dt>ID operasi</dt><dd><strong>{{ operation.operation_id }}</strong></dd>
+    <dt>Kategori kendaraan</dt><dd>{{ operation.vehicle_category.value }}</dd>
+    <dt>Mode aktivitas</dt><dd>{{ mode_label }}</dd>
+    {% if operation.lifting_hours is not none %}
+    <dt>Jam lifting</dt><dd>{{ operation.lifting_hours | angka }} jam</dd>
+    {% endif %}
+    <dt>Jarak total</dt><dd>{{ operation.total_distance_km | angka }} km</dd>
+    <dt>Sumber jarak</dt><dd>{{ source_label }}</dd>
+    {% if operation.stop_sequence %}
+    <dt>Urutan pemberhentian</dt>
+    <dd><ol class="stop-list">{% for stop in operation.stop_sequence %}<li>{{ stop }}</li>{% endfor %}</ol></dd>
+    {% endif %}
+  </dl>
+  <form method="post" action="/operasi-harian/{{ operation.operation_id }}/prediksi">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">Buat estimasi kebutuhan BBM</button>
+  </form>
+</section>
+
+<p><a href="/prediksi">Buat operasi lain</a></p>
+
+{% endblock %}

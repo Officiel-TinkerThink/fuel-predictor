@@ -17,7 +17,6 @@ from fuel_predictor.application.actual_fuel import (
 from fuel_predictor.application.baseline_predictions import (
     BaselineModelNotFoundError,
     BaselineTrainingError,
-    GenerateFuelPrediction,
     TrainBaselineCandidate,
 )
 from fuel_predictor.application.bulk_actual_fuel import BulkActualFuel, BulkActualFuelResult
@@ -26,7 +25,6 @@ from fuel_predictor.application.bulk_operation_predictions import (
     BulkOperationPredictionResult,
 )
 from fuel_predictor.application.daily_operations import (
-    CreateDailyOperation,
     DailyOperationNotFoundError,
 )
 from fuel_predictor.application.historical_datasets import (
@@ -45,24 +43,20 @@ from fuel_predictor.application.model_lifecycle import (
 from fuel_predictor.application.monitoring import GetMonitoringDashboard
 from fuel_predictor.delivery.http import (
     ActualFuelRequest,
-    CreateDailyOperationRequest,
-    execute_create,
     translate_validation_errors,
 )
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.actual_fuel import ActualFuelRecord
-from fuel_predictor.domain.daily_operation import DailyOperation, DailyOperationValidationError
-from fuel_predictor.domain.prediction import FuelPrediction, ModelVersion
+from fuel_predictor.domain.daily_operation import DailyOperationValidationError
+from fuel_predictor.domain.prediction import ModelVersion
 
 _UPLOAD_FILE = File(...)
 _DEMO_HISTORICAL_DATA = Path(__file__).resolve().parents[3] / "examples" / "riwayat-angber-demo.csv"
 
 
 def build_form_router(
-    create_daily_operation: CreateDailyOperation,
     import_historical_dataset: ImportHistoricalDataset,
     train_baseline_candidate: TrainBaselineCandidate,
-    generate_fuel_prediction: GenerateFuelPrediction,
     bulk_operation_prediction: BulkOperationPrediction,
     record_actual_fuel: RecordActualFuel,
     bulk_actual_fuel: BulkActualFuel,
@@ -78,10 +72,6 @@ def build_form_router(
     def _current_csrf(request: Request) -> str:
         caller = guard.caller_or_none(request)
         return caller.csrf_token if caller is not None else ""
-
-    @router.get("/prediksi", response_class=HTMLResponse)
-    def show_form(request: Request) -> HTMLResponse:
-        return HTMLResponse(_render_form({}, [], _current_csrf(request)))
 
     @router.get("/impor-data-historis", response_class=HTMLResponse)
     def show_import_form(request: Request) -> HTMLResponse:
@@ -136,41 +126,6 @@ def build_form_router(
                 status_code=status.HTTP_404_NOT_FOUND,
             )
         return HTMLResponse(_render_candidate_comparison(comparison, _current_csrf(request)))
-
-    @router.post("/operasi-harian", response_class=HTMLResponse)
-    async def submit_form(request: Request) -> HTMLResponse:
-        form_data = await request.form()
-        submitted: dict[str, Any] = {
-            key: str(value) for key, value in form_data.items() if key != "csrf_token"
-        }
-        submitted_stops = [
-            str(value).strip() for value in form_data.getlist("stop_sequence") if str(value).strip()
-        ]
-        submitted["stop_sequence"] = submitted_stops
-        payload: dict[str, Any] = dict(submitted)
-        if payload.get("lifting_hours") == "":
-            payload["lifting_hours"] = None
-
-        try:
-            validated = CreateDailyOperationRequest.model_validate(payload)
-            operation = execute_create(validated, create_daily_operation)
-        except ValidationError as error:
-            errors = translate_validation_errors(error.errors())
-            return HTMLResponse(
-                _render_form(submitted, errors, _current_csrf(request)),
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            )
-        except DailyOperationValidationError as error:
-            errors = [{"field": error.field, "message": error.message}]
-            return HTMLResponse(
-                _render_form(submitted, errors, _current_csrf(request)),
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            )
-
-        return HTMLResponse(
-            _render_success(operation, _current_csrf(request)),
-            status_code=status.HTTP_201_CREATED,
-        )
 
     @router.post("/impor-data-historis", response_class=HTMLResponse)
     async def submit_import(request: Request, file: UploadFile = _UPLOAD_FILE) -> HTMLResponse:
@@ -323,26 +278,6 @@ def build_form_router(
             )
         return HTMLResponse(
             _render_bulk_actual_fuel_success(result), status_code=status.HTTP_201_CREATED
-        )
-
-    @router.post("/operasi-harian/{operation_id}/prediksi", response_class=HTMLResponse)
-    def submit_prediction(operation_id: str) -> HTMLResponse:
-        try:
-            prediction = generate_fuel_prediction.execute(operation_id)
-        except BaselineModelNotFoundError:
-            return HTMLResponse(
-                _page(
-                    "Prediksi belum tersedia",
-                    """
-                    <main class="shell"><h1>Prediksi belum tersedia</h1>
-                    <p class="lead">Latih kandidat baseline dari dataset tervalidasi sebelum membuat
-                    estimasi untuk operasi ini.</p><a class="button-link" href="/">Kembali</a></main>
-                    """,
-                ),
-                status_code=status.HTTP_409_CONFLICT,
-            )
-        return HTMLResponse(
-            _render_prediction_success(prediction), status_code=status.HTTP_201_CREATED
         )
 
     return router
@@ -653,147 +588,6 @@ def _render_promotion_success(model: ModelVersion) -> str:
     )
 
 
-def _render_form(values: dict[str, Any], errors: list[dict[str, str]], csrf_token: str) -> str:
-    activity_mode = values.get("activity_mode", "transport")
-    error_summary = ""
-    if errors:
-        items = "".join(f"<li>{escape(item['message'])}</li>" for item in errors)
-        error_summary = (
-            '<section class="errors" role="alert" aria-labelledby="error-title" tabindex="-1">'
-            '<h2 id="error-title">Periksa kembali data operasi</h2>'
-            f"<ul>{items}</ul></section>"
-        )
-    stop_sequence = values.get("stop_sequence", ["", ""])
-    if not isinstance(stop_sequence, list):
-        stop_sequence = ["", ""]
-    if not stop_sequence:
-        stop_sequence = ["", ""]
-    stop_inputs = "".join(
-        _render_stop_input(str(value), index) for index, value in enumerate(stop_sequence)
-    )
-
-    return _page(
-        "Buat Operasi Harian",
-        f"""
-        <main class="shell">
-          <header>
-            <p class="eyebrow">PERENCANAAN BAHAN BAKAR</p>
-            <h1>Buat Operasi Harian</h1>
-            <p class="lead">Catat satu rencana operasi ANGBER secara lengkap dan konsisten.</p>
-            <p><a href="/impor-data-historis">Impor data historis ANGBER</a> · <a href="/prediksi-operasi-massal">Prediksi operasi massal</a> · <a href="/bahan-bakar-aktual">Catat BBM aktual</a> · <a href="/kinerja-prediksi">Kinerja prediksi</a> · <a href="/pemantauan-operasi">Pemantauan operasi dan alert</a></p>
-          </header>
-          {error_summary}
-          <form method="post" action="/operasi-harian" novalidate>
-            {_csrf_input(csrf_token)}
-            <fieldset>
-              <legend>Detail operasi</legend>
-              <div class="field">
-                <label for="vehicle_category">Kategori kendaraan</label>
-                <select id="vehicle_category" name="vehicle_category" required>
-                  {_option("ANGBER", "ANGBER — Angkutan Berat", values.get("vehicle_category", "ANGBER"))}
-                </select>
-              </div>
-              <div class="field">
-                <label for="activity_mode">Mode aktivitas</label>
-                <select id="activity_mode" name="activity_mode" required>
-                  {_option("transport", "Angkut", activity_mode)}
-                  {_option("lifting", "Lifting", activity_mode)}
-                  {_option("transport_and_lifting", "Angkut dan lifting", activity_mode)}
-                </select>
-                <small>Pilih aktivitas yang mencakup seluruh operasi hari ini.</small>
-              </div>
-              <div class="field" id="lifting-field">
-                <label for="lifting_hours">Jam lifting</label>
-                <div class="unit-input">
-                  <input id="lifting_hours" name="lifting_hours" type="number" min="0.01"
-                    step="0.01" inputmode="decimal"
-                    value="{escape(values.get("lifting_hours", ""))}">
-                  <span>jam</span>
-                </div>
-                <small>Wajib untuk mode yang mencakup lifting.</small>
-              </div>
-              <div class="field">
-                <label for="total_distance_km">Jarak total cadangan</label>
-                <div class="unit-input">
-                  <input id="total_distance_km" name="total_distance_km" type="number"
-                    min="0.01" step="0.01" inputmode="decimal" required
-                    value="{escape(values.get("total_distance_km", ""))}">
-                  <span>km</span>
-                </div>
-                <small>Dipakai bila penyedia rute tidak tersedia; jika rute berhasil dihitung,
-                  sistem memakai hasil hitung rute.</small>
-              </div>
-              <fieldset class="stops-field" aria-describedby="stops-help">
-                <legend>Urutan pemberhentian</legend>
-                <p id="stops-help" class="hint">Masukkan lokasi sesuai urutan pelaksanaan.
-                  Sistem tidak akan mengoptimalkan atau mengubah urutannya.</p>
-                <div id="stop-sequence">{stop_inputs}</div>
-                <button class="secondary-button" id="add-stop" type="button">Tambah pemberhentian</button>
-              </fieldset>
-              <div class="field">
-                <label for="distance_source">Sumber jarak</label>
-                <select id="distance_source" name="distance_source" required>
-                  {_option("manual", "Input manual", values.get("distance_source", "manual"))}
-                  {_option("routing_provider", "Penyedia rute", values.get("distance_source", "manual"))}
-                </select>
-              </div>
-            </fieldset>
-            <button type="submit">Simpan operasi harian</button>
-          </form>
-        </main>
-        <script>
-          const mode = document.querySelector('#activity_mode');
-          const lifting = document.querySelector('#lifting_hours');
-          const liftingField = document.querySelector('#lifting-field');
-          function syncLifting() {{
-            const applies = mode.value === 'lifting' || mode.value === 'transport_and_lifting';
-            lifting.required = applies;
-            lifting.disabled = !applies;
-            liftingField.hidden = !applies;
-            if (!applies) lifting.value = '';
-          }}
-          mode.addEventListener('change', syncLifting);
-          syncLifting();
-          const sequence = document.querySelector('#stop-sequence');
-          function controls(index) {{
-            return `<div class="stop-controls"><button type="button" data-action="up" aria-label="Naikkan urutan pemberhentian ${"{"}index + 1{"}"}">↑</button><button type="button" data-action="down" aria-label="Turunkan urutan pemberhentian ${"{"}index + 1{"}"}">↓</button><button type="button" data-action="remove" aria-label="Hapus pemberhentian ${"{"}index + 1{"}"}">Hapus pemberhentian</button></div>`;
-          }}
-          function stopRow(value = '') {{
-            const row = document.createElement('div');
-            row.className = 'stop-row';
-            row.innerHTML = `<label>Pemberhentian <input name="stop_sequence" type="text" value="${"{"}value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;'){"}"}" autocomplete="off"></label>${"{"}controls(sequence.children.length){"}"}`;
-            return row;
-          }}
-          function refreshStopControls() {{
-            [...sequence.children].forEach((row, index) => {{
-              row.querySelector('.stop-controls').innerHTML = controls(index);
-            }});
-          }}
-          document.querySelector('#add-stop').addEventListener('click', () => {{
-            sequence.append(stopRow());
-            refreshStopControls();
-            sequence.lastElementChild.querySelector('input').focus();
-          }});
-          sequence.addEventListener('click', (event) => {{
-            const button = event.target.closest('button[data-action]');
-            if (!button) return;
-            const row = button.closest('.stop-row');
-            if (button.dataset.action === 'remove') row.remove();
-            if (button.dataset.action === 'up' && row.previousElementSibling) {{
-              sequence.insertBefore(row, row.previousElementSibling);
-            }}
-            if (button.dataset.action === 'down' && row.nextElementSibling) {{
-              sequence.insertBefore(row.nextElementSibling, row);
-            }}
-            refreshStopControls();
-          }});
-          refreshStopControls();
-          document.querySelector('.errors')?.focus();
-        </script>
-        """,
-    )
-
-
 def _render_import_form(csrf_token: str, error: str | None = None) -> str:
     error_summary = ""
     if error is not None:
@@ -1008,108 +802,9 @@ def _render_training_error(dataset_version_id: str, error: str) -> str:
     )
 
 
-def _render_success(operation: DailyOperation, csrf_token: str) -> str:
-    mode_labels = {
-        "transport": "Angkut",
-        "lifting": "Lifting",
-        "transport_and_lifting": "Angkut dan lifting",
-    }
-    source_labels = {"manual": "Input manual", "routing_provider": "Penyedia rute"}
-    lifting = (
-        f"<dt>Jam lifting</dt><dd>{_format_decimal(operation.lifting_hours)} jam</dd>"
-        if operation.lifting_hours is not None
-        else ""
-    )
-    stops = ""
-    if operation.stop_sequence:
-        stop_items = "".join(f"<li>{escape(stop)}</li>" for stop in operation.stop_sequence)
-        stops = f'<dt>Urutan pemberhentian</dt><dd><ol class="stop-list">{stop_items}</ol></dd>'
-    fallback = (
-        '<p class="route-warning">Penyedia rute tidak tersedia saat perencanaan. '
-        "Jarak total manual dipakai untuk estimasi ini.</p>"
-        if operation.route_distance_manual_fallback
-        else ""
-    )
-    return _page(
-        "Operasi berhasil dibuat",
-        f"""
-        <main class="shell success">
-          <p class="success-mark" aria-hidden="true">✓</p>
-          <p class="eyebrow">OPERASI TERSIMPAN</p>
-          <h1>Operasi harian berhasil dibuat</h1>
-          <p class="lead">Gunakan ID ini untuk proses dan pencatatan berikutnya.</p>
-          <p class="operation-id"><span>ID operasi</span><strong>{escape(operation.operation_id)}</strong></p>
-          <dl>
-            <dt>Kategori kendaraan</dt><dd>{escape(operation.vehicle_category.value)}</dd>
-            <dt>Mode aktivitas</dt><dd>{mode_labels[operation.activity_mode.value]}</dd>
-            {lifting}
-            <dt>Jarak total</dt><dd>{_format_decimal(operation.total_distance_km)} km</dd>
-            <dt>Sumber jarak</dt><dd>{source_labels[operation.distance_source.value]}</dd>
-            {stops}
-          </dl>
-          {fallback}
-          <form method="post" action="/operasi-harian/{escape(operation.operation_id)}/prediksi">
-            {_csrf_input(csrf_token)}
-            <button type="submit">Buat estimasi kebutuhan BBM</button>
-          </form>
-          <p><a href="/">Buat operasi lain</a></p>
-        </main>
-        """,
-    )
-
-
-def _render_prediction_success(prediction: FuelPrediction) -> str:
-    fallback = (
-        '<p class="route-warning">Penyedia rute tidak tersedia saat perencanaan; '
-        "prediksi ini memakai jarak total manual.</p>"
-        if prediction.route_distance_manual_fallback
-        else ""
-    )
-    return _page(
-        "Estimasi kebutuhan bahan bakar",
-        f"""
-        <main class="shell success">
-          <p class="success-mark" aria-hidden="true">✓</p>
-          <p class="eyebrow">ESTIMASI PERENCANAAN</p>
-          <h1>Estimasi kebutuhan bahan bakar</h1>
-          <p class="lead">Estimasi ini dipelajari dari catatan <em>bahan bakar disiapkan</em>.
-            Nilai ini bukan konsumsi aktual yang telah diverifikasi.</p>
-          <dl>
-            <dt>ID operasi</dt><dd>{escape(prediction.operation_id)}</dd>
-            <dt>Estimasi kebutuhan BBM</dt><dd>{_format_decimal(prediction.estimated_fuel_requirement_liters)} L</dd>
-            <dt>Alokasi rekomendasi</dt><dd>{_format_decimal(prediction.recommended_allocation_liters)} L</dd>
-            <dt>Rentang ketidakpastian</dt><dd>{_format_decimal(prediction.uncertainty_lower_liters)}–{_format_decimal(prediction.uncertainty_upper_liters)} L</dd>
-            <dt>Sumber jarak rute</dt><dd>{escape(prediction.route_distance_source.value)}</dd>
-            <dt>Model</dt><dd>{escape(prediction.model.model_version_id)} · {escape(prediction.model.algorithm)}</dd>
-            <dt>Versi dataset</dt><dd>{escape(prediction.model.dataset_version_id)}</dd>
-            <dt>Versi fitur</dt><dd>{escape(prediction.model.feature_version)}</dd>
-          </dl>
-          {fallback}
-          <p class="lead">{escape(prediction.safety_policy)}</p>
-          <a class="button-link" href="/">Buat operasi lain</a>
-        </main>
-        """,
-    )
-
-
 def _option(value: str, label: str, selected_value: str) -> str:
     selected = " selected" if value == selected_value else ""
     return f'<option value="{escape(value)}"{selected}>{escape(label)}</option>'
-
-
-def _render_stop_input(value: str, index: int) -> str:
-    number = index + 1
-    return f"""
-      <div class="stop-row">
-        <label>Pemberhentian <input name="stop_sequence" type="text" value="{escape(value)}"
-          autocomplete="off"></label>
-        <div class="stop-controls">
-          <button type="button" data-action="up" aria-label="Naikkan urutan pemberhentian {number}">↑</button>
-          <button type="button" data-action="down" aria-label="Turunkan urutan pemberhentian {number}">↓</button>
-          <button type="button" data-action="remove" aria-label="Hapus pemberhentian {number}">Hapus pemberhentian</button>
-        </div>
-      </div>
-    """
 
 
 def _format_decimal(value: float) -> str:

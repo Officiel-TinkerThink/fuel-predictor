@@ -253,7 +253,9 @@ def test_demo_flow_downloads_imports_and_manually_trains_the_baseline(tmp_path: 
                 "distance_source": "manual",
             },
         )
-        operation_id = operation.text.split("<strong>", 1)[1].split("</strong>", 1)[0]
+        operation_id = operation.text.split("<dt>ID operasi</dt><dd><strong>", 1)[1].split(
+            "</strong>", 1
+        )[0]
         prediction = client.post(f"/operasi-harian/{operation_id}/prediksi")
 
     assert sample.status_code == 200

@@ -70,4 +70,94 @@
       }
     });
   });
+
+  // Lifting-hours only applies to some activity modes. Without JS the field
+  // just stays visible and optional; the server is the real source of truth
+  // for whether it's required (DailyOperationValidationError), so hiding it
+  // here is convenience only, never validation.
+  var mode = document.querySelector("#activity_mode");
+  var lifting = document.querySelector("#lifting_hours");
+  var liftingField = document.querySelector("#lifting-field");
+  if (mode && lifting && liftingField) {
+    var syncLifting = function () {
+      var applies = mode.value === "lifting" || mode.value === "transport_and_lifting";
+      lifting.required = applies;
+      liftingField.hidden = !applies;
+      if (!applies) {
+        lifting.value = "";
+      }
+    };
+    mode.addEventListener("change", syncLifting);
+    syncLifting();
+  }
+
+  // Ordered stop-sequence rows: add / remove / move up / move down.
+  // Without JS, the two rows rendered by the server are still submittable as-is.
+  var sequence = document.querySelector("#stop-sequence");
+  var addStop = document.querySelector("#add-stop");
+  if (sequence && addStop) {
+    var stopControlsHtml = function (index) {
+      return (
+        '<div class="stop-controls">' +
+        '<button type="button" data-action="up" aria-label="Naikkan urutan pemberhentian ' +
+        (index + 1) +
+        '">↑</button>' +
+        '<button type="button" data-action="down" aria-label="Turunkan urutan pemberhentian ' +
+        (index + 1) +
+        '">↓</button>' +
+        '<button type="button" data-action="remove" aria-label="Hapus pemberhentian ' +
+        (index + 1) +
+        '">Hapus</button>' +
+        "</div>"
+      );
+    };
+    var refreshStopControls = function () {
+      Array.prototype.forEach.call(sequence.children, function (row, index) {
+        var controls = row.querySelector(".stop-controls");
+        if (controls) {
+          controls.outerHTML = stopControlsHtml(index);
+        }
+      });
+    };
+    var newStopRow = function () {
+      var row = document.createElement("div");
+      row.className = "stop-row";
+      var field = document.createElement("div");
+      field.className = "field";
+      var label = document.createElement("label");
+      label.textContent = "Pemberhentian";
+      var input = document.createElement("input");
+      input.name = "stop_sequence";
+      input.type = "text";
+      input.autocomplete = "off";
+      label.appendChild(input);
+      field.appendChild(label);
+      row.appendChild(field);
+      var controls = document.createElement("div");
+      controls.innerHTML = stopControlsHtml(sequence.children.length);
+      row.appendChild(controls.firstChild);
+      return row;
+    };
+    addStop.addEventListener("click", function () {
+      var row = newStopRow();
+      sequence.appendChild(row);
+      refreshStopControls();
+      row.querySelector("input").focus();
+    });
+    sequence.addEventListener("click", function (event) {
+      var button = event.target.closest("button[data-action]");
+      if (!button) {
+        return;
+      }
+      var row = button.closest(".stop-row");
+      if (button.dataset.action === "remove") {
+        row.remove();
+      } else if (button.dataset.action === "up" && row.previousElementSibling) {
+        sequence.insertBefore(row, row.previousElementSibling);
+      } else if (button.dataset.action === "down" && row.nextElementSibling) {
+        sequence.insertBefore(row.nextElementSibling, row);
+      }
+      refreshStopControls();
+    });
+  }
 })();

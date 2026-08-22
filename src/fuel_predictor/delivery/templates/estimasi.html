@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{{ ui.banner('success', 'Estimasi kebutuhan bahan bakar', 'Estimasi ini dipelajari dari catatan bahan bakar disiapkan. Nilai ini bukan konsumsi aktual yang telah diverifikasi.') }}
+
+{% if prediction.route_distance_manual_fallback %}
+{{ ui.banner('warning', 'Jarak manual dipakai', 'Penyedia rute tidak tersedia saat perencanaan; prediksi ini memakai jarak total manual.') }}
+{% endif %}
+
+<div class="grid grid--metrics">
+  {{ ui.metric('Estimasi kebutuhan BBM', prediction.estimated_fuel_requirement_liters | angka, unit='L') }}
+  {{ ui.metric('Alokasi rekomendasi', prediction.recommended_allocation_liters | angka, unit='L') }}
+  {{ ui.metric('Rentang ketidakpastian', (prediction.uncertainty_lower_liters | angka) ~ '–' ~ (prediction.uncertainty_upper_liters | angka), unit='L') }}
+</div>
+
+<section class="card">
+  <dl class="detail-list">
+    <dt>ID operasi</dt><dd>{{ prediction.operation_id }}</dd>
+    <dt>Sumber jarak rute</dt><dd>{{ prediction.route_distance_source.value }}</dd>
+    <dt>Model</dt><dd>{{ prediction.model.model_version_id }} · {{ prediction.model.algorithm }}</dd>
+    <dt>Versi dataset</dt><dd>{{ prediction.model.dataset_version_id }}</dd>
+    <dt>Versi fitur</dt><dd>{{ prediction.model.feature_version }}</dd>
+  </dl>
+  <p class="hint">{{ prediction.safety_policy }}</p>
+</section>
+
+<p><a href="/prediksi">Buat operasi lain</a></p>
+
+{% endblock %}

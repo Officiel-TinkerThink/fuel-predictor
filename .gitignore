@@ -16,3 +16,6 @@ dist/
 .scratch/*
 !.scratch/fuel-prediction-mvp/
 .scratch/fuel-prediction-mvp/**/*.sqlite3
+
+# Claude Code harness runtime state, not project configuration.
+.claude/scheduled_tasks.lock

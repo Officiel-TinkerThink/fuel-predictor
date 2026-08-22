@@ -53,13 +53,38 @@ session (or a different model) can resume without re-deriving context.
       `tests/test_authentication_and_roles.py`. Watch for the same trap in any new form: the
       submitted `csrf_token` field must be stripped out of a dict before it reaches a
       `model_config = ConfigDict(extra="forbid")` Pydantic model, or validation 422s.
-- [ ] **Not done**: redesigning prediction, bulk import, actual-fuel, and model pages onto the new
-      Jinja/design-system templates. They still render through the original f-string functions in
-      `delivery/form.py`, which now live behind auth + capability checks (via `ROUTE_CAPABILITIES`)
-      and now correctly carry CSRF tokens, but are visually and structurally unchanged from the MVP.
-      This is the largest remaining Phase 1 item. Suggested order: prediction form → bulk prediction
-      → actual fuel (single + bulk) → monitoring (needs the 3-way Kesehatan/Pergeseran/Kinerja split
-      from the plan, currently one page) → model governance/comparison.
+- [x] Prediction form migrated to the Jinja design system — `delivery/prediction_pages.py` now owns
+      `GET /prediksi`, `POST /operasi-harian`, and `POST /operasi-harian/{id}/prediksi`, replacing
+      the old f-string versions in `form.py` (which are deleted, not just superseded — `_render_form`,
+      `_render_success`, `_render_prediction_success`, `_render_stop_input` are gone). New templates:
+      `prediksi.html`, `operasi-tersimpan.html`, `estimasi.html`, and a reusable `pesan.html` for
+      simple message-and-a-link-back pages. The dynamic ordered-stop-sequence UI (add/remove/reorder,
+      lifting-hours show/hide) moved from page-embedded `<script>` into `delivery/static/app.js` as
+      real progressive enhancement — every control still works via plain form POST with JS off.
+      New reusable macro: `ui.stop_sequence_field` in `components.html`.
+- [x] Fixed `rendering.NAVIGATION`: it had been written to match the plan's *aspirational* nav
+      structure, not the routes that actually exist yet, so half the sidebar 404'd (`/prediksi-massal`,
+      `/bbm-aktual`, `/model`, `/pemantauan/*`, etc.) the moment a real user was signed in — none of
+      the earlier manual smoke tests caught it because they only followed one link at a time. Fixed to
+      point only at real routes, with comments marking which plan-named items are still missing pages
+      (`Riwayat Prediksi`, `Unggah Kandidat`, `Riwayat dan Rollback`, `Integrasi Agen`, and the
+      Kesehatan Sistem / Pergeseran Data split). **Regression test added**:
+      `tests/test_navigation_links.py` signs in and GETs every `NAVIGATION` href, asserting none 404.
+      Run this test (or extend it) any time `NAVIGATION` changes.
+- [x] Fixed `format_decimal` (`rendering.py`): it always showed a fixed number of decimal places
+      (`42,00`), where the original f-string pages trimmed trailing zeros (`42`, `43,2`) via Python's
+      `:g` format. Existing tests asserting exact rendered numbers (`"43,2 km" in response.text`)
+      caught this immediately — now trims trailing zeros while keeping thousands grouping.
+- [ ] **Not done**: redesigning bulk-prediction, actual-fuel (single + bulk), monitoring, and model
+      governance/comparison pages onto the Jinja design system. They still render through the
+      f-string functions remaining in `delivery/form.py`, which live behind auth + capability checks
+      and correctly carry CSRF tokens, but are visually and structurally unchanged from the MVP.
+      Suggested order: bulk prediction → actual fuel (single + bulk) → monitoring (needs the 3-way
+      Kesehatan/Pergeseran/Kinerja split from the plan, currently one page) → model
+      governance/comparison. Follow the pattern in `prediction_pages.py` and `dashboard.py`: a new
+      `delivery/<name>.py` module, matching templates, then delete the old render functions from
+      `form.py` (don't leave both versions in place) and remove now-unused params from
+      `build_form_router`.
 - [ ] Nav items the plan names but that don't exist yet, intentionally left out of
       `rendering.NAVIGATION` rather than linked to a placeholder: "Riwayat Prediksi", "Unggah
       Kandidat", "Riwayat dan Rollback", "Integrasi Agen". Add each back to `NAVIGATION` as its page
@@ -95,8 +120,15 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (41 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (43 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
+- Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
+  doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref
+  clicks on real `<button type="submit">` elements can silently no-op even though `read_page` shows
+  them correctly. When that happens, `document.querySelector(...).requestSubmit()` via
+  `javascript_tool` reliably drives the same form submission and is a fine substitute for verifying
+  a page renders and behaves correctly end-to-end — it isn't a product bug, it's a tool/environment
+  limitation. Don't burn time debugging the click itself; switch to `requestSubmit()` and move on.
 - `git` was not initialized in this repository before this work started; it now is, on branch
   `production-plan`, with a `Baseline: local MVP before production work` commit before any change
   in this effort. That commit is the rollback point if something here needs to be reverted wholesale.
