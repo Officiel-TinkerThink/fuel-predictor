@@ -292,12 +292,26 @@ rollback yet — see "Not done" below for exactly where it stops.
       amendment and its reasoning are recorded in the plan itself, next to the archive listing.
 - [x] Test fixtures extracted to `tests/model_package_fixtures.py` rather than imported across test
       modules, so editing one test's fixture to suit itself cannot silently change another's meaning.
+- [x] Promotion eligibility (plan validation step 8) — `application/model_promotion_policy.py`.
+      **Eligibility is not promotion**: ADR 0004 keeps promotion a manual act, so this decides only
+      whether an administrator *may* promote and gives them the comparison to decide whether they
+      *should*. A candidate clearing every threshold still waits for a human, and a test asserts the
+      summary text never implies otherwise.
+      Uses both an absolute MAE ceiling and a relative regression ratio, because either alone is
+      gameable: a ceiling alone accepts a clear regression that still sits under it (4.9 L passing a
+      5 L ceiling while the active model is at 2.0 L), and a ratio alone accepts unbounded drift
+      downward as long as each individual step is small. Small test sets block promotion, since
+      metrics from them are not trustworthy enough to act on. A zero-MAE active model is compared
+      absolutely rather than by ratio, which would divide by zero. Falling interval coverage warns
+      but does not block — a better point estimate with slightly worse calibration can still be the
+      right model, and that trade-off is the operator's judgement, not the policy's.
+      Thresholds are configurable (`FUEL_PREDICTOR_PROMOTION_*`).
+      Tests: `tests/test_model_promotion_policy.py`, 12 cases.
 - [ ] **Not done** — the remaining Phase 2 scope, roughly in dependency order:
       1. Real `ModelArtifactLoader` (isolated ONNX/skops loading — needs `onnxruntime`/`skops` as new
          dependencies, not added yet) and `MemoryProbe`. `SmokeTestRunner` is done —
          `DeterministicSmokeTestRunner` works against any loaded model.
-      2. Metric-vs-policy comparison (plan validation step 8) and the persistence + audit record
-         (step 9).
+      2. The persistence + audit record for a completed validation (plan step 9).
       3. The production upload endpoint and its UI (the "Unggah Kandidat" and "Riwayat dan Rollback"
          nav items still deliberately absent from `rendering.NAVIGATION`), plus optional package
          signature verification.
@@ -330,7 +344,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (161 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (173 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref

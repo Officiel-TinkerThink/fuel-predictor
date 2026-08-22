@@ -39,6 +39,10 @@ class ApplicationSettings(BaseSettings):
     model_package_max_extracted_bytes: int = Field(default=256 * 1024 * 1024, gt=0)
     model_package_max_member_count: int = Field(default=32, gt=0)
     model_package_max_compression_ratio: int = Field(default=100, gt=0)
+    # Promotion eligibility (plan validation step 8). These gate whether an
+    # administrator *may* promote; promotion itself stays manual per ADR 0004.
+    promotion_max_mae_regression_ratio: float = Field(default=1.1, gt=0)
+    promotion_minimum_test_set_size: int = Field(default=30, ge=1)
 
     @field_validator("database_url")
     @classmethod
