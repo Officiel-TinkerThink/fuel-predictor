@@ -82,16 +82,26 @@ session (or a different model) can resume without re-deriving context.
       table + correction report). Verified end-to-end live (import → train → promote → bulk upload →
       9-row results table with correctly trimmed decimals) since this exercises a different code path
       (multipart `UploadFile`) than the plain-form prediction page did.
-- [ ] **Not done**: redesigning actual-fuel (single + bulk), monitoring, and model
-      governance/comparison pages onto the Jinja design system. They still render through the
-      f-string functions remaining in `delivery/form.py`, which live behind auth + capability checks
-      and correctly carry CSRF tokens, but are visually and structurally unchanged from the MVP.
-      Suggested order: actual fuel (single + bulk) → monitoring (needs the 3-way
-      Kesehatan/Pergeseran/Kinerja split from the plan, currently one page) → model
-      governance/comparison. Follow the pattern in `prediction_pages.py` / `bulk_prediction_pages.py`
-      / `dashboard.py`: a new `delivery/<name>.py` module, matching templates, then delete the old
-      render functions from `form.py` (don't leave both versions in place) and remove now-unused
-      params from `build_form_router` and its `main.py` call site.
+- [x] Actual-fuel pages (single + bulk) migrated — `delivery/actual_fuel_pages.py` owns
+      `GET`/`POST /bahan-bakar-aktual` and `GET`/`POST /bahan-bakar-aktual-massal`, replacing all
+      four `_render_actual_fuel_*`/`_render_bulk_actual_fuel_*` functions in `form.py` (deleted). New
+      templates: `bbm-aktual.html`, `bbm-aktual-tersimpan.html`, `bbm-aktual-massal.html`,
+      `bbm-aktual-massal-selesai.html`. Verified end-to-end live: bulk upload with one valid + one
+      invalid row produced the correct accepted-row table and correction-report table in one pass.
+- [ ] **Not done**: redesigning monitoring and model governance/comparison pages onto the Jinja
+      design system. They still render through the f-string functions remaining in `delivery/form.py`
+      (`_render_model_governance`, `_render_monitoring_dashboard`, `_render_candidate_comparison`,
+      `_render_promotion_success`, `_render_training_success`, `_render_training_error`,
+      `_render_import_form`, `_render_import_success`), which live behind auth + capability checks and
+      correctly carry CSRF tokens, but are visually and structurally unchanged from the MVP. Suggested
+      order: monitoring (needs the 3-way Kesehatan/Pergeseran/Kinerja split from the plan, currently
+      one page) → model governance/comparison → historical dataset import. After these, `form.py`
+      should be near-empty and worth deleting outright rather than migrating piecemeal — check what's
+      left before starting the next one. Follow the pattern in `prediction_pages.py` /
+      `bulk_prediction_pages.py` / `actual_fuel_pages.py` / `dashboard.py`: a new `delivery/<name>.py`
+      module, matching templates, then delete the old render functions from `form.py` (don't leave
+      both versions in place) and remove now-unused params from `build_form_router` and its `main.py`
+      call site.
 - [ ] Nav items the plan names but that don't exist yet, intentionally left out of
       `rendering.NAVIGATION` rather than linked to a placeholder: "Riwayat Prediksi", "Unggah
       Kandidat", "Riwayat dan Rollback", "Integrasi Agen". Add each back to `NAVIGATION` as its page

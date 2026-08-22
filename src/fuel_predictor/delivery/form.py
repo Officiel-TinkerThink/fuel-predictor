@@ -6,21 +6,13 @@ from typing import Any
 
 from fastapi import APIRouter, File, Request, UploadFile, status
 from fastapi.responses import HTMLResponse, Response
-from pydantic import ValidationError
 
 from fuel_predictor.application.actual_fuel import (
-    ActualFuelAlreadyRecordedError,
     GetPredictionPerformance,
-    RecordActualFuel,
-    RecordActualFuelCommand,
 )
 from fuel_predictor.application.baseline_predictions import (
     BaselineTrainingError,
     TrainBaselineCandidate,
-)
-from fuel_predictor.application.bulk_actual_fuel import BulkActualFuel, BulkActualFuelResult
-from fuel_predictor.application.daily_operations import (
-    DailyOperationNotFoundError,
 )
 from fuel_predictor.application.historical_datasets import (
     DatasetVersionNotFoundError,
@@ -36,13 +28,7 @@ from fuel_predictor.application.model_lifecycle import (
     PromoteCandidateModel,
 )
 from fuel_predictor.application.monitoring import GetMonitoringDashboard
-from fuel_predictor.delivery.http import (
-    ActualFuelRequest,
-    translate_validation_errors,
-)
 from fuel_predictor.delivery.security import SecurityGuard
-from fuel_predictor.domain.actual_fuel import ActualFuelRecord
-from fuel_predictor.domain.daily_operation import DailyOperationValidationError
 from fuel_predictor.domain.prediction import ModelVersion
 
 _UPLOAD_FILE = File(...)
@@ -52,8 +38,6 @@ _DEMO_HISTORICAL_DATA = Path(__file__).resolve().parents[3] / "examples" / "riwa
 def build_form_router(
     import_historical_dataset: ImportHistoricalDataset,
     train_baseline_candidate: TrainBaselineCandidate,
-    record_actual_fuel: RecordActualFuel,
-    bulk_actual_fuel: BulkActualFuel,
     get_prediction_performance: GetPredictionPerformance,
     promote_candidate_model: PromoteCandidateModel,
     get_candidate_model_comparison: GetCandidateModelComparison,
@@ -78,14 +62,6 @@ def build_form_router(
             media_type="text/csv; charset=utf-8",
             headers={"Content-Disposition": 'attachment; filename="riwayat-angber-demo.csv"'},
         )
-
-    @router.get("/bahan-bakar-aktual", response_class=HTMLResponse)
-    def show_actual_fuel_form(request: Request) -> HTMLResponse:
-        return HTMLResponse(_render_actual_fuel_form(csrf_token=_current_csrf(request)))
-
-    @router.get("/bahan-bakar-aktual-massal", response_class=HTMLResponse)
-    def show_bulk_actual_fuel_form(request: Request) -> HTMLResponse:
-        return HTMLResponse(_render_bulk_actual_fuel_form(csrf_token=_current_csrf(request)))
 
     @router.get("/kinerja-prediksi", response_class=HTMLResponse)
     def show_prediction_performance() -> HTMLResponse:
@@ -169,204 +145,11 @@ def build_form_router(
             )
         return HTMLResponse(_render_promotion_success(model), status_code=status.HTTP_200_OK)
 
-    @router.post("/bahan-bakar-aktual", response_class=HTMLResponse)
-    async def submit_actual_fuel(request: Request) -> HTMLResponse:
-        form_data = await request.form()
-        submitted = {
-            key: str(value) for key, value in form_data.items() if key != "csrf_token"
-        }
-        try:
-            payload = {key: value for key, value in submitted.items() if key != "operation_id"}
-            validated = ActualFuelRequest.model_validate(payload)
-            record = record_actual_fuel.execute(
-                RecordActualFuelCommand(
-                    operation_id=submitted.get("operation_id", "").strip(),
-                    actual_fuel_liters=validated.actual_fuel_liters,
-                    measurement_source=validated.measurement_source,
-                )
-            )
-        except ValidationError as error:
-            return HTMLResponse(
-                _render_actual_fuel_form(
-                    _current_csrf(request), submitted, translate_validation_errors(error.errors())
-                ),
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            )
-        except DailyOperationValidationError as error:
-            return HTMLResponse(
-                _render_actual_fuel_form(
-                    _current_csrf(request),
-                    submitted,
-                    [{"field": error.field, "message": error.message}],
-                ),
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            )
-        except ActualFuelAlreadyRecordedError:
-            return HTMLResponse(
-                _render_actual_fuel_form(
-                    _current_csrf(request),
-                    submitted,
-                    [
-                        {
-                            "field": "operation_id",
-                            "message": "Bahan bakar aktual untuk operasi ini sudah tercatat.",
-                        }
-                    ],
-                ),
-                status_code=status.HTTP_409_CONFLICT,
-            )
-        except DailyOperationNotFoundError:
-            return HTMLResponse(
-                _render_actual_fuel_form(
-                    _current_csrf(request),
-                    submitted,
-                    [{"field": "operation_id", "message": "ID operasi tidak ditemukan."}],
-                ),
-                status_code=status.HTTP_404_NOT_FOUND,
-            )
-        return HTMLResponse(
-            _render_actual_fuel_success(record), status_code=status.HTTP_201_CREATED
-        )
-
-    @router.post("/bahan-bakar-aktual-massal", response_class=HTMLResponse)
-    async def submit_bulk_actual_fuel(
-        request: Request, file: UploadFile = _UPLOAD_FILE
-    ) -> HTMLResponse:
-        try:
-            result = bulk_actual_fuel.execute(
-                file.filename or "berkas-bbm-aktual", await file.read()
-            )
-        except HistoricalDatasetImportError as error:
-            return HTMLResponse(
-                _render_bulk_actual_fuel_form(_current_csrf(request), error.message),
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            )
-        return HTMLResponse(
-            _render_bulk_actual_fuel_success(result), status_code=status.HTTP_201_CREATED
-        )
-
     return router
 
 
 def _csrf_input(csrf_token: str) -> str:
     return f'<input type="hidden" name="csrf_token" value="{escape(csrf_token)}">'
-
-
-def _render_actual_fuel_form(
-    csrf_token: str,
-    values: dict[str, Any] | None = None,
-    errors: list[dict[str, str]] | None = None,
-) -> str:
-    values = values or {}
-    errors = errors or []
-    error_summary = ""
-    if errors:
-        error_summary = (
-            '<section class="errors" role="alert" aria-labelledby="error-title" tabindex="-1">'
-            '<h2 id="error-title">Bahan bakar aktual belum dapat disimpan</h2><ul>'
-            + "".join(f"<li>{escape(error['message'])}</li>" for error in errors)
-            + "</ul></section>"
-        )
-    return _page(
-        "Catat Bahan Bakar Aktual",
-        f"""
-        <main class="shell">
-          <header><p class="eyebrow">UMPAN BALIK OPERASI</p><h1>Catat Bahan Bakar Aktual</h1>
-          <p class="lead">Masukkan konsumsi BBM setelah operasi selesai. Nilai ini disimpan
-          terpisah dari bahan bakar disiapkan.</p></header>
-          {error_summary}
-          <form method="post" action="/bahan-bakar-aktual" novalidate>
-            {_csrf_input(csrf_token)}
-            <fieldset><legend>Hasil operasi</legend>
-              <div class="field"><label for="operation_id">ID operasi</label>
-                <input id="operation_id" name="operation_id" required value="{escape(str(values.get("operation_id", "")))}">
-                <small>Gunakan ID OPR-... dari operasi yang sudah disimpan.</small></div>
-              <div class="field"><label for="actual_fuel_liters">Bahan bakar aktual</label>
-                <div class="unit-input"><input id="actual_fuel_liters" name="actual_fuel_liters" type="number" min="0.01" step="0.01" required value="{escape(str(values.get("actual_fuel_liters", "")))}"><span>L</span></div></div>
-              <div class="field"><label for="measurement_source">Sumber pengukuran</label>
-                <select id="measurement_source" name="measurement_source">
-                  {_option("manual_entry", "Catatan manual", values.get("measurement_source", "manual_entry"))}
-                  {_option("fuel_meter", "Meter BBM", values.get("measurement_source", "manual_entry"))}
-                  {_option("receipt", "Bukti/nota", values.get("measurement_source", "manual_entry"))}
-                </select></div>
-            </fieldset><button type="submit">Simpan bahan bakar aktual</button></form>
-          <p><a href="/bahan-bakar-aktual-massal">Impor aktual massal</a> · <a href="/kinerja-prediksi">Lihat kinerja prediksi</a> · <a href="/">Kembali</a></p>
-        </main><script>document.querySelector('.errors')?.focus();</script>
-        """,
-    )
-
-
-def _render_actual_fuel_success(record: ActualFuelRecord) -> str:
-    return _page(
-        "Bahan Bakar Aktual Tersimpan",
-        f"""
-        <main class="shell success"><p class="success-mark" aria-hidden="true">✓</p>
-          <p class="eyebrow">UMPAN BALIK TERSIMPAN</p><h1>Bahan bakar aktual tersimpan</h1>
-          <p class="lead">{_format_decimal(record.actual_fuel_liters)} L tercatat untuk <strong>{escape(record.operation_id)}</strong>.</p>
-          <p>Nilai prepared fuel dan prediksi tidak diubah. Status: {escape(record.status.value)}.</p>
-          <p><a class="button-link" href="/bahan-bakar-aktual">Catat operasi lain</a> <a href="/kinerja-prediksi">Lihat kinerja prediksi</a></p>
-        </main>
-        """,
-    )
-
-
-def _render_bulk_actual_fuel_form(csrf_token: str, error: str | None = None) -> str:
-    error_summary = (
-        '<section class="errors" role="alert"><h2>Berkas belum dapat diproses</h2>'
-        f"<p>{escape(error)}</p></section>"
-        if error is not None
-        else ""
-    )
-    return _page(
-        "Impor Bahan Bakar Aktual",
-        f"""
-        <main class="shell"><header><p class="eyebrow">UMPAN BALIK OPERASI</p>
-          <h1>Impor Bahan Bakar Aktual</h1><p class="lead">Unggah CSV atau Excel .xlsx.
-          Baris valid tetap disimpan; ID tidak cocok dan nilai tidak valid dikarantina.</p></header>
-          {error_summary}
-          <p><a href="/api/v1/bulk-actual-fuel/template?format=xlsx">Unduh template Excel</a> · <a href="/api/v1/bulk-actual-fuel/template?format=csv">Unduh template CSV</a></p>
-          <form method="post" action="/bahan-bakar-aktual-massal" enctype="multipart/form-data">
-            {_csrf_input(csrf_token)}
-            <div class="field"><label for="file">Berkas bahan bakar aktual</label>
-            <input id="file" name="file" type="file" accept=".csv,.xlsx" required>
-            <small>Kolom wajib: ID operasi dan bahan bakar aktual (L). Sumber pengukuran opsional.</small></div>
-            <button type="submit">Validasi dan simpan aktual</button></form>
-          <p><a href="/bahan-bakar-aktual">Catat satu operasi</a> · <a href="/">Kembali</a></p>
-        </main>
-        """,
-    )
-
-
-def _render_bulk_actual_fuel_success(result: BulkActualFuelResult) -> str:
-    accepted_rows = "".join(
-        "<tr>"
-        f"<td>{escape(row.source.sheet_name)} {row.source.row_number}</td>"
-        f"<td>{escape(row.actual_fuel.operation_id)}</td>"
-        f"<td>{_format_decimal(row.actual_fuel.actual_fuel_liters)} L</td>"
-        f"<td>{escape(row.actual_fuel.measurement_source.value)}</td></tr>"
-        for row in result.accepted_rows
-    )
-    corrections = "".join(
-        f"<li><strong>{escape(issue.source.sheet_name)} baris {issue.source.row_number}:</strong> "
-        f"{escape('; '.join(reason.message for reason in issue.reasons))}</li>"
-        for issue in result.correction_report
-    )
-    correction_section = (
-        f'<section class="corrections"><h2>Laporan koreksi</h2><ul>{corrections}</ul></section>'
-        if corrections
-        else ""
-    )
-    return _page(
-        "Impor Bahan Bakar Aktual Selesai",
-        f"""
-        <main class="shell success"><p class="success-mark" aria-hidden="true">✓</p>
-          <p class="eyebrow">IMPOR AKTUAL SELESAI</p><h1>Bahan bakar aktual sudah diproses</h1>
-          <p class="lead">{len(result.accepted_rows)} baris valid disimpan. {len(result.correction_report)} baris dikarantina. {result.ignored_blank_row_count} baris kosong diabaikan.</p>
-          <table><thead><tr><th>Baris sumber</th><th>ID operasi</th><th>Aktual</th><th>Sumber</th></tr></thead><tbody>{accepted_rows}</tbody></table>
-          {correction_section}<p><a href="/kinerja-prediksi">Lihat kinerja prediksi</a></p>
-        </main>
-        """,
-    )
 
 
 def _render_prediction_performance(report: Any) -> str:

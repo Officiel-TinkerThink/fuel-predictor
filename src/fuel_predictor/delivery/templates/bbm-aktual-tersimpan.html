@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{{ ui.banner('success', 'Bahan bakar aktual tersimpan', (record.actual_fuel_liters | angka) ~ ' L tercatat untuk ' ~ record.operation_id ~ '. Nilai prepared fuel dan prediksi tidak diubah.') }}
+
+<p><a class="button button--secondary" href="/bahan-bakar-aktual">Catat operasi lain</a>
+   <a class="button button--secondary" href="/kinerja-prediksi">Lihat kinerja prediksi</a></p>
+
+{% endblock %}

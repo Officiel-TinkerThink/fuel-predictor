@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{{ ui.banner('success', 'Bahan bakar aktual sudah diproses', accepted_count ~ ' baris valid disimpan. ' ~ quarantined_count ~ ' baris dikarantina. ' ~ ignored_count ~ ' baris kosong diabaikan.') }}
+
+<section class="card">
+  {% if result.accepted_rows %}
+  <div class="table-wrap">
+    <table>
+      <caption>Baris berhasil disimpan</caption>
+      <thead><tr><th>Baris sumber</th><th>ID operasi</th><th class="numeric">Aktual</th><th>Sumber</th></tr></thead>
+      <tbody>
+        {% for row in result.accepted_rows %}
+        <tr>
+          <td>{{ row.source.sheet_name }} {{ row.source.row_number }}</td>
+          <td>{{ row.actual_fuel.operation_id }}</td>
+          <td class="numeric">{{ row.actual_fuel.actual_fuel_liters | angka }} L</td>
+          <td>{{ row.actual_fuel.measurement_source.value }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ ui.empty_state('Tidak ada baris yang berhasil disimpan.') }}
+  {% endif %}
+</section>
+
+{% if result.correction_report %}
+<section class="card">
+  <h2>Laporan koreksi</h2>
+  <div class="table-wrap">
+    <table>
+      <caption>{{ result.correction_report | length }} baris dikarantina</caption>
+      <thead><tr><th>Baris sumber</th><th>Alasan</th></tr></thead>
+      <tbody>
+        {% for issue in result.correction_report %}
+        <tr>
+          <td>{{ issue.source.sheet_name }} {{ issue.source.row_number }}</td>
+          <td>{{ issue.reasons | map(attribute='message') | join('; ') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<p><a class="button button--secondary" href="/kinerja-prediksi">Lihat kinerja prediksi</a></p>
+
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{{ ui.error_summary(errors, 'Bahan bakar aktual belum dapat disimpan') }}
+
+<section class="card">
+  <form method="post" action="/bahan-bakar-aktual" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <fieldset>
+      <legend>Hasil operasi</legend>
+      {{ ui.text_field('operation_id', 'ID operasi', values.get('operation_id', ''), hint='Gunakan ID OPR-... dari operasi yang sudah disimpan.', errors=errors, required=true) }}
+      {{ ui.number_field('actual_fuel_liters', 'Bahan bakar aktual', 'L', values.get('actual_fuel_liters', ''), errors=errors, required=true, min=0.01) }}
+      {{ ui.select_field('measurement_source', 'Sumber pengukuran', [('manual_entry', 'Catatan manual'), ('fuel_meter', 'Meter BBM'), ('receipt', 'Bukti/nota')], values.get('measurement_source', 'manual_entry'), errors=errors) }}
+    </fieldset>
+    <button type="submit">Simpan bahan bakar aktual</button>
+  </form>
+</section>
+
+<p><a href="/bahan-bakar-aktual-massal">Impor aktual massal</a> · <a href="/kinerja-prediksi">Lihat kinerja prediksi</a></p>
+
+{% endblock %}

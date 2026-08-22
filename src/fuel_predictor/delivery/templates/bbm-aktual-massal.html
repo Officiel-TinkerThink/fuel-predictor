@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{% if error %}
+{{ ui.banner('danger', 'Berkas belum dapat diproses', error) }}
+{% endif %}
+
+<section class="card">
+  <p><a href="/api/v1/bulk-actual-fuel/template?format=xlsx">Unduh template Excel</a> ·
+    <a href="/api/v1/bulk-actual-fuel/template?format=csv">Unduh template CSV</a></p>
+  <form method="post" action="/bahan-bakar-aktual-massal" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {{ ui.file_field('file', 'Berkas bahan bakar aktual', '.csv,.xlsx', hint='Kolom wajib: ID operasi dan bahan bakar aktual (L). Sumber pengukuran opsional.') }}
+    <button type="submit">Validasi dan simpan aktual</button>
+  </form>
+</section>
+
+<p><a href="/bahan-bakar-aktual">Catat satu operasi</a></p>
+
+{% endblock %}

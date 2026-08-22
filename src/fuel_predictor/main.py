@@ -35,6 +35,7 @@ from fuel_predictor.application.model_lifecycle import (
 from fuel_predictor.application.monitoring import GetMonitoringDashboard
 from fuel_predictor.application.routing import RoutingProvider, UnavailableRoutingProvider
 from fuel_predictor.configuration import ApplicationSettings
+from fuel_predictor.delivery.actual_fuel_pages import build_actual_fuel_pages_router
 from fuel_predictor.delivery.authentication import (
     build_authentication_router,
     register_identity_error_handlers,
@@ -231,6 +232,13 @@ def create_app(
         )
     )
     app.include_router(
+        build_actual_fuel_pages_router(
+            record_actual_fuel,
+            bulk_actual_fuel,
+            guard,
+        )
+    )
+    app.include_router(
         build_router(
             create_daily_operation,
             get_daily_operation,
@@ -252,8 +260,6 @@ def create_app(
         build_form_router(
             import_historical_dataset,
             train_baseline_candidate,
-            record_actual_fuel,
-            bulk_actual_fuel,
             get_prediction_performance,
             promote_candidate_model,
             get_candidate_model_comparison,
