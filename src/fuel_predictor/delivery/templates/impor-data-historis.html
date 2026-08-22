@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{% if error %}
+{{ ui.banner('danger', 'Berkas belum dapat diimpor', error) }}
+{% endif %}
+
+<section class="card">
+  {{ ui.banner('info', 'Untuk demo', 'Unduh data contoh yang siap diimpor.', 'Unduh data contoh', '/contoh-data-riwayat.csv') }}
+  <form method="post" action="/impor-data-historis" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {{ ui.file_field('file', 'Berkas historis', '.csv,.xlsx', hint='Kolom wajib: kategori ANGBER, mode aktivitas, jarak total, bahan bakar disiapkan, dan sumber jarak. Kolom jam lifting diterima dengan variasi header.') }}
+    <button type="submit">Validasi dan buat versi dataset</button>
+  </form>
+</section>
+
+<p><a href="/prediksi-operasi-massal">Prediksi operasi massal</a> · <a href="/prediksi">Kembali ke operasi harian</a></p>
+
+{% endblock %}

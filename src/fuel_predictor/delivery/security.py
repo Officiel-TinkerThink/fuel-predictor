@@ -42,6 +42,7 @@ ROUTE_CAPABILITIES: tuple[tuple[str, str, Capability], ...] = (
     ("GET", "/impor-data-historis", Capability.IMPORT_OPERATIONS),
     ("POST", "/impor-data-historis", Capability.IMPORT_OPERATIONS),
     ("GET", "/contoh-data-riwayat.csv", Capability.IMPORT_OPERATIONS),
+    ("POST", "/dataset-versions/*/latih-kandidat-baseline", Capability.MANAGE_MODELS),
     ("GET", "/prediksi-operasi-massal", Capability.IMPORT_OPERATIONS),
     ("POST", "/prediksi-operasi-massal", Capability.IMPORT_OPERATIONS),
     ("GET", "/bahan-bakar-aktual", Capability.RECORD_ACTUAL_FUEL),

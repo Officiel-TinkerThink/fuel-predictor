@@ -5,6 +5,7 @@
 
 <section class="card info-card">
   <p>{{ message }}</p>
+  {% if detail is defined and detail %}<p>{{ detail }}</p>{% endif %}
   <p><a class="button button--secondary" href="{{ back_href }}">{{ back_label }}</a></p>
 </section>
 

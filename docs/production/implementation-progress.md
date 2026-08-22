@@ -17,9 +17,16 @@ session (or a different model) can resume without re-deriving context.
 - The Jinja design system lives in `delivery/rendering.py` (environment, navigation, view-model
   helpers), `delivery/templates/` (`base.html` is the shell, `components.html` has the reusable
   macros), and `delivery/static/` (`app.css`, `app.js`).
-- `delivery/dashboard.py` holds the first three pages built on the new template system: `/`
-  (overview), `/pengguna` (users), `/audit`. Everything else still renders through the original
-  f-string builders in `delivery/form.py` — see "Known gaps" below.
+- Every page is on the Jinja design system now. `delivery/form.py` — the original f-string page
+  builder — is **deleted**; there is nothing left to migrate for Phase 1's UI redesign. Pages are
+  organized by feature area, each a `delivery/<name>_pages.py` module with a `build_<name>_router`
+  factory: `dashboard.py` (overview, users, audit), `prediction_pages.py` (create operation,
+  estimate), `bulk_prediction_pages.py`, `actual_fuel_pages.py` (single + bulk), `monitoring_pages.py`
+  (the three Pemantauan views), `historical_dataset_pages.py` (import, baseline training),
+  `model_governance_pages.py` (governance dashboard, candidate comparison, promotion). Templates
+  live in `delivery/templates/`, one file per page plus the shared `components.html` macros and
+  `pesan.html` for simple message-and-a-link-back pages. See "Known gaps" below for what's still not
+  built at all (not migrated — doesn't exist yet).
 - **Legacy/unprovisioned mode**: until the first user account exists, `SecurityGuard` and the
   middleware treat every request as an authenticated administrator with no CSRF requirement. This
   is what keeps the original 34 MVP tests passing unmodified — they never create a user. A real
@@ -109,20 +116,30 @@ session (or a different model) can resume without re-deriving context.
       still linked to `/pemantauan-operasi` or `/kinerja-prediksi` after those routes were deleted here.
       `test_navigation_links.py` only checks `rendering.NAVIGATION` entries, not arbitrary in-template
       links — when retiring a route, `grep -rn "<old-path>" src/fuel_predictor/` before deleting it.
-- [ ] **Not done**: redesigning model governance/comparison and historical-dataset-import pages onto
-      the Jinja design system. They still render through the f-string functions remaining in
-      `delivery/form.py` (`_render_model_governance`, `_render_candidate_comparison`,
-      `_render_promotion_success`, `_render_training_success`, `_render_training_error`,
-      `_render_import_form`, `_render_import_success`), which live behind auth + capability checks and
-      correctly carry CSRF tokens, but are visually and structurally unchanged from the MVP. After
-      these, `form.py` should be near-empty and worth deleting outright rather than migrating
-      piecemeal — check what's left before starting the next one. Follow the pattern in
-      `prediction_pages.py` / `bulk_prediction_pages.py` / `actual_fuel_pages.py` /
-      `monitoring_pages.py` / `dashboard.py`: a new `delivery/<name>.py` module, matching templates,
-      then delete the old render functions from `form.py` (don't leave both versions in place), remove
-      now-unused params from `build_form_router` and its `main.py` call site, update
-      `rendering.NAVIGATION` and `security.ROUTE_CAPABILITIES` for any path change, and
-      `grep -rn "<old-path>"` across `src/fuel_predictor/` for stale links before deleting a route.
+- [x] Model governance/comparison and historical-dataset-import pages migrated —
+      `delivery/model_governance_pages.py` owns `GET /pengelolaan-model`, `GET
+      /kandidat-model/{id}/perbandingan`, `POST /kandidat-model/{id}/promosikan`;
+      `delivery/historical_dataset_pages.py` owns `GET /impor-data-historis`,
+      `GET /contoh-data-riwayat.csv`, `POST /impor-data-historis`, and
+      `POST /dataset-versions/{id}/latih-kandidat-baseline`. **This was the last of `delivery/form.py`
+      — the file is now deleted entirely**, along with every `_render_*` function and `_page`/`_option`
+      helper it held. New templates: `pengelolaan-model.html`, `kandidat-perbandingan.html`,
+      `model-dipromosikan.html`, `impor-data-historis.html`, `impor-data-historis-selesai.html`,
+      `kandidat-terlatih.html`; `pesan.html` gained an optional `detail` paragraph (guarded with
+      `is defined` since the Jinja environment uses `StrictUndefined`) for the training-error page,
+      which needs both an error message and a separate dataset-version-ID line.
+      **Found while migrating, not by any test**: `POST /dataset-versions/{id}/latih-kandidat-baseline`
+      had no entry in `ROUTE_CAPABILITIES` at all — pre-existing since the route was first added, not
+      introduced by this migration — meaning any authenticated caller regardless of role could train a
+      baseline candidate. Added `MANAGE_MODELS`, matching its JSON-API equivalent
+      (`POST /api/v1/dataset-versions/*/baseline-candidates`). No regression test added for this specific
+      gap yet — the existing role tests don't parametrize over every route, so a systematic
+      "every ROUTE_CAPABILITIES entry has a role-appropriate test" check is still a real gap (see
+      Known gaps).
+      Verified end-to-end live: full demo flow (import → train → governance page shows candidate →
+      comparison page → promote → "Model aktif diperbarui") plus the 404 error page for an unknown
+      candidate, all through the real HTTP flow with cookies and CSRF tokens exactly as a browser
+      would send them.
 - [ ] Nav items the plan names but that don't exist yet, intentionally left out of
       `rendering.NAVIGATION` rather than linked to a placeholder: "Riwayat Prediksi", "Unggah
       Kandidat", "Riwayat dan Rollback", "Integrasi Agen". Add each back to `NAVIGATION` as its page
@@ -130,6 +147,19 @@ session (or a different model) can resume without re-deriving context.
 - [ ] Accessibility/browser-level workflow tests — the design system follows the plan's checklist
       (focus visibility, semantic status, table equivalents for charts) but nothing automated
       verifies it yet (e.g. axe-core or Playwright a11y checks).
+- [ ] Systematic `ROUTE_CAPABILITIES` coverage test. One real gap was found by inspection this way
+      (`POST /dataset-versions/{id}/latih-kandidat-baseline` had no entry at all — see above) and
+      there is no reason to believe it was the only one; nothing currently proves that every entry in
+      `security.ROUTE_CAPABILITIES` matches a route that actually exists, or that every route that
+      exists has an entry. A good next step: a test that walks the FastAPI app's route table and
+      cross-checks it against `ROUTE_CAPABILITIES`.
+
+**Phase 1's UI redesign is complete**: every human-facing page renders through the Jinja design
+system, `delivery/form.py` is deleted, and the three remaining unchecked items above are additive
+(new nav items for pages that don't exist yet, a11y test automation, capability-table coverage
+testing) rather than migration work. What's left in Phase 1 proper before it can be called fully
+done per the plan's own Phase 1 bullet list: accessibility/browser-level workflow tests, and the
+"redesign ... monitoring, and model pages" bullet is now satisfied. Phases 2-6 remain untouched.
 
 ## Phase 2 — External model ingestion (ADR 0009, ADR 0010)
 

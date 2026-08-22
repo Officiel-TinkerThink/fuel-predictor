@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{{ ui.banner('success', 'Dataset versi ' ~ dataset.version ~ ' berhasil dibuat', dataset.valid_operation_count ~ ' operasi valid siap digunakan untuk pelatihan. ' ~ dataset.quarantined_row_count ~ ' baris dikarantina. ' ~ dataset.ignored_blank_row_count ~ ' baris kalender kosong diabaikan.') }}
+
+<section class="card">
+  <dl class="detail-list">
+    <dt>ID versi dataset</dt><dd>{{ dataset.dataset_version_id }}</dd>
+    <dt>Berkas sumber</dt><dd>{{ dataset.source_filename }}</dd>
+    <dt>Operasi valid</dt><dd>{{ dataset.valid_operation_count }}</dd>
+    <dt>Baris dikarantina</dt><dd>{{ dataset.quarantined_row_count }}</dd>
+  </dl>
+</section>
+
+{% if result.correction_report %}
+<section class="card">
+  <h2>Laporan koreksi</h2>
+  <p class="hint">Perbaiki baris berikut lalu unggah kembali berkasnya. Data valid tetap tersimpan
+    dalam versi ini.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Baris sumber</th><th>Alasan</th></tr></thead>
+      <tbody>
+        {% for issue in result.correction_report %}
+        <tr>
+          <td>{{ issue.source.sheet_name }} {{ issue.source.row_number }}</td>
+          <td>{{ issue.reasons | map(attribute='message') | join('; ') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if dataset.valid_operation_count >= 2 %}
+<section class="card">
+  <h2>Langkah berikutnya: latih kandidat baseline</h2>
+  <p>Latih secara manual memakai {{ dataset.valid_operation_count }} operasi valid pada dataset ini.</p>
+  <form method="post" action="/dataset-versions/{{ dataset.dataset_version_id }}/latih-kandidat-baseline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">Latih kandidat baseline secara manual</button>
+  </form>
+</section>
+{% else %}
+<section class="card">
+  <h2>Belum dapat melatih kandidat baseline</h2>
+  <p>Tambahkan sedikitnya dua operasi valid, lalu impor kembali sebagai versi dataset baru.</p>
+</section>
+{% endif %}
+
+<p><a class="button button--secondary" href="/impor-data-historis">Impor data lain</a></p>
+
+{% endblock %}

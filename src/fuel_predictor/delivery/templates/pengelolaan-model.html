@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{% if dashboard.retraining_recommended %}
+{{ ui.banner('warning', 'Perlu ditinjau', dashboard.recommendation) }}
+{% else %}
+{{ ui.banner('info', 'Rekomendasi model', dashboard.recommendation) }}
+{% endif %}
+
+<section class="card">
+  <h2>Model aktif</h2>
+  <dl class="detail-list">
+    <dt>Versi</dt>
+    <dd>{% if dashboard.active_model %}<strong>{{ dashboard.active_model.model_version_id }}</strong>{% else %}Belum ada model aktif{% endif %}</dd>
+    <dt>MAE aktif</dt>
+    <dd>{% if dashboard.active_performance and dashboard.active_performance.mae_liters is not none %}{{ dashboard.active_performance.mae_liters | angka }} L{% else %}Belum cukup data{% endif %}</dd>
+  </dl>
+</section>
+
+<section class="card">
+  <h2>Kandidat menunggu keputusan</h2>
+  {% if dashboard.candidate_models %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Model</th><th>Dataset</th><th>Evaluasi</th><th>Keputusan</th></tr></thead>
+      <tbody>
+        {% for candidate in dashboard.candidate_models %}
+        <tr>
+          <td>{{ candidate.model_version_id }}</td>
+          <td>{{ candidate.dataset_version_id }}</td>
+          <td><a href="/kandidat-model/{{ candidate.model_version_id }}/perbandingan">Bandingkan</a></td>
+          <td>
+            <form method="post" action="/kandidat-model/{{ candidate.model_version_id }}/promosikan">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit">Promosikan manual</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ ui.empty_state('Belum ada kandidat yang menunggu tinjauan.') }}
+  {% endif %}
+  <p class="hint">Promosi tidak pernah dilakukan otomatis. Promosi baru berlaku setelah tombol
+    tindakan manual dipilih.</p>
+</section>
+
+{% endblock %}

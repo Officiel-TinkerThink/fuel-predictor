@@ -42,8 +42,11 @@ from fuel_predictor.delivery.authentication import (
 )
 from fuel_predictor.delivery.bulk_prediction_pages import build_bulk_prediction_pages_router
 from fuel_predictor.delivery.dashboard import build_dashboard_router
-from fuel_predictor.delivery.form import build_form_router
+from fuel_predictor.delivery.historical_dataset_pages import (
+    build_historical_dataset_pages_router,
+)
 from fuel_predictor.delivery.http import build_router, register_error_handlers
+from fuel_predictor.delivery.model_governance_pages import build_model_governance_pages_router
 from fuel_predictor.delivery.monitoring_pages import build_monitoring_pages_router
 from fuel_predictor.delivery.prediction_pages import build_prediction_pages_router
 from fuel_predictor.delivery.rendering import STATIC_DIRECTORY
@@ -258,9 +261,14 @@ def create_app(
         )
     )
     app.include_router(
-        build_form_router(
+        build_historical_dataset_pages_router(
             import_historical_dataset,
             train_baseline_candidate,
+            guard,
+        )
+    )
+    app.include_router(
+        build_model_governance_pages_router(
             promote_candidate_model,
             get_candidate_model_comparison,
             get_model_governance_dashboard,

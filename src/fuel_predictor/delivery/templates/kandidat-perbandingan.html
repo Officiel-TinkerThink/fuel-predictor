@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+<section class="card">
+  <dl class="detail-list">
+    <dt>Kandidat</dt><dd>{{ comparison.candidate.model_version_id }}</dd>
+    <dt>MAE kandidat</dt>
+    <dd>{% if comparison.candidate_overall.mae_liters is not none %}{{ comparison.candidate_overall.mae_liters | angka }} L{% else %}Belum cukup data{% endif %}</dd>
+    <dt>MAE model aktif</dt>
+    <dd>
+      {% if comparison.active_overall is not none and comparison.active_overall.mae_liters is not none %}
+        {{ comparison.active_overall.mae_liters | angka }} L
+      {% elif comparison.active_model is none %}
+        Belum ada model aktif
+      {% else %}
+        Belum cukup data
+      {% endif %}
+    </dd>
+  </dl>
+</section>
+
+<section class="card">
+  <h2>MAE per kategori ANGBER</h2>
+  {% if comparison.by_vehicle_category %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Kategori</th><th class="numeric">Kandidat</th><th class="numeric">Aktif</th></tr></thead>
+      <tbody>
+        {% for item in comparison.by_vehicle_category %}
+        <tr>
+          <td>{{ item.vehicle_category.value }}</td>
+          <td class="numeric">{{ item.candidate.mae_liters | angka if item.candidate.mae_liters is not none else 'Belum cukup data' }}</td>
+          <td class="numeric">{{ item.active.mae_liters | angka if item.active and item.active.mae_liters is not none else '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ ui.empty_state('Belum ada bahan bakar aktual untuk evaluasi.') }}
+  {% endif %}
+</section>
+
+<section class="card">
+  <p class="hint">Metrik dihitung ulang pada operasi yang memiliki bahan bakar aktual. Tindakan ini
+    tidak mengubah model aktif.</p>
+  <form method="post" action="/kandidat-model/{{ comparison.candidate.model_version_id }}/promosikan">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">Promosikan kandidat secara manual</button>
+  </form>
+</section>
+
+<p><a href="/pengelolaan-model">Kembali ke pengelolaan model</a></p>
+
+{% endblock %}

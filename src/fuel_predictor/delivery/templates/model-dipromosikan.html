@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{{ ui.banner('success', 'Model aktif diperbarui', model.model_version_id ~ ' kini menjadi model aktif. Riwayat model aktif sebelumnya tetap tersimpan.') }}
+
+<p><a class="button button--secondary" href="/">Kembali ke ringkasan</a>
+   <a class="button button--secondary" href="/pengelolaan-model">Kelola model</a></p>
+
+{% endblock %}
