@@ -411,6 +411,16 @@ rollback yet — see "Not done" below for exactly where it stops.
       Retention policy is a correctness concern here, not just disk hygiene (ADR 0010): the retention
       job must never delete the artefact rollback would target.
 
+**Phase 2 is functionally complete.** The external model pipeline runs end to end and has been
+verified live against a running server: a model trained with scikit-learn is packaged by this repo's
+own packager, uploaded through the web UI, validated through all nine plan steps (bounded extraction,
+checksum verification, manifest/statistics/smoke-test schema validation, isolated load, smoke tests
+replayed against the real model, policy evaluation), retained on disk, and recorded in history — with
+a rejected upload likewise recorded, reason intact. Prediction serves from the in-process holder once
+a package is activated, falling back to the MLflow path until then per ADR 0011.
+
+The three remaining items above are genuinely optional or small UI wiring, not missing capability.
+
 ## Phase 3 — Operational monitoring
 
 Not started. Needs: scheduled `python -m fuel_predictor monitor` idempotent command, stored report
