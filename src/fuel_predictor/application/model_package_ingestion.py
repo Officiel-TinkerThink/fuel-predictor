@@ -112,9 +112,12 @@ class ManifestSchemaValidator(Protocol):
 # duplicated a field the manifest already carries authoritatively (the ordered
 # feature schema, and every member's checksum). See the amendment note in
 # docs/production/self-service-production-plan.md.
-_REQUIRED_PACKAGE_MEMBERS = frozenset(
-    {"manifest.json", "reference-statistics.json", "smoke-tests.json"}
-)
+# `manifest.json` is deliberately absent: it cannot carry a checksum of the
+# bytes that contain that very checksum, which is also why
+# `verify_member_checksums` excludes it. Requiring one here while excluding it
+# there made a well-formed package impossible to build — caught by the
+# end-to-end flow test, not by either unit test on its own.
+_REQUIRED_PACKAGE_MEMBERS = frozenset({"reference-statistics.json", "smoke-tests.json"})
 
 
 @dataclass(frozen=True, slots=True)

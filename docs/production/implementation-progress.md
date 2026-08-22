@@ -333,10 +333,24 @@ rollback yet — see "Not done" below for exactly where it stops.
       a pipeline carrying a user-defined callable — code the package brought with it, which is the
       case that actually matters — and asserts the fixture really is untrusted before testing that it
       is refused.
+- [x] End-to-end validation flow — `application/model_package_validation.py`'s
+      `ValidateModelPackage` runs plan steps 1-9 in order. **The order is itself a safety property**:
+      cheap structural checks before parsing, parsing before loading, and the artefact loaded only
+      after its bytes are checksum-verified against an already-validated manifest. A flow that loaded
+      first would execute unverified bytes, which is the exact risk ADR 0009 restricts formats to
+      avoid — asserted directly by a test that corrupts a checksum and expects rejection *before* any
+      load happens. Failing the promotion policy is a verdict, not a validation error: a merely-worse
+      candidate still validates so the operator can see the comparison; only malformed or dishonest
+      packages are refused.
+      Tests: `tests/test_model_package_validation_flow.py`, 6 cases building a real ZIP around a
+      genuinely trained model.
+      **This integration test caught a real contradiction the unit tests could not**:
+      `_REQUIRED_PACKAGE_MEMBERS` demanded a checksum for `manifest.json` while
+      `verify_member_checksums` deliberately excluded it (it cannot checksum itself), making a
+      well-formed package impossible to construct. Each unit test passed in isolation because each
+      only ever saw one side of the contradiction.
 - [ ] **Not done** — the remaining Phase 2 scope, roughly in dependency order:
-      1. Wiring the validated-package pieces together into one ingestion flow (they exist
-         individually but nothing calls them in sequence yet).
-      2. The persistence + audit record for a completed validation (plan step 9).
+      1. The persistence + audit record for a completed validation (plan step 9).
       3. The production upload endpoint and its UI (the "Unggah Kandidat" and "Riwayat dan Rollback"
          nav items still deliberately absent from `rendering.NAVIGATION`), plus optional package
          signature verification.
@@ -369,7 +383,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (185 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (191 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref
