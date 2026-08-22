@@ -10,6 +10,7 @@ SCHEMA_DIRECTORY = Path(__file__).resolve().parents[3] / "schemas" / "model-pack
 
 MANIFEST_SCHEMA = SCHEMA_DIRECTORY / "manifest.schema.json"
 SMOKE_TESTS_SCHEMA = SCHEMA_DIRECTORY / "smoke-tests.schema.json"
+REFERENCE_STATISTICS_SCHEMA = SCHEMA_DIRECTORY / "reference-statistics.schema.json"
 
 
 class JsonSchemaValidator:

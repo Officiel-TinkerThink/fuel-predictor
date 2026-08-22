@@ -105,17 +105,23 @@ eligible for production.
 
 ### Model package contract
 
-Production accepts a documented archive, for example:
+Production accepts a documented archive:
 
 ```text
 fuel-model-2026.08.22.1.zip
 +-- model.onnx or model.skops
 +-- manifest.json
-+-- input-schema.json
 +-- reference-statistics.json
 +-- smoke-tests.json
-+-- checksum.sha256
 ```
+
+**Amended during implementation.** This list originally also showed
+`input-schema.json` and `checksum.sha256`. Both were dropped because each duplicated a field the
+manifest is already required to carry — the ordered feature schema, and the checksum of every
+package member. Two sources for one fact can disagree, and a package whose `input-schema.json`
+contradicted its own manifest would have no correct interpretation. The manifest is the single
+authority for both, and `manifest.json` is itself excluded from `package_checksums` because it
+cannot carry a checksum of the bytes containing that checksum.
 
 The manifest must include at least:
 

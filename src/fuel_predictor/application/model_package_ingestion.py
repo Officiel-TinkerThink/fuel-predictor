@@ -17,12 +17,16 @@ from hmac import compare_digest
 from typing import Any, Protocol
 
 from fuel_predictor.domain.model_package import (
+    CategoricalFeatureSummary,
     FeatureSchemaEntry,
+    FeatureSummary,
     ManifestCategoryMetrics,
     ManifestMetrics,
     ModelFormat,
     ModelPackageManifest,
     ModelPackageValidationError,
+    NumericFeatureSummary,
+    ReferenceStatistics,
     SmokeTestCase,
     TargetDefinition,
 )
@@ -103,8 +107,13 @@ class ManifestSchemaValidator(Protocol):
     def validate(self, raw_manifest: Mapping[str, Any]) -> Sequence[str]: ...
 
 
+# `input-schema.json` and `checksum.sha256` appeared in the production plan's
+# original illustrative file list and were dropped during implementation: each
+# duplicated a field the manifest already carries authoritatively (the ordered
+# feature schema, and every member's checksum). See the amendment note in
+# docs/production/self-service-production-plan.md.
 _REQUIRED_PACKAGE_MEMBERS = frozenset(
-    {"manifest.json", "input-schema.json", "reference-statistics.json", "smoke-tests.json"}
+    {"manifest.json", "reference-statistics.json", "smoke-tests.json"}
 )
 
 
@@ -192,6 +201,64 @@ class ParseSmokeTests:
             )
             for case in raw["cases"]
         )
+
+
+@dataclass(frozen=True, slots=True)
+class ParseReferenceStatistics:
+    """Validate and load a package's `reference-statistics.json`.
+
+    Also checks the summary against the manifest's feature schema: a baseline
+    that describes different features than the model consumes cannot produce a
+    meaningful drift verdict, and silently computing one anyway would be worse
+    than refusing.
+    """
+
+    schema_validator: ManifestSchemaValidator
+
+    def execute(
+        self, raw: Mapping[str, Any], manifest: ModelPackageManifest
+    ) -> ReferenceStatistics:
+        errors = [
+            ("reference-statistics.json", message)
+            for message in self.schema_validator.validate(raw)
+        ]
+        if errors:
+            raise ModelPackageValidationError(errors)
+
+        declared = set(manifest.feature_names_in_order())
+        summarised = set(raw["features"])
+        for name in sorted(declared - summarised):
+            errors.append(
+                ("reference-statistics.json", f"Fitur '{name}' tidak memiliki statistik referensi.")
+            )
+        for name in sorted(summarised - declared):
+            errors.append(
+                (
+                    "reference-statistics.json",
+                    f"Statistik referensi memuat fitur '{name}' yang tidak ada dalam manifest.",
+                )
+            )
+        if errors:
+            raise ModelPackageValidationError(errors)
+
+        return ReferenceStatistics(
+            row_count=raw["row_count"],
+            features={
+                name: _feature_summary(summary) for name, summary in raw["features"].items()
+            },
+        )
+
+
+def _feature_summary(raw: Mapping[str, Any]) -> FeatureSummary:
+    if raw["kind"] == "numeric":
+        return NumericFeatureSummary(
+            minimum=raw["minimum"],
+            maximum=raw["maximum"],
+            mean=raw["mean"],
+            standard_deviation=raw["standard_deviation"],
+            quantiles=dict(raw.get("quantiles", {})),
+        )
+    return CategoricalFeatureSummary(frequencies=dict(raw["frequencies"]))
 
 
 @dataclass(frozen=True, slots=True)

@@ -7,65 +7,22 @@ from fuel_predictor.domain.model_package import ModelFormat, ModelPackageValidat
 from fuel_predictor.infrastructure.jsonschema_manifest_validator import (
     JsonSchemaManifestValidator,
 )
-
-_FEATURE_CONTRACT_VERSION = "baseline-v1"
-_RUNTIME_VERSION = "onnxruntime-1.20"
+from tests.model_package_fixtures import (
+    FEATURE_CONTRACT_VERSION,
+    RUNTIME_VERSION,
+    valid_manifest,
+)
 
 
 def _valid_manifest(**overrides: Any) -> dict[str, Any]:
-    manifest: dict[str, Any] = {
-        "model_version": "fuel-model-2026.08.22.1",
-        "model_format": "onnx",
-        "runtime_compatibility_version": _RUNTIME_VERSION,
-        "target": {"name": "prepared_fuel_liters", "unit": "liters"},
-        "feature_contract_version": _FEATURE_CONTRACT_VERSION,
-        "feature_schema": [
-            {"name": "vehicle_category", "type": "string"},
-            {"name": "activity_mode", "type": "string"},
-            {"name": "distance_source", "type": "string"},
-            {"name": "total_distance_km", "type": "number"},
-            {"name": "lifting_hours", "type": "number"},
-        ],
-        "training_dataset_version": "DSV-000001",
-        "trained_at": "2026-08-22T00:00:00+00:00",
-        "source_revision": "a1b2c3d4",
-        "metrics": {
-            "overall": {
-                "mae": 3.2,
-                "rmse": 4.1,
-                "smape_percent": 12.5,
-                "interval_coverage_percent": 91.0,
-            },
-            "by_category": [
-                {
-                    "category": "ANGBER",
-                    "mae": 3.2,
-                    "rmse": 4.1,
-                    "smape_percent": 12.5,
-                    "interval_coverage_percent": 91.0,
-                }
-            ],
-        },
-        "test_set_size": 120,
-        "model_size_bytes": 45_000,
-        "expected_memory_bytes": 200_000_000,
-        "package_checksums": {
-            "model.onnx": "a" * 64,
-            "manifest.json": "b" * 64,
-            "input-schema.json": "c" * 64,
-            "reference-statistics.json": "d" * 64,
-            "smoke-tests.json": "e" * 64,
-        },
-    }
-    manifest.update(overrides)
-    return manifest
+    return valid_manifest(**overrides)
 
 
 def _parser(**overrides: Any) -> ParseModelPackageManifest:
     defaults: dict[str, Any] = {
         "schema_validator": JsonSchemaManifestValidator(),
-        "supported_feature_contract_versions": frozenset({_FEATURE_CONTRACT_VERSION}),
-        "supported_runtime_compatibility_versions": frozenset({_RUNTIME_VERSION}),
+        "supported_feature_contract_versions": frozenset({FEATURE_CONTRACT_VERSION}),
+        "supported_runtime_compatibility_versions": frozenset({RUNTIME_VERSION}),
     }
     defaults.update(overrides)
     return ParseModelPackageManifest(**defaults)

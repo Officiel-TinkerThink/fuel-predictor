@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fuel-predictor.internal/schemas/model-package/reference-statistics.schema.json",
+  "title": "Model package reference statistics",
+  "description": "Per-feature distribution summary of the training data, used as the drift baseline. This exists because a model trained outside production has no in-database dataset for production to compare against; without it, drift for an externally-trained model could not be computed at all.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["row_count", "features"],
+  "properties": {
+    "row_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Rows the summary was computed from. Surfaced next to any drift verdict so a comparison against a small baseline is not read as confidently as one against a large baseline."
+    },
+    "features": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "Keyed by feature name; each entry must match the feature's declared type in the manifest.",
+      "additionalProperties": {
+        "oneOf": [
+          { "$ref": "#/$defs/numericSummary" },
+          { "$ref": "#/$defs/categoricalSummary" }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "numericSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "minimum", "maximum", "mean", "standard_deviation"],
+      "properties": {
+        "kind": { "const": "numeric" },
+        "minimum": { "type": "number" },
+        "maximum": { "type": "number" },
+        "mean": { "type": "number" },
+        "standard_deviation": { "type": "number", "minimum": 0 },
+        "quantiles": {
+          "type": "object",
+          "additionalProperties": { "type": "number" },
+          "description": "Optional; keyed by quantile as a decimal string, e.g. \"0.5\"."
+        }
+      }
+    },
+    "categoricalSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "frequencies"],
+      "properties": {
+        "kind": { "const": "categorical" },
+        "frequencies": {
+          "type": "object",
+          "minProperties": 1,
+          "description": "Observed level to its share of rows, each between 0 and 1.",
+          "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    }
+  }
+}

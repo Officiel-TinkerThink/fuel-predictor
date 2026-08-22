@@ -275,19 +275,35 @@ rollback yet — see "Not done" below for exactly where it stops.
       that is precisely the situation someone reconstructs later. An empty reason and an unknown
       target are both refused before anything is recorded.
       Tests: 4 cases in `tests/test_model_activation.py`.
+- [x] Reference statistics — `schemas/model-package/reference-statistics.schema.json` and
+      `ParseReferenceStatistics`. This is the drift baseline: a model trained outside production has
+      no in-database dataset to compare against, so without it drift for an externally-trained model
+      could not be computed at all. `row_count` travels with the summary so a verdict from a small
+      baseline is never presented as confidently as one from a large baseline. Validation also checks
+      the summary against the manifest's feature schema in both directions — a baseline describing
+      different features than the model consumes cannot produce a meaningful verdict, and silently
+      computing one anyway would be worse than refusing.
+      Tests: `tests/test_model_package_reference_statistics.py`, 8 cases.
+- [x] **Plan amended**: `input-schema.json` and `checksum.sha256` dropped from the package format.
+      The plan's file list was explicitly illustrative ("for example"), and each of those two
+      duplicated a field the manifest is *required* to carry — the ordered feature schema, and every
+      member's checksum. Two sources for one fact can disagree, and a package whose
+      `input-schema.json` contradicted its own manifest would have no correct interpretation. The
+      amendment and its reasoning are recorded in the plan itself, next to the archive listing.
+- [x] Test fixtures extracted to `tests/model_package_fixtures.py` rather than imported across test
+      modules, so editing one test's fixture to suit itself cannot silently change another's meaning.
 - [ ] **Not done** — the remaining Phase 2 scope, roughly in dependency order:
       1. Real `ModelArtifactLoader` (isolated ONNX/skops loading — needs `onnxruntime`/`skops` as new
-         dependencies, not added yet), `SmokeTestRunner`, and `MemoryProbe`.
-      2. `input-schema.json` and `reference-statistics.json` schemas and their validation, mirroring
-         what `manifest.schema.json` and `smoke-tests.schema.json` already do.
-      4. Metric-vs-policy comparison (plan validation step 8) and the persistence + audit record
+         dependencies, not added yet) and `MemoryProbe`. `SmokeTestRunner` is done —
+         `DeterministicSmokeTestRunner` works against any loaded model.
+      2. Metric-vs-policy comparison (plan validation step 8) and the persistence + audit record
          (step 9).
-      5. The production upload endpoint and its UI (the "Unggah Kandidat" and "Riwayat dan Rollback"
+      3. The production upload endpoint and its UI (the "Unggah Kandidat" and "Riwayat dan Rollback"
          nav items still deliberately absent from `rendering.NAVIGATION`), plus optional package
          signature verification.
-      6. The external packager tool itself, which lives in this repo so the package contract has one
+      4. The external packager tool itself, which lives in this repo so the package contract has one
          implementation (ADR 0009).
-      7. Wiring `ActiveModelHolder` into `GenerateFuelPrediction` so prediction reads the holder
+      5. Wiring `ActiveModelHolder` into `GenerateFuelPrediction` so prediction reads the holder
          instead of loading through `BaselineModelStore` per request — until that happens the holder
          is built and tested but not yet on the serving path.
       Retention policy is a correctness concern here, not just disk hygiene (ADR 0010): the retention
@@ -314,7 +330,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (153 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (161 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref

@@ -67,6 +67,38 @@ class ModelPackageManifest:
 
 
 @dataclass(frozen=True, slots=True)
+class NumericFeatureSummary:
+    minimum: float
+    maximum: float
+    mean: float
+    standard_deviation: float
+    quantiles: dict[str, float]
+
+
+@dataclass(frozen=True, slots=True)
+class CategoricalFeatureSummary:
+    frequencies: dict[str, float]
+
+
+FeatureSummary = NumericFeatureSummary | CategoricalFeatureSummary
+
+
+@dataclass(frozen=True, slots=True)
+class ReferenceStatistics:
+    """Drift baseline shipped with the package.
+
+    A model trained outside production has no in-database dataset to compare
+    against, so without this the drift view would have nothing to be a
+    baseline. `row_count` travels with the summary so a verdict computed
+    against a small baseline is never presented as confidently as one
+    computed against a large baseline.
+    """
+
+    row_count: int
+    features: dict[str, FeatureSummary]
+
+
+@dataclass(frozen=True, slots=True)
 class SmokeTestCase:
     """One deterministic case a package asserts about its own model.
 
