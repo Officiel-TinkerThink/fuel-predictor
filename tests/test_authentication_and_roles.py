@@ -144,3 +144,38 @@ def test_authentication_and_privileged_actions_are_audited(tmp_path: Path) -> No
     for record in audit.json()["records"]:
         assert record["occurred_at"]
         assert "outcome" in record
+
+
+def test_legacy_form_pages_carry_a_working_csrf_token_once_provisioned(tmp_path: Path) -> None:
+    """Regression test: the original f-string-rendered forms (form.py) never
+    included a csrf_token field. Once a system is provisioned (an admin
+    exists), the session middleware enforces CSRF on every form POST, so
+    without this fix every one of those forms became permanently unusable.
+    """
+    with _app(tmp_path) as client:
+        _sign_in(client, *_ADMIN)
+        page = client.get("/prediksi")
+        token = _csrf_token(page.text)
+
+        with_token = client.post(
+            "/operasi-harian",
+            data={
+                "vehicle_category": "ANGBER",
+                "activity_mode": "transport",
+                "total_distance_km": "20",
+                "distance_source": "manual",
+                "csrf_token": token,
+            },
+        )
+        without_token = client.post(
+            "/operasi-harian",
+            data={
+                "vehicle_category": "ANGBER",
+                "activity_mode": "transport",
+                "total_distance_km": "20",
+                "distance_source": "manual",
+            },
+        )
+
+    assert with_token.status_code == 201
+    assert without_token.status_code == 403

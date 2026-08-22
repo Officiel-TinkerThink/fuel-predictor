@@ -49,6 +49,7 @@ from fuel_predictor.delivery.http import (
     execute_create,
     translate_validation_errors,
 )
+from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.actual_fuel import ActualFuelRecord
 from fuel_predictor.domain.daily_operation import DailyOperation, DailyOperationValidationError
 from fuel_predictor.domain.prediction import FuelPrediction, ModelVersion
@@ -70,16 +71,21 @@ def build_form_router(
     get_candidate_model_comparison: GetCandidateModelComparison,
     get_model_governance_dashboard: GetModelGovernanceDashboard,
     get_monitoring_dashboard: GetMonitoringDashboard,
+    guard: SecurityGuard,
 ) -> APIRouter:
     router = APIRouter()
 
+    def _current_csrf(request: Request) -> str:
+        caller = guard.caller_or_none(request)
+        return caller.csrf_token if caller is not None else ""
+
     @router.get("/prediksi", response_class=HTMLResponse)
-    def show_form() -> HTMLResponse:
-        return HTMLResponse(_render_form({}, []))
+    def show_form(request: Request) -> HTMLResponse:
+        return HTMLResponse(_render_form({}, [], _current_csrf(request)))
 
     @router.get("/impor-data-historis", response_class=HTMLResponse)
-    def show_import_form() -> HTMLResponse:
-        return HTMLResponse(_render_import_form())
+    def show_import_form(request: Request) -> HTMLResponse:
+        return HTMLResponse(_render_import_form(_current_csrf(request)))
 
     @router.get("/contoh-data-riwayat.csv")
     def download_demo_historical_data() -> Response:
@@ -90,31 +96,35 @@ def build_form_router(
         )
 
     @router.get("/prediksi-operasi-massal", response_class=HTMLResponse)
-    def show_bulk_prediction_form() -> HTMLResponse:
-        return HTMLResponse(_render_bulk_prediction_form())
+    def show_bulk_prediction_form(request: Request) -> HTMLResponse:
+        return HTMLResponse(_render_bulk_prediction_form(csrf_token=_current_csrf(request)))
 
     @router.get("/bahan-bakar-aktual", response_class=HTMLResponse)
-    def show_actual_fuel_form() -> HTMLResponse:
-        return HTMLResponse(_render_actual_fuel_form())
+    def show_actual_fuel_form(request: Request) -> HTMLResponse:
+        return HTMLResponse(_render_actual_fuel_form(csrf_token=_current_csrf(request)))
 
     @router.get("/bahan-bakar-aktual-massal", response_class=HTMLResponse)
-    def show_bulk_actual_fuel_form() -> HTMLResponse:
-        return HTMLResponse(_render_bulk_actual_fuel_form())
+    def show_bulk_actual_fuel_form(request: Request) -> HTMLResponse:
+        return HTMLResponse(_render_bulk_actual_fuel_form(csrf_token=_current_csrf(request)))
 
     @router.get("/kinerja-prediksi", response_class=HTMLResponse)
     def show_prediction_performance() -> HTMLResponse:
         return HTMLResponse(_render_prediction_performance(get_prediction_performance.execute()))
 
     @router.get("/pengelolaan-model", response_class=HTMLResponse)
-    def show_model_governance() -> HTMLResponse:
-        return HTMLResponse(_render_model_governance(get_model_governance_dashboard.execute()))
+    def show_model_governance(request: Request) -> HTMLResponse:
+        return HTMLResponse(
+            _render_model_governance(
+                get_model_governance_dashboard.execute(), _current_csrf(request)
+            )
+        )
 
     @router.get("/pemantauan-operasi", response_class=HTMLResponse)
     def show_monitoring_dashboard() -> HTMLResponse:
         return HTMLResponse(_render_monitoring_dashboard(get_monitoring_dashboard.execute()))
 
     @router.get("/kandidat-model/{model_version_id}/perbandingan", response_class=HTMLResponse)
-    def show_candidate_comparison(model_version_id: str) -> HTMLResponse:
+    def show_candidate_comparison(model_version_id: str, request: Request) -> HTMLResponse:
         try:
             comparison = get_candidate_model_comparison.execute(model_version_id)
         except CandidateModelNotFoundError:
@@ -125,12 +135,14 @@ def build_form_router(
                 ),
                 status_code=status.HTTP_404_NOT_FOUND,
             )
-        return HTMLResponse(_render_candidate_comparison(comparison))
+        return HTMLResponse(_render_candidate_comparison(comparison, _current_csrf(request)))
 
     @router.post("/operasi-harian", response_class=HTMLResponse)
     async def submit_form(request: Request) -> HTMLResponse:
         form_data = await request.form()
-        submitted: dict[str, Any] = {key: str(value) for key, value in form_data.items()}
+        submitted: dict[str, Any] = {
+            key: str(value) for key, value in form_data.items() if key != "csrf_token"
+        }
         submitted_stops = [
             str(value).strip() for value in form_data.getlist("stop_sequence") if str(value).strip()
         ]
@@ -145,33 +157,36 @@ def build_form_router(
         except ValidationError as error:
             errors = translate_validation_errors(error.errors())
             return HTMLResponse(
-                _render_form(submitted, errors),
+                _render_form(submitted, errors, _current_csrf(request)),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         except DailyOperationValidationError as error:
             errors = [{"field": error.field, "message": error.message}]
             return HTMLResponse(
-                _render_form(submitted, errors),
+                _render_form(submitted, errors, _current_csrf(request)),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
 
         return HTMLResponse(
-            _render_success(operation),
+            _render_success(operation, _current_csrf(request)),
             status_code=status.HTTP_201_CREATED,
         )
 
     @router.post("/impor-data-historis", response_class=HTMLResponse)
-    async def submit_import(file: UploadFile = _UPLOAD_FILE) -> HTMLResponse:
+    async def submit_import(request: Request, file: UploadFile = _UPLOAD_FILE) -> HTMLResponse:
         try:
             result = import_historical_dataset.execute(
                 file.filename or "berkas-impor", await file.read()
             )
         except HistoricalDatasetImportError as error:
             return HTMLResponse(
-                _render_import_form(error.message),
+                _render_import_form(_current_csrf(request), error.message),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
-        return HTMLResponse(_render_import_success(result), status_code=status.HTTP_201_CREATED)
+        return HTMLResponse(
+            _render_import_success(result, _current_csrf(request)),
+            status_code=status.HTTP_201_CREATED,
+        )
 
     @router.post(
         "/dataset-versions/{dataset_version_id}/latih-kandidat-baseline",
@@ -210,20 +225,23 @@ def build_form_router(
         return HTMLResponse(_render_promotion_success(model), status_code=status.HTTP_200_OK)
 
     @router.post("/prediksi-operasi-massal", response_class=HTMLResponse)
-    async def submit_bulk_prediction(file: UploadFile = _UPLOAD_FILE) -> HTMLResponse:
+    async def submit_bulk_prediction(
+        request: Request, file: UploadFile = _UPLOAD_FILE
+    ) -> HTMLResponse:
         try:
             result = bulk_operation_prediction.execute(
                 file.filename or "berkas-prediksi-operasi", await file.read()
             )
         except HistoricalDatasetImportError as error:
             return HTMLResponse(
-                _render_bulk_prediction_form(error.message),
+                _render_bulk_prediction_form(_current_csrf(request), error.message),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         except BaselineModelNotFoundError:
             return HTMLResponse(
                 _render_bulk_prediction_form(
-                    "Latih kandidat baseline dari dataset tervalidasi sebelum membuat prediksi massal."
+                    _current_csrf(request),
+                    "Latih kandidat baseline dari dataset tervalidasi sebelum membuat prediksi massal.",
                 ),
                 status_code=status.HTTP_409_CONFLICT,
             )
@@ -234,7 +252,9 @@ def build_form_router(
     @router.post("/bahan-bakar-aktual", response_class=HTMLResponse)
     async def submit_actual_fuel(request: Request) -> HTMLResponse:
         form_data = await request.form()
-        submitted = {key: str(value) for key, value in form_data.items()}
+        submitted = {
+            key: str(value) for key, value in form_data.items() if key != "csrf_token"
+        }
         try:
             payload = {key: value for key, value in submitted.items() if key != "operation_id"}
             validated = ActualFuelRequest.model_validate(payload)
@@ -247,19 +267,24 @@ def build_form_router(
             )
         except ValidationError as error:
             return HTMLResponse(
-                _render_actual_fuel_form(submitted, translate_validation_errors(error.errors())),
+                _render_actual_fuel_form(
+                    _current_csrf(request), submitted, translate_validation_errors(error.errors())
+                ),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         except DailyOperationValidationError as error:
             return HTMLResponse(
                 _render_actual_fuel_form(
-                    submitted, [{"field": error.field, "message": error.message}]
+                    _current_csrf(request),
+                    submitted,
+                    [{"field": error.field, "message": error.message}],
                 ),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         except ActualFuelAlreadyRecordedError:
             return HTMLResponse(
                 _render_actual_fuel_form(
+                    _current_csrf(request),
                     submitted,
                     [
                         {
@@ -273,7 +298,9 @@ def build_form_router(
         except DailyOperationNotFoundError:
             return HTMLResponse(
                 _render_actual_fuel_form(
-                    submitted, [{"field": "operation_id", "message": "ID operasi tidak ditemukan."}]
+                    _current_csrf(request),
+                    submitted,
+                    [{"field": "operation_id", "message": "ID operasi tidak ditemukan."}],
                 ),
                 status_code=status.HTTP_404_NOT_FOUND,
             )
@@ -282,14 +309,16 @@ def build_form_router(
         )
 
     @router.post("/bahan-bakar-aktual-massal", response_class=HTMLResponse)
-    async def submit_bulk_actual_fuel(file: UploadFile = _UPLOAD_FILE) -> HTMLResponse:
+    async def submit_bulk_actual_fuel(
+        request: Request, file: UploadFile = _UPLOAD_FILE
+    ) -> HTMLResponse:
         try:
             result = bulk_actual_fuel.execute(
                 file.filename or "berkas-bbm-aktual", await file.read()
             )
         except HistoricalDatasetImportError as error:
             return HTMLResponse(
-                _render_bulk_actual_fuel_form(error.message),
+                _render_bulk_actual_fuel_form(_current_csrf(request), error.message),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         return HTMLResponse(
@@ -319,8 +348,14 @@ def build_form_router(
     return router
 
 
+def _csrf_input(csrf_token: str) -> str:
+    return f'<input type="hidden" name="csrf_token" value="{escape(csrf_token)}">'
+
+
 def _render_actual_fuel_form(
-    values: dict[str, Any] | None = None, errors: list[dict[str, str]] | None = None
+    csrf_token: str,
+    values: dict[str, Any] | None = None,
+    errors: list[dict[str, str]] | None = None,
 ) -> str:
     values = values or {}
     errors = errors or []
@@ -341,6 +376,7 @@ def _render_actual_fuel_form(
           terpisah dari bahan bakar disiapkan.</p></header>
           {error_summary}
           <form method="post" action="/bahan-bakar-aktual" novalidate>
+            {_csrf_input(csrf_token)}
             <fieldset><legend>Hasil operasi</legend>
               <div class="field"><label for="operation_id">ID operasi</label>
                 <input id="operation_id" name="operation_id" required value="{escape(str(values.get("operation_id", "")))}">
@@ -374,7 +410,7 @@ def _render_actual_fuel_success(record: ActualFuelRecord) -> str:
     )
 
 
-def _render_bulk_actual_fuel_form(error: str | None = None) -> str:
+def _render_bulk_actual_fuel_form(csrf_token: str, error: str | None = None) -> str:
     error_summary = (
         '<section class="errors" role="alert"><h2>Berkas belum dapat diproses</h2>'
         f"<p>{escape(error)}</p></section>"
@@ -390,6 +426,7 @@ def _render_bulk_actual_fuel_form(error: str | None = None) -> str:
           {error_summary}
           <p><a href="/api/v1/bulk-actual-fuel/template?format=xlsx">Unduh template Excel</a> · <a href="/api/v1/bulk-actual-fuel/template?format=csv">Unduh template CSV</a></p>
           <form method="post" action="/bahan-bakar-aktual-massal" enctype="multipart/form-data">
+            {_csrf_input(csrf_token)}
             <div class="field"><label for="file">Berkas bahan bakar aktual</label>
             <input id="file" name="file" type="file" accept=".csv,.xlsx" required>
             <small>Kolom wajib: ID operasi dan bahan bakar aktual (L). Sumber pengukuran opsional.</small></div>
@@ -467,7 +504,7 @@ def _metric(value: float | None, unit: str) -> str:
     return "Belum cukup data" if value is None else f"{_format_decimal(value)} {unit}"
 
 
-def _render_model_governance(dashboard: Any) -> str:
+def _render_model_governance(dashboard: Any, csrf_token: str) -> str:
     active = (
         f"<strong>{escape(dashboard.active_model.model_version_id)}</strong>"
         if dashboard.active_model
@@ -478,7 +515,7 @@ def _render_model_governance(dashboard: Any) -> str:
             "<tr>"
             f"<td>{escape(candidate.model_version_id)}</td><td>{escape(candidate.dataset_version_id)}</td>"
             f'<td><a href="/kandidat-model/{escape(candidate.model_version_id)}/perbandingan">Bandingkan</a></td>'
-            f'<td><form method="post" action="/kandidat-model/{escape(candidate.model_version_id)}/promosikan"><button>Promosikan manual</button></form></td>'
+            f'<td><form method="post" action="/kandidat-model/{escape(candidate.model_version_id)}/promosikan">{_csrf_input(csrf_token)}<button>Promosikan manual</button></form></td>'
             "</tr>"
             for candidate in dashboard.candidate_models
         )
@@ -576,7 +613,7 @@ def _render_monitoring_dashboard(dashboard: Any) -> str:
     )
 
 
-def _render_candidate_comparison(comparison: Any) -> str:
+def _render_candidate_comparison(comparison: Any, csrf_token: str) -> str:
     overall_active = (
         _metric(comparison.active_overall.mae_liters, "L")
         if comparison.active_overall is not None
@@ -598,7 +635,7 @@ def _render_candidate_comparison(comparison: Any) -> str:
           <p class="lead">Metrik dihitung ulang pada operasi yang memiliki bahan bakar aktual. Tindakan ini tidak mengubah model aktif.</p></header>
           <dl><dt>Kandidat</dt><dd>{escape(comparison.candidate.model_version_id)}</dd><dt>MAE kandidat</dt><dd>{_metric(comparison.candidate_overall.mae_liters, "L")}</dd><dt>MAE model aktif</dt><dd>{overall_active}</dd></dl>
           <h2>MAE per kategori ANGBER</h2><table><thead><tr><th>Kategori</th><th>Kandidat</th><th>Aktif</th></tr></thead><tbody>{rows}</tbody></table>
-          <form method="post" action="/kandidat-model/{escape(comparison.candidate.model_version_id)}/promosikan"><button>Promosikan kandidat secara manual</button></form>
+          <form method="post" action="/kandidat-model/{escape(comparison.candidate.model_version_id)}/promosikan">{_csrf_input(csrf_token)}<button>Promosikan kandidat secara manual</button></form>
           <p><a href="/pengelolaan-model">Kembali ke pengelolaan model</a></p></main>
         """,
     )
@@ -616,7 +653,7 @@ def _render_promotion_success(model: ModelVersion) -> str:
     )
 
 
-def _render_form(values: dict[str, Any], errors: list[dict[str, str]]) -> str:
+def _render_form(values: dict[str, Any], errors: list[dict[str, str]], csrf_token: str) -> str:
     activity_mode = values.get("activity_mode", "transport")
     error_summary = ""
     if errors:
@@ -647,6 +684,7 @@ def _render_form(values: dict[str, Any], errors: list[dict[str, str]]) -> str:
           </header>
           {error_summary}
           <form method="post" action="/operasi-harian" novalidate>
+            {_csrf_input(csrf_token)}
             <fieldset>
               <legend>Detail operasi</legend>
               <div class="field">
@@ -756,7 +794,7 @@ def _render_form(values: dict[str, Any], errors: list[dict[str, str]]) -> str:
     )
 
 
-def _render_import_form(error: str | None = None) -> str:
+def _render_import_form(csrf_token: str, error: str | None = None) -> str:
     error_summary = ""
     if error is not None:
         error_summary = (
@@ -777,6 +815,7 @@ def _render_import_form(error: str | None = None) -> str:
           {error_summary}
           <p class="demo-note"><strong>Untuk demo:</strong> <a href="/contoh-data-riwayat.csv" download>unduh data contoh yang siap diimpor</a>.</p>
           <form method="post" action="/impor-data-historis" enctype="multipart/form-data">
+            {_csrf_input(csrf_token)}
             <div class="field">
               <label for="file">Berkas historis</label>
               <input id="file" name="file" type="file" accept=".csv,.xlsx" required>
@@ -792,7 +831,7 @@ def _render_import_form(error: str | None = None) -> str:
     )
 
 
-def _render_bulk_prediction_form(error: str | None = None) -> str:
+def _render_bulk_prediction_form(csrf_token: str, error: str | None = None) -> str:
     error_summary = ""
     if error is not None:
         error_summary = (
@@ -814,6 +853,7 @@ def _render_bulk_prediction_form(error: str | None = None) -> str:
           <p><a href="/api/v1/bulk-operation-predictions/template?format=xlsx">Unduh template Excel</a> ·
             <a href="/api/v1/bulk-operation-predictions/template?format=csv">Unduh template CSV</a></p>
           <form method="post" action="/prediksi-operasi-massal" enctype="multipart/form-data">
+            {_csrf_input(csrf_token)}
             <div class="field">
               <label for="file">Berkas rencana operasi</label>
               <input id="file" name="file" type="file" accept=".csv,.xlsx" required>
@@ -867,7 +907,7 @@ def _render_bulk_prediction_success(result: BulkOperationPredictionResult) -> st
     )
 
 
-def _render_import_success(result: HistoricalDatasetImportResult) -> str:
+def _render_import_success(result: HistoricalDatasetImportResult, csrf_token: str) -> str:
     dataset = result.dataset_version
     correction_summary = (
         f"{dataset.quarantined_row_count} baris dikarantina"
@@ -896,6 +936,7 @@ def _render_import_success(result: HistoricalDatasetImportResult) -> str:
             <h2 id="training-title">Langkah berikutnya: latih kandidat baseline</h2>
             <p>Latih secara manual memakai {dataset.valid_operation_count} operasi valid pada dataset ini.</p>
             <form method="post" action="/dataset-versions/{escape(dataset.dataset_version_id)}/latih-kandidat-baseline">
+              {_csrf_input(csrf_token)}
               <button type="submit">Latih kandidat baseline secara manual</button>
             </form>
           </section>
@@ -967,7 +1008,7 @@ def _render_training_error(dataset_version_id: str, error: str) -> str:
     )
 
 
-def _render_success(operation: DailyOperation) -> str:
+def _render_success(operation: DailyOperation, csrf_token: str) -> str:
     mode_labels = {
         "transport": "Angkut",
         "lifting": "Lifting",
@@ -1008,6 +1049,7 @@ def _render_success(operation: DailyOperation) -> str:
           </dl>
           {fallback}
           <form method="post" action="/operasi-harian/{escape(operation.operation_id)}/prediksi">
+            {_csrf_input(csrf_token)}
             <button type="submit">Buat estimasi kebutuhan BBM</button>
           </form>
           <p><a href="/">Buat operasi lain</a></p>

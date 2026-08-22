@@ -247,6 +247,7 @@ def create_app(
             get_candidate_model_comparison,
             get_model_governance_dashboard,
             get_monitoring_dashboard,
+            guard,
         )
     )
     return app

@@ -44,13 +44,22 @@ session (or a different model) can resume without re-deriving context.
       status, backup status) because Phase 3 doesn't exist yet — do not fake these.
 - [x] User administration (`/pengguna`) and audit log (`/audit`) pages, both on the new template
       system.
+- [x] Every remaining POST form in `delivery/form.py` (still the original f-string pages) now
+      carries and validates a real CSRF token, via a `_csrf_input(csrf_token)` helper threaded
+      through each render function and `_current_csrf(request)` in each route. Without this they
+      would have been completely unusable the moment a real deployment provisioned an admin — CSRF
+      is enforced globally at that point and these forms previously had no token field at all.
+      Regression test: `test_legacy_form_pages_carry_a_working_csrf_token_once_provisioned` in
+      `tests/test_authentication_and_roles.py`. Watch for the same trap in any new form: the
+      submitted `csrf_token` field must be stripped out of a dict before it reaches a
+      `model_config = ConfigDict(extra="forbid")` Pydantic model, or validation 422s.
 - [ ] **Not done**: redesigning prediction, bulk import, actual-fuel, and model pages onto the new
       Jinja/design-system templates. They still render through the original f-string functions in
       `delivery/form.py`, which now live behind auth + capability checks (via `ROUTE_CAPABILITIES`)
-      but are visually and structurally unchanged from the MVP. This is the largest remaining Phase 1
-      item. Suggested order: prediction form → bulk prediction → actual fuel (single + bulk) →
-      monitoring (needs the 3-way Kesehatan/Pergeseran/Kinerja split from the plan, currently one
-      page) → model governance/comparison.
+      and now correctly carry CSRF tokens, but are visually and structurally unchanged from the MVP.
+      This is the largest remaining Phase 1 item. Suggested order: prediction form → bulk prediction
+      → actual fuel (single + bulk) → monitoring (needs the 3-way Kesehatan/Pergeseran/Kinerja split
+      from the plan, currently one page) → model governance/comparison.
 - [ ] Nav items the plan names but that don't exist yet, intentionally left out of
       `rendering.NAVIGATION` rather than linked to a placeholder: "Riwayat Prediksi", "Unggah
       Kandidat", "Riwayat dan Rollback", "Integrasi Agen". Add each back to `NAVIGATION` as its page
