@@ -32,6 +32,17 @@ from fuel_predictor.application.model_lifecycle import (
     GetModelGovernanceDashboard,
     PromoteCandidateModel,
 )
+from fuel_predictor.application.model_package_ingestion import (
+    ModelPackageArchiveLimits,
+    ParseModelPackageManifest,
+    ParseReferenceStatistics,
+    ParseSmokeTests,
+)
+from fuel_predictor.application.model_package_validation import ValidateModelPackage
+from fuel_predictor.application.model_promotion_policy import (
+    EvaluateCandidateAgainstPolicy,
+    PromotionPolicy,
+)
 from fuel_predictor.application.monitoring import GetMonitoringDashboard
 from fuel_predictor.application.routing import RoutingProvider, UnavailableRoutingProvider
 from fuel_predictor.configuration import ApplicationSettings
@@ -47,6 +58,7 @@ from fuel_predictor.delivery.historical_dataset_pages import (
 )
 from fuel_predictor.delivery.http import build_router, register_error_handlers
 from fuel_predictor.delivery.model_governance_pages import build_model_governance_pages_router
+from fuel_predictor.delivery.model_upload_pages import build_model_upload_pages_router
 from fuel_predictor.delivery.monitoring_pages import build_monitoring_pages_router
 from fuel_predictor.delivery.prediction_pages import build_prediction_pages_router
 from fuel_predictor.delivery.rendering import STATIC_DIRECTORY
@@ -65,7 +77,15 @@ from fuel_predictor.infrastructure.google_maps_routing import GoogleMapsRoutesPr
 from fuel_predictor.infrastructure.historical_source_reader import (
     SpreadsheetHistoricalDatasetSourceReader,
 )
+from fuel_predictor.infrastructure.jsonschema_manifest_validator import (
+    REFERENCE_STATISTICS_SCHEMA,
+    SMOKE_TESTS_SCHEMA,
+    JsonSchemaManifestValidator,
+    JsonSchemaValidator,
+)
 from fuel_predictor.infrastructure.mlflow_baseline_models import MlflowBaselineModelStore
+from fuel_predictor.infrastructure.model_artifact_loader import build_loader
+from fuel_predictor.infrastructure.model_artifact_store import FilesystemModelArtifactStore
 from fuel_predictor.infrastructure.password_hashing import ScryptPasswordHasher
 from fuel_predictor.infrastructure.sqlalchemy_actual_fuel import SqlAlchemyActualFuelRepository
 from fuel_predictor.infrastructure.sqlalchemy_daily_operations import (
@@ -79,8 +99,12 @@ from fuel_predictor.infrastructure.sqlalchemy_identity import (
     SqlAlchemySessionRepository,
     SqlAlchemyUserRepository,
 )
+from fuel_predictor.infrastructure.sqlalchemy_model_package_records import (
+    SqlAlchemyModelPackageValidationRepository,
+)
 from fuel_predictor.infrastructure.sqlalchemy_monitoring import SqlAlchemyMonitoringRepository
 from fuel_predictor.infrastructure.sqlalchemy_predictions import SqlAlchemyPredictionRepository
+from fuel_predictor.infrastructure.zip_model_package_archive import ZipModelPackageArchiveReader
 
 
 def create_app(
@@ -180,6 +204,41 @@ def create_app(
     )
     if resolved_bootstrap_administrator is not None:
         ensure_bootstrap_administrator.execute(*resolved_bootstrap_administrator)
+    validation_records = SqlAlchemyModelPackageValidationRepository(session_factory)
+    artifact_store = FilesystemModelArtifactStore(root=settings.model_artifact_directory)
+    validate_package = ValidateModelPackage(
+        archive_reader=ZipModelPackageArchiveReader(
+            ModelPackageArchiveLimits(
+                max_archive_bytes=settings.model_package_max_archive_bytes,
+                max_extracted_bytes=settings.model_package_max_extracted_bytes,
+                max_member_count=settings.model_package_max_member_count,
+                max_compression_ratio=settings.model_package_max_compression_ratio,
+            )
+        ),
+        parse_manifest=ParseModelPackageManifest(
+            schema_validator=JsonSchemaManifestValidator(),
+            supported_feature_contract_versions=frozenset(
+                _split_setting(settings.supported_feature_contract_versions)
+            ),
+            supported_runtime_compatibility_versions=frozenset(
+                _split_setting(settings.supported_runtime_compatibility_versions)
+            ),
+        ),
+        parse_reference_statistics=ParseReferenceStatistics(
+            schema_validator=JsonSchemaValidator(REFERENCE_STATISTICS_SCHEMA)
+        ),
+        parse_smoke_tests=ParseSmokeTests(
+            schema_validator=JsonSchemaValidator(SMOKE_TESTS_SCHEMA)
+        ),
+        evaluate_policy=EvaluateCandidateAgainstPolicy(
+            policy=PromotionPolicy(
+                max_mae_liters=settings.max_active_model_mae_liters,
+                max_mae_regression_ratio=settings.promotion_max_mae_regression_ratio,
+                minimum_test_set_size=settings.promotion_minimum_test_set_size,
+            )
+        ),
+        build_artifact_loader=build_loader,
+    )
     guard = SecurityGuard()
 
     @asynccontextmanager
@@ -276,6 +335,14 @@ def create_app(
         )
     )
     app.include_router(
+        build_model_upload_pages_router(
+            validate_package,
+            validation_records,
+            artifact_store,
+            guard,
+        )
+    )
+    app.include_router(
         build_monitoring_pages_router(
             get_monitoring_dashboard,
             get_prediction_performance,
@@ -283,6 +350,11 @@ def create_app(
         )
     )
     return app
+
+
+def _split_setting(value: str) -> tuple[str, ...]:
+    """Comma-separated settings, since pydantic-settings reads env vars as strings."""
+    return tuple(part.strip() for part in value.split(",") if part.strip())
 
 
 def _database_url_for_path(database_path: Path | None) -> str:

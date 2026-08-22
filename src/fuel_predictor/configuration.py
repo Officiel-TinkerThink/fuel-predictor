@@ -43,6 +43,12 @@ class ApplicationSettings(BaseSettings):
     # administrator *may* promote; promotion itself stays manual per ADR 0004.
     promotion_max_mae_regression_ratio: float = Field(default=1.1, gt=0)
     promotion_minimum_test_set_size: int = Field(default=30, ge=1)
+    # Where accepted model packages are retained. Retention here is a
+    # correctness concern, not just disk hygiene (ADR 0010): rollback can only
+    # return to a version whose bytes still exist.
+    model_artifact_directory: Path = Path(".fuel_predictor/model-packages")
+    supported_feature_contract_versions: str = "baseline-v1"
+    supported_runtime_compatibility_versions: str = "onnxruntime-1.20,skops-0.11"
 
     @field_validator("database_url")
     @classmethod

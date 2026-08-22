@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{% if eligibility.eligible %}
+{{ ui.banner('success', 'Paket diterima dan memenuhi kebijakan', eligibility.summary) }}
+{% else %}
+{{ ui.banner('warning', 'Paket valid tetapi belum memenuhi kebijakan promosi', eligibility.summary) }}
+{% endif %}
+
+<section class="card">
+  {{ ui.steps(['Unggah', 'Validasi', 'Bandingkan', 'Konfirmasi', 'Verifikasi'], 3) }}
+  <dl class="detail-list">
+    <dt>Versi model</dt><dd>{{ manifest.model_version }}</dd>
+    <dt>Format</dt><dd>{{ manifest.model_format.value }}</dd>
+    <dt>Kontrak fitur</dt><dd>{{ manifest.feature_contract_version }}</dd>
+    <dt>Dataset pelatihan</dt><dd>{{ manifest.training_dataset_version }}</dd>
+    <dt>Ukuran set uji</dt><dd>{{ manifest.test_set_size }}</dd>
+    <dt>MAE</dt><dd>{{ manifest.overall_metrics.mae | angka }} L</dd>
+    <dt>RMSE</dt><dd>{{ manifest.overall_metrics.rmse | angka }} L</dd>
+    <dt>Cakupan interval</dt><dd>{{ manifest.overall_metrics.interval_coverage_percent | angka }}%</dd>
+  </dl>
+</section>
+
+{% if eligibility.reasons %}
+<section class="card">
+  <h2>Belum memenuhi kebijakan</h2>
+  <ul>{% for reason in eligibility.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+
+{% if eligibility.warnings %}
+<section class="card">
+  <h2>Catatan</h2>
+  <ul>{% for warning in eligibility.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+
+<p><a class="button button--secondary" href="/pengelolaan-model">Ke pengelolaan model</a>
+   <a class="button button--secondary" href="/model/riwayat">Riwayat unggahan</a></p>
+
+{% endblock %}

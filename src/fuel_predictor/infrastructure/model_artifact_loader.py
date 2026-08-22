@@ -4,6 +4,13 @@ Only the two trusted formats are loadable, and neither executes arbitrary
 code on load — that is the whole reason ADR 0009 restricts the format set.
 The loader never inspects a path supplied by the package; it is handed bytes
 that archive handling already validated and checksummed.
+
+`onnxruntime` and `skops` are imported lazily inside the functions that need
+them rather than at module scope. Importing `skops.io` pulls in
+scikit-learn's estimator discovery, which walks loaded shared libraries and
+can fail outright on some Windows hosts — and it is slow. Serving a
+prediction page should not pay that cost, and the application must not fail
+to start on a machine that never uploads a package.
 """
 
 from collections.abc import Mapping, Sequence
@@ -11,8 +18,6 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy
-import onnxruntime  # type: ignore[import-untyped]
-import skops.io as skops_io  # type: ignore[import-untyped]
 
 from fuel_predictor.application.model_activation import LoadedModel
 from fuel_predictor.domain.model_activation import ModelLoadFailedError
@@ -73,11 +78,15 @@ class ModelPackageArtifactLoader:
     def _build_predictor(self) -> OnnxPredictor | SkopsPredictor:
         order = self.manifest.feature_names_in_order()
         if self.manifest.model_format is ModelFormat.ONNX:
+            import onnxruntime  # type: ignore[import-untyped]
+
             session = onnxruntime.InferenceSession(
                 self.artifact_bytes,
                 providers=["CPUExecutionProvider"],
             )
             return OnnxPredictor(session=session, feature_order=order)
+
+        import skops.io as skops_io  # type: ignore[import-untyped]
 
         unknown = skops_io.get_untrusted_types(data=self.artifact_bytes)
         disallowed = sorted(set(unknown) - set(self.trusted_skops_types))

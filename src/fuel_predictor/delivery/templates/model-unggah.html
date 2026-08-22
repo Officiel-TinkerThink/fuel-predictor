@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{{ ui.error_summary(errors, 'Paket model belum dapat diterima') }}
+
+<section class="card">
+  {{ ui.steps(['Unggah', 'Validasi', 'Bandingkan', 'Konfirmasi', 'Verifikasi'], 1) }}
+  <form method="post" action="/model/unggah" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {{ ui.file_field('file', 'Berkas paket model', '.zip', hint='Arsip .zip berisi manifest.json, model.onnx atau model.skops, reference-statistics.json, dan smoke-tests.json.') }}
+    <button type="submit">Validasi paket</button>
+  </form>
+  <p class="hint">Mengunggah tidak mengaktifkan model. Paket yang lolos menjadi kandidat, dan
+    aktivasi tetap merupakan tindakan manual di halaman Pengelolaan Model.</p>
+</section>
+
+<p><a href="/model/riwayat">Lihat riwayat unggahan</a></p>
+
+{% endblock %}

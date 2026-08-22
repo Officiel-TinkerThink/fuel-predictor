@@ -376,13 +376,28 @@ rollback yet — see "Not done" below for exactly where it stops.
       packager's output straight into the validator**: packager and validator are separate code with
       schemas between them, and only a round-trip proves they agree. Testing either side alone would
       not.
+- [x] Upload endpoint and UI — `delivery/model_upload_pages.py` with `GET`/`POST /model/unggah` and
+      `GET /model/riwayat`, plus `infrastructure/model_artifact_store.py` for retention. **Uploading
+      never activates** (ADR 0004): a package that validates and clears policy becomes an eligible
+      candidate, and the page says so explicitly. Rejections are recorded before the error page
+      renders, so the reason survives even though nothing was accepted. The artifact store re-checks
+      the version against a safe-name pattern even though the manifest schema already constrained it,
+      because this function is what turns a string into a filesystem path and therefore owns that
+      decision. "Unggah Kandidat" and "Riwayat Paket" are now real entries in `NAVIGATION`.
+- [x] **Fixed a startup regression this introduced**: importing `skops.io` at module scope pulls in
+      scikit-learn's estimator discovery, which walks loaded shared libraries and fails outright on
+      some Windows hosts (`GetModuleFileNameEx failed`) — and once `main.py` imported the loader, that
+      made the *whole application* fail to start. Caught because the navigation test could no longer
+      even import the app. `onnxruntime` and `skops` are now imported lazily inside the functions that
+      use them: serving a prediction page should not pay that cost, and a machine that never uploads a
+      package should never load those libraries at all.
 - [ ] **Not done** — the remaining Phase 2 scope, roughly in dependency order:
-      1. The production upload endpoint and its UI (the "Unggah Kandidat" and "Riwayat dan Rollback"
-         nav items still deliberately absent from `rendering.NAVIGATION`), plus optional package
-         signature verification.
-      2. Wiring `ActiveModelHolder` into `GenerateFuelPrediction` so prediction reads the holder
+      1. Wiring `ActiveModelHolder` into `GenerateFuelPrediction` so prediction reads the holder
          instead of loading through `BaselineModelStore` per request — until that happens the holder
-         is built and tested but not yet on the serving path.
+         and activation sequence are built and tested but not yet on the serving path, and the
+         governance page still promotes via the older `PromoteCandidateModel` route rather than
+         `ActivateModelVersion`. Connecting these two is the last structural step in Phase 2.
+      2. Optional package signature verification (ADR 0009 lists it as optional).
       Retention policy is a correctness concern here, not just disk hygiene (ADR 0010): the retention
       job must never delete the artefact rollback would target.
 
@@ -407,7 +422,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (206 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (209 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref

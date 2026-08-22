@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+<section class="card">
+  {% if records %}
+  <div class="table-wrap">
+    <table>
+      <caption>{{ records | length }} unggahan terakhir</caption>
+      <thead><tr><th>Waktu</th><th>Versi model</th><th>Pelaku</th><th>Hasil</th><th>Kelayakan</th></tr></thead>
+      <tbody>
+        {% for record in records %}
+        <tr>
+          <td>{{ record.validated_at | waktu }}</td>
+          <td>{{ record.model_version }}</td>
+          <td>{{ record.actor }}</td>
+          <td>{% if record.was_accepted %}{{ ui.badge('Diterima', 'success') }}{% else %}{{ ui.badge('Ditolak', 'danger') }}{% endif %}</td>
+          <td>
+            {% if not record.was_accepted %}—
+            {% elif record.eligible %}{{ ui.badge('Layak', 'success') }}
+            {% else %}{{ ui.badge('Belum layak', 'warning') }}{% endif %}
+          </td>
+        </tr>
+        {% if record.reasons %}
+        <tr><td colspan="5"><small>{{ record.reasons | join('; ') }}</small></td></tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ ui.empty_state('Belum ada paket model yang diunggah.') }}
+  {% endif %}
+</section>
+
+<p><a class="button button--secondary" href="/model/unggah">Unggah kandidat</a></p>
+
+{% endblock %}

@@ -80,9 +80,9 @@ NAVIGATION: tuple[NavigationGroup, ...] = (
     NavigationGroup(
         title="Model",
         items=(
-            # "Unggah Kandidat" (external ingestion, ADR 0009) and "Riwayat dan
-            # Rollback" (ADR 0010) are Phase 2 work; not linked until they exist.
             NavigationItem("Pengelolaan Model", "/pengelolaan-model", Capability.VIEW_MODELS),
+            NavigationItem("Unggah Kandidat", "/model/unggah", Capability.MANAGE_MODELS),
+            NavigationItem("Riwayat Paket", "/model/riwayat", Capability.VIEW_MODELS),
         ),
     ),
     NavigationGroup(
