@@ -234,23 +234,45 @@ rollback yet — see "Not done" below for exactly where it stops.
       releasing the lock, so a later activation could swap in between and this call would report on —
       and blame — the wrong model. It now health-checks the specific `LoadedModel` this activation
       swapped in.
+- [x] SQLAlchemy `ActivationRepository` — `SqlAlchemyPredictionRepository.activate`. The conditional
+      `UPDATE ... WHERE model_version_id = :expected AND status = 'active'` is the arbiter: a zero row
+      count means someone else already changed the active model. When the caller expects *no* active
+      model, the existing partial unique index on `lifecycle_status = 'active'` plays that role
+      instead, and a losing racer's `IntegrityError` is translated into the same conflict result
+      rather than surfacing as a crash. Re-activating the already-active version is treated as an
+      idempotent success so a retried request isn't reported as a conflict with itself. Needed no
+      Alembic revision — the existing `model_versions` schema and its partial unique index already
+      carry everything the contract requires.
+      Both a candidate and a previously-retired version may be activated: the first is a promotion,
+      the second a rollback. The extra authority rollback needs (administrator, recorded reason) is
+      the use case's job, not the repository's — this method owns the concurrency contract, not the
+      approval policy. Re-activating a retired version clears `retired_at`, so a restored model does
+      not still look retired.
+      Tests: `tests/test_activation_repository.py`, 10 cases against a real SQLite database rather
+      than a fake, since the partial unique index and the zero-row UPDATE are precisely what a fake
+      cannot demonstrate. Includes a two-thread race.
+      **On `ModelNotActivatableError`**: currently unreachable through `ModelLifecycleStatus`, whose
+      three values are all handled. It exists because the plan's state diagram adds `rejected`, and a
+      rejected package must never become active by accident. Rather than leave untested defensive
+      code, the test drives it by writing the status directly, so the guard is genuinely exercised.
 - [ ] **Not done** — the remaining Phase 2 scope, roughly in dependency order:
-      1. The SQLAlchemy `ActivationRepository` — a conditional `UPDATE ... WHERE active version =
-         :expected` whose zero-row result is the conflict, plus an Alembic revision if the model
-         tables need columns for retained-artefact paths.
-      2. Real `ModelArtifactLoader` (isolated ONNX/skops loading — needs `onnxruntime`/`skops` as new
+      1. Real `ModelArtifactLoader` (isolated ONNX/skops loading — needs `onnxruntime`/`skops` as new
          dependencies, not added yet), `SmokeTestRunner`, and `MemoryProbe`.
-      3. `smoke-tests.json`, `input-schema.json`, and `reference-statistics.json` schemas and their
+      2. `smoke-tests.json`, `input-schema.json`, and `reference-statistics.json` schemas and their
          validation, mirroring what `manifest.schema.json` already does.
-      4. `RollbackModelVersion` — re-activates a retained version through the same sequence, requires
-         `expected_current_version`, and records the administrator and a required reason.
-      5. Metric-vs-policy comparison (plan validation step 8) and the persistence + audit record
+      3. `RollbackModelVersion` — re-activates a retained version through the same sequence, requires
+         `expected_current_version`, and records the administrator and a required reason. The
+         repository already supports the retired→active transition it needs.
+      4. Metric-vs-policy comparison (plan validation step 8) and the persistence + audit record
          (step 9).
-      6. The production upload endpoint and its UI (the "Unggah Kandidat" and "Riwayat dan Rollback"
+      5. The production upload endpoint and its UI (the "Unggah Kandidat" and "Riwayat dan Rollback"
          nav items still deliberately absent from `rendering.NAVIGATION`), plus optional package
          signature verification.
-      7. The external packager tool itself, which lives in this repo so the package contract has one
+      6. The external packager tool itself, which lives in this repo so the package contract has one
          implementation (ADR 0009).
+      7. Wiring `ActiveModelHolder` into `GenerateFuelPrediction` so prediction reads the holder
+         instead of loading through `BaselineModelStore` per request — until that happens the holder
+         is built and tested but not yet on the serving path.
       Retention policy is a correctness concern here, not just disk hygiene (ADR 0010): the retention
       job must never delete the artefact rollback would target.
 
@@ -275,7 +297,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (130 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (140 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref

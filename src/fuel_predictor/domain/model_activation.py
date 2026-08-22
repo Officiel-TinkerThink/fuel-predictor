@@ -10,6 +10,26 @@ class ModelActivationError(Exception):
     """Base for every reason an activation or rollback did not take effect."""
 
 
+class ModelVersionNotFoundError(ModelActivationError):
+    """The version asked for does not exist at all — not a concurrency problem."""
+
+    def __init__(self, model_version_id: str) -> None:
+        super().__init__(f"Versi model {model_version_id} tidak ditemukan.")
+        self.model_version_id = model_version_id
+
+
+class ModelNotActivatableError(ModelActivationError):
+    """The version exists but its current lifecycle state forbids activation."""
+
+    def __init__(self, model_version_id: str, lifecycle_status: str) -> None:
+        super().__init__(
+            f"Versi model {model_version_id} berstatus '{lifecycle_status}' dan tidak "
+            "dapat diaktifkan."
+        )
+        self.model_version_id = model_version_id
+        self.lifecycle_status = lifecycle_status
+
+
 class ModelActivationConflictError(ModelActivationError):
     """Someone else changed the active model since the caller last looked.
 
