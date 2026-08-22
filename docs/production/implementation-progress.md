@@ -88,20 +88,41 @@ session (or a different model) can resume without re-deriving context.
       templates: `bbm-aktual.html`, `bbm-aktual-tersimpan.html`, `bbm-aktual-massal.html`,
       `bbm-aktual-massal-selesai.html`. Verified end-to-end live: bulk upload with one valid + one
       invalid row produced the correct accepted-row table and correction-report table in one pass.
-- [ ] **Not done**: redesigning monitoring and model governance/comparison pages onto the Jinja
-      design system. They still render through the f-string functions remaining in `delivery/form.py`
-      (`_render_model_governance`, `_render_monitoring_dashboard`, `_render_candidate_comparison`,
+- [x] Monitoring pages migrated and genuinely split into the plan's three views —
+      `delivery/monitoring_pages.py` owns `GET /pemantauan/kesehatan-sistem`, `GET
+      /pemantauan/pergeseran-data`, and `GET /pemantauan/kinerja-model`, replacing the single combined
+      `/pemantauan-operasi` page (deleted) *and* absorbing the separate old `/kinerja-prediksi`
+      full-history performance report into the new Kinerja Model page — the plan's nav only names one
+      "Kinerja Model" item, and the two features (full-history report vs. rolling/windowed trend)
+      answer the same question at different time horizons, so they're sections on one page rather than
+      two competing pages. New templates: `kesehatan-sistem.html` (alerts, data quality, dataset
+      validation, missing-actual backlog; infra metrics like uptime/latency/disk/backup are honestly
+      `Belum tersedia` pending Phase 3, same pattern as the overview page), `pergeseran-data.html`
+      (feature drift with plain-language status), `kinerja-model.html` (overall + per-category
+      performance metrics, rolling error trend, category degradation). `_render_monitoring_dashboard`
+      and `_render_prediction_performance` deleted from `form.py`; `_metric`/`_format_decimal` kept
+      since model governance still uses them. Updated `test_monitoring_dashboard.py` for the new path
+      and page title. Verified live: all three pages 200, Kinerja Model correctly showed both the
+      overall/per-category metrics and matched-outcome data together.
+      **Caught by manual grep, not by any test**: three templates from earlier migrations
+      (`ringkasan.html`, `bbm-aktual.html`, `bbm-aktual-tersimpan.html`, `bbm-aktual-massal-selesai.html`)
+      still linked to `/pemantauan-operasi` or `/kinerja-prediksi` after those routes were deleted here.
+      `test_navigation_links.py` only checks `rendering.NAVIGATION` entries, not arbitrary in-template
+      links — when retiring a route, `grep -rn "<old-path>" src/fuel_predictor/` before deleting it.
+- [ ] **Not done**: redesigning model governance/comparison and historical-dataset-import pages onto
+      the Jinja design system. They still render through the f-string functions remaining in
+      `delivery/form.py` (`_render_model_governance`, `_render_candidate_comparison`,
       `_render_promotion_success`, `_render_training_success`, `_render_training_error`,
       `_render_import_form`, `_render_import_success`), which live behind auth + capability checks and
-      correctly carry CSRF tokens, but are visually and structurally unchanged from the MVP. Suggested
-      order: monitoring (needs the 3-way Kesehatan/Pergeseran/Kinerja split from the plan, currently
-      one page) → model governance/comparison → historical dataset import. After these, `form.py`
-      should be near-empty and worth deleting outright rather than migrating piecemeal — check what's
-      left before starting the next one. Follow the pattern in `prediction_pages.py` /
-      `bulk_prediction_pages.py` / `actual_fuel_pages.py` / `dashboard.py`: a new `delivery/<name>.py`
-      module, matching templates, then delete the old render functions from `form.py` (don't leave
-      both versions in place) and remove now-unused params from `build_form_router` and its `main.py`
-      call site.
+      correctly carry CSRF tokens, but are visually and structurally unchanged from the MVP. After
+      these, `form.py` should be near-empty and worth deleting outright rather than migrating
+      piecemeal — check what's left before starting the next one. Follow the pattern in
+      `prediction_pages.py` / `bulk_prediction_pages.py` / `actual_fuel_pages.py` /
+      `monitoring_pages.py` / `dashboard.py`: a new `delivery/<name>.py` module, matching templates,
+      then delete the old render functions from `form.py` (don't leave both versions in place), remove
+      now-unused params from `build_form_router` and its `main.py` call site, update
+      `rendering.NAVIGATION` and `security.ROUTE_CAPABILITIES` for any path change, and
+      `grep -rn "<old-path>"` across `src/fuel_predictor/` for stale links before deleting a route.
 - [ ] Nav items the plan names but that don't exist yet, intentionally left out of
       `rendering.NAVIGATION` rather than linked to a placeholder: "Riwayat Prediksi", "Unggah
       Kandidat", "Riwayat dan Rollback", "Integrasi Agen". Add each back to `NAVIGATION` as its page

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{% if performance.overall.matched_record_count == 0 %}
+{{ ui.banner('info', 'Belum cukup data', 'Belum ada bahan bakar aktual yang dapat dicocokkan dengan prediksi.') }}
+{% else %}
+{{ ui.banner('info', performance.overall.matched_record_count ~ ' catatan aktual tercocokkan', 'Metrik memakai estimasi kebutuhan BBM, bukan alokasi rekomendasi.') }}
+{% endif %}
+
+<section class="card">
+  <h2>Keseluruhan</h2>
+  <div class="grid grid--metrics">
+    {% if performance.overall.mae_liters is not none %}
+    {{ ui.metric('MAE', performance.overall.mae_liters | angka, unit='L') }}
+    {{ ui.metric('RMSE', performance.overall.rmse_liters | angka, unit='L') }}
+    {{ ui.metric('sMAPE', performance.overall.smape_percent | angka, unit='%') }}
+    {{ ui.metric('Cakupan interval', performance.overall.interval_coverage_percent | angka, unit='%') }}
+    {% else %}
+    {{ ui.metric('MAE', 'Belum cukup data', unavailable=true) }}
+    {% endif %}
+  </div>
+</section>
+
+<section class="card">
+  <h2>Per kategori ANGBER</h2>
+  {% if performance.by_vehicle_category %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Kategori</th><th class="numeric">Cocok</th><th class="numeric">MAE</th><th class="numeric">RMSE</th><th class="numeric">sMAPE</th><th class="numeric">Cakupan interval</th></tr></thead>
+      <tbody>
+        {% for category, metrics in performance.by_vehicle_category %}
+        <tr>
+          <td>{{ category.value }}</td>
+          <td class="numeric">{{ metrics.matched_record_count }}</td>
+          <td class="numeric">{{ metrics.mae_liters | angka if metrics.mae_liters is not none else 'Belum cukup data' }}</td>
+          <td class="numeric">{{ metrics.rmse_liters | angka if metrics.rmse_liters is not none else '-' }}</td>
+          <td class="numeric">{{ metrics.smape_percent | angka if metrics.smape_percent is not none else '-' }}</td>
+          <td class="numeric">{{ metrics.interval_coverage_percent | angka if metrics.interval_coverage_percent is not none else '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ ui.empty_state('Belum cukup data yang cocok.') }}
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Tren kesalahan bergulir</h2>
+  <p class="hint">Jendela bergulir {{ rolling_error_window }} catatan terakhir, berbeda dari metrik
+    keseluruhan di atas yang memakai seluruh riwayat.</p>
+  {% if rolling_error_trend %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Tanggal aktual</th><th class="numeric">Data cocok</th><th class="numeric">MAE</th></tr></thead>
+      <tbody>
+        {% for point in rolling_error_trend %}
+        <tr>
+          <td>{{ point.observed_at | waktu }}</td>
+          <td class="numeric">{{ point.matched_record_count }}</td>
+          <td class="numeric">{{ point.mae_liters | angka }} L</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ ui.empty_state('Belum ada aktual yang cocok.') }}
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Degradasi per kategori</h2>
+  <p class="hint">Ambang MAE: {{ degradation_mae_threshold_liters | angka }} L.</p>
+  {% if category_degradation %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Kategori</th><th class="numeric">Data cocok</th><th class="numeric">MAE bergulir</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for item in category_degradation %}
+        <tr>
+          <td>{{ item.vehicle_category.value }}</td>
+          <td class="numeric">{{ item.matched_record_count }}</td>
+          <td class="numeric">{{ item.rolling_mae_liters | angka if item.rolling_mae_liters is not none else '-' }}</td>
+          <td>{% if item.degraded %}{{ ui.badge('Perlu ditinjau', 'warning') }}{% else %}{{ ui.badge('Dalam ambang', 'success') }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ ui.empty_state('Belum ada aktual yang cocok.') }}
+  {% endif %}
+</section>
+
+<p><a href="/bahan-bakar-aktual">Catat bahan bakar aktual</a> · <a href="/pengelolaan-model">Kelola model</a></p>
+
+{% endblock %}

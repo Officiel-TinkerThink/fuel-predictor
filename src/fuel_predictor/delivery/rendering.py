@@ -66,13 +66,14 @@ NAVIGATION: tuple[NavigationGroup, ...] = (
     NavigationGroup(
         title="Pemantauan",
         items=(
-            # The plan calls for three separate views (Kinerja Model / Pergeseran
-            # Data / Kesehatan Sistem); only one combined page exists so far.
             NavigationItem(
-                "Kinerja Prediksi", "/kinerja-prediksi", Capability.VIEW_MONITORING
+                "Kinerja Model", "/pemantauan/kinerja-model", Capability.VIEW_MONITORING
             ),
             NavigationItem(
-                "Pemantauan Operasi", "/pemantauan-operasi", Capability.VIEW_MONITORING
+                "Pergeseran Data", "/pemantauan/pergeseran-data", Capability.VIEW_MONITORING
+            ),
+            NavigationItem(
+                "Kesehatan Sistem", "/pemantauan/kesehatan-sistem", Capability.VIEW_MONITORING
             ),
         ),
     ),

@@ -7,9 +7,6 @@ from typing import Any
 from fastapi import APIRouter, File, Request, UploadFile, status
 from fastapi.responses import HTMLResponse, Response
 
-from fuel_predictor.application.actual_fuel import (
-    GetPredictionPerformance,
-)
 from fuel_predictor.application.baseline_predictions import (
     BaselineTrainingError,
     TrainBaselineCandidate,
@@ -27,7 +24,6 @@ from fuel_predictor.application.model_lifecycle import (
     ModelPromotionNotAllowedError,
     PromoteCandidateModel,
 )
-from fuel_predictor.application.monitoring import GetMonitoringDashboard
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.prediction import ModelVersion
 
@@ -38,11 +34,9 @@ _DEMO_HISTORICAL_DATA = Path(__file__).resolve().parents[3] / "examples" / "riwa
 def build_form_router(
     import_historical_dataset: ImportHistoricalDataset,
     train_baseline_candidate: TrainBaselineCandidate,
-    get_prediction_performance: GetPredictionPerformance,
     promote_candidate_model: PromoteCandidateModel,
     get_candidate_model_comparison: GetCandidateModelComparison,
     get_model_governance_dashboard: GetModelGovernanceDashboard,
-    get_monitoring_dashboard: GetMonitoringDashboard,
     guard: SecurityGuard,
 ) -> APIRouter:
     router = APIRouter()
@@ -63,10 +57,6 @@ def build_form_router(
             headers={"Content-Disposition": 'attachment; filename="riwayat-angber-demo.csv"'},
         )
 
-    @router.get("/kinerja-prediksi", response_class=HTMLResponse)
-    def show_prediction_performance() -> HTMLResponse:
-        return HTMLResponse(_render_prediction_performance(get_prediction_performance.execute()))
-
     @router.get("/pengelolaan-model", response_class=HTMLResponse)
     def show_model_governance(request: Request) -> HTMLResponse:
         return HTMLResponse(
@@ -74,10 +64,6 @@ def build_form_router(
                 get_model_governance_dashboard.execute(), _current_csrf(request)
             )
         )
-
-    @router.get("/pemantauan-operasi", response_class=HTMLResponse)
-    def show_monitoring_dashboard() -> HTMLResponse:
-        return HTMLResponse(_render_monitoring_dashboard(get_monitoring_dashboard.execute()))
 
     @router.get("/kandidat-model/{model_version_id}/perbandingan", response_class=HTMLResponse)
     def show_candidate_comparison(model_version_id: str, request: Request) -> HTMLResponse:
@@ -152,37 +138,6 @@ def _csrf_input(csrf_token: str) -> str:
     return f'<input type="hidden" name="csrf_token" value="{escape(csrf_token)}">'
 
 
-def _render_prediction_performance(report: Any) -> str:
-    overall = report.overall
-    if overall.matched_record_count == 0:
-        summary = "Belum ada bahan bakar aktual yang dapat dicocokkan dengan prediksi."
-    else:
-        summary = (
-            f"{overall.matched_record_count} catatan aktual sudah cocok dengan prediksi terakhir."
-        )
-    rows = (
-        "".join(
-            "<tr>"
-            f"<td>{escape(category.value)}</td><td>{metrics.matched_record_count}</td>"
-            f"<td>{_metric(metrics.mae_liters, 'L')}</td><td>{_metric(metrics.rmse_liters, 'L')}</td>"
-            f"<td>{_metric(metrics.smape_percent, '%')}</td><td>{_metric(metrics.interval_coverage_percent, '%')}</td></tr>"
-            for category, metrics in report.by_vehicle_category
-        )
-        or '<tr><td colspan="6">Belum cukup data yang cocok.</td></tr>'
-    )
-    return _page(
-        "Kinerja Prediksi",
-        f"""
-        <main class="shell"><header><p class="eyebrow">EVALUASI MODEL</p><h1>Kinerja Prediksi</h1>
-          <p class="lead">{summary} Metrik memakai estimasi kebutuhan BBM, bukan alokasi rekomendasi.</p></header>
-          <section class="summary-card"><h2>Keseluruhan</h2><dl><dt>MAE</dt><dd>{_metric(overall.mae_liters, "L")}</dd><dt>RMSE</dt><dd>{_metric(overall.rmse_liters, "L")}</dd><dt>sMAPE</dt><dd>{_metric(overall.smape_percent, "%")}</dd><dt>Cakupan interval</dt><dd>{_metric(overall.interval_coverage_percent, "%")}</dd></dl></section>
-          <h2>Per kategori ANGBER</h2><table><thead><tr><th>Kategori</th><th>Cocok</th><th>MAE</th><th>RMSE</th><th>sMAPE</th><th>Cakupan interval</th></tr></thead><tbody>{rows}</tbody></table>
-          <p><a class="button-link" href="/bahan-bakar-aktual">Catat bahan bakar aktual</a></p>
-        </main>
-        """,
-    )
-
-
 def _metric(value: float | None, unit: str) -> str:
     return "Belum cukup data" if value is None else f"{_format_decimal(value)} {unit}"
 
@@ -213,84 +168,6 @@ def _render_model_governance(dashboard: Any, csrf_token: str) -> str:
           <p>MAE aktif: {_metric(dashboard.active_performance.mae_liters, "L") if dashboard.active_performance else "Belum cukup data"}</p></section>
           <h2>Kandidat menunggu keputusan</h2><table><thead><tr><th>Model</th><th>Dataset</th><th>Evaluasi</th><th>Keputusan</th></tr></thead><tbody>{candidates}</tbody></table>
           <p class="lead">Promosi tidak pernah dilakukan otomatis. Promosi baru berlaku setelah tombol tindakan manual dipilih.</p>
-        </main>
-        """,
-    )
-
-
-def _render_monitoring_dashboard(dashboard: Any) -> str:
-    alerts = (
-        "".join(
-            "<li><strong>"
-            f"{escape(alert.severity.value.upper())}</strong> — {escape(alert.message)}"
-            f" <small>({escape(alert.alert_key)})</small></li>"
-            for alert in dashboard.active_alerts
-        )
-        or "<li>Tidak ada alert aktif.</li>"
-    )
-    issues = (
-        "".join(
-            f"<li>{escape(issue.dataset_version_id)} · {escape(issue.sheet_name)} baris "
-            f"{issue.row_number}: {escape('; '.join(issue.messages))}</li>"
-            for issue in dashboard.unresolved_data_quality_issues
-        )
-        or "<li>Tidak ada baris yang perlu diperbaiki.</li>"
-    )
-    datasets = (
-        "".join(
-            "<tr>"
-            f"<td>{escape(item.dataset_version_id)}</td><td>{escape(item.source_filename)}</td>"
-            f"<td>{item.valid_operation_count}</td><td>{item.quarantined_row_count}</td>"
-            "</tr>"
-            for item in dashboard.dataset_validation_summaries
-        )
-        or '<tr><td colspan="4">Belum ada dataset.</td></tr>'
-    )
-    missing = (
-        "".join(
-            f"<li>{escape(item.operation_id)} · prediksi {escape(item.prediction_id)}</li>"
-            for item in dashboard.missing_actual_predictions
-        )
-        or "<li>Tidak ada prediksi yang lewat batas waktu.</li>"
-    )
-    trend = (
-        "".join(
-            f"<tr><td>{escape(point.observed_at.date().isoformat())}</td>"
-            f"<td>{point.matched_record_count}</td><td>{_metric(point.mae_liters, 'L')}</td></tr>"
-            for point in dashboard.rolling_error_trend
-        )
-        or '<tr><td colspan="3">Belum ada aktual yang cocok.</td></tr>'
-    )
-    categories = (
-        "".join(
-            f"<tr><td>{escape(item.vehicle_category.value)}</td><td>{item.matched_record_count}</td>"
-            f"<td>{_metric(item.rolling_mae_liters, 'L')}</td>"
-            f"<td>{'Perlu ditinjau' if item.degraded else 'Dalam ambang'}</td></tr>"
-            for item in dashboard.category_degradation
-        )
-        or '<tr><td colspan="4">Belum ada aktual yang cocok.</td></tr>'
-    )
-    drift = dashboard.feature_drift
-    drift_status = {
-        "ready": "tersedia",
-        "insufficient_data": "belum cukup data",
-        "no_active_model": "belum ada model aktif",
-    }.get(drift.status, drift.status)
-    return _page(
-        "Pemantauan Operasi dan Alert",
-        f"""
-        <main class="shell"><header><p class="eyebrow">PEMANTAUAN LOKAL</p>
-          <h1>Pemantauan Operasi dan Alert</h1><p class="lead">Alert ini hanya tersimpan di aplikasi lokal.
-          Tidak ada email/pesan keluar. Tidak ada promosi model otomatis.</p></header>
-          <section class="errors"><h2>Alert aktif ({len(dashboard.active_alerts)})</h2><ul>{alerts}</ul></section>
-          <h2>Kualitas data</h2><p>{dashboard.unresolved_data_quality_issue_count} isu belum selesai.</p><ul>{issues}</ul>
-          <table><thead><tr><th>Dataset</th><th>Berkas</th><th>Valid</th><th>Dikarantina</th></tr></thead><tbody>{datasets}</tbody></table>
-          <h2>Actual Fuel tertunda</h2><p>Prediksi tanpa aktual setelah {dashboard.missing_actual_after_days} hari: {dashboard.missing_actual_prediction_count}.</p><ul>{missing}</ul>
-          <h2>Drift fitur</h2><p>Status: {escape(drift_status)}. Ambang share drift: {_format_decimal(drift.threshold)}.
-          Share saat ini: {_metric(drift.drift_share, "")}. Fitur bergeser: {escape(", ".join(drift.drifting_features) or "tidak ada")}.</p>
-          <h2>Tren kesalahan bergulir</h2><table><thead><tr><th>Tanggal aktual</th><th>Data cocok</th><th>MAE</th></tr></thead><tbody>{trend}</tbody></table>
-          <h2>Degradasi per kategori</h2><p>Ambang MAE: {_format_decimal(dashboard.degradation_mae_threshold_liters)} L.</p><table><thead><tr><th>Kategori</th><th>Data cocok</th><th>MAE bergulir</th><th>Status</th></tr></thead><tbody>{categories}</tbody></table>
-          <p><a href="/bahan-bakar-aktual">Catat bahan bakar aktual</a> · <a href="/pengelolaan-model">Kelola model</a></p>
         </main>
         """,
     )

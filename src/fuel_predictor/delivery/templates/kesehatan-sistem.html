@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{% if active_alerts %}
+{{ ui.banner('warning', active_alerts | length ~ ' peringatan aktif', 'Alert ini hanya tersimpan di aplikasi lokal. Tidak ada email/pesan keluar. Tidak ada promosi model otomatis.') }}
+{% else %}
+{{ ui.banner('success', 'Tidak ada peringatan aktif', 'Alert ini hanya tersimpan di aplikasi lokal. Tidak ada email/pesan keluar. Tidak ada promosi model otomatis.') }}
+{% endif %}
+
+<div class="grid grid--metrics">
+  {{ ui.metric('Isu kualitas data', unresolved_data_quality_issue_count) }}
+  {{ ui.metric('Aktual BBM tertunda', missing_actual_prediction_count, context='Lebih dari ' ~ missing_actual_after_days ~ ' hari sejak prediksi') }}
+  {{ ui.metric('Ketersediaan / latensi / disk', 'Belum tersedia', unavailable=true, context='Tersedia setelah Fase 3.') }}
+  {{ ui.metric('Cadangan (backup) terakhir', 'Belum tersedia', unavailable=true, context='Tersedia setelah Fase 6.') }}
+</div>
+
+<section class="card">
+  <h2>Alert aktif</h2>
+  {% if active_alerts %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Jenis</th><th>Pesan</th><th>Tingkat</th></tr></thead>
+      <tbody>
+        {% for alert in active_alerts %}
+        <tr>
+          <td>{{ alert.kind.value }}</td>
+          <td>{{ alert.message }}</td>
+          <td>{% if alert.severity.value == 'critical' %}{{ ui.badge('Kritis', 'danger') }}{% else %}{{ ui.badge('Peringatan', 'warning') }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ ui.empty_state('Tidak ada alert aktif.') }}
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Kualitas data</h2>
+  {% if unresolved_data_quality_issues %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Dataset</th><th>Baris</th><th>Pesan</th></tr></thead>
+      <tbody>
+        {% for issue in unresolved_data_quality_issues %}
+        <tr>
+          <td>{{ issue.dataset_version_id }}</td>
+          <td>{{ issue.sheet_name }} {{ issue.row_number }}</td>
+          <td>{{ issue.messages | join('; ') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ ui.empty_state('Tidak ada baris yang perlu diperbaiki.') }}
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Versi dataset</h2>
+  {% if dataset_validation_summaries %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Dataset</th><th>Berkas</th><th class="numeric">Valid</th><th class="numeric">Dikarantina</th></tr></thead>
+      <tbody>
+        {% for item in dataset_validation_summaries %}
+        <tr>
+          <td>{{ item.dataset_version_id }}</td>
+          <td>{{ item.source_filename }}</td>
+          <td class="numeric">{{ item.valid_operation_count }}</td>
+          <td class="numeric">{{ item.quarantined_row_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ ui.empty_state('Belum ada dataset.') }}
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>BBM aktual tertunda</h2>
+  {% if missing_actual_predictions %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID operasi</th><th>ID prediksi</th><th>Kategori</th></tr></thead>
+      <tbody>
+        {% for item in missing_actual_predictions %}
+        <tr>
+          <td>{{ item.operation_id }}</td>
+          <td>{{ item.prediction_id }}</td>
+          <td>{{ item.vehicle_category.value }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ ui.empty_state('Tidak ada prediksi yang lewat batas waktu.') }}
+  {% endif %}
+</section>
+
+<p><a href="/bahan-bakar-aktual">Catat bahan bakar aktual</a> · <a href="/pengelolaan-model">Kelola model</a></p>
+
+{% endblock %}

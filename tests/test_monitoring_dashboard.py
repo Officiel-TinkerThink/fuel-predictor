@@ -77,7 +77,7 @@ def test_monitoring_dashboard_reports_traceable_local_alerts(
                 {"created_at": datetime.now(UTC) - timedelta(days=2), "operation_id": operation_id},
             )
         dashboard = client.get("/api/v1/monitoring-dashboard")
-        page = client.get("/pemantauan-operasi")
+        health_page = client.get("/pemantauan/kesehatan-sistem")
         recorded = client.post(
             f"/api/v1/daily-operations/{operation_id}/actual-fuel",
             json={"actual_fuel_liters": estimate, "measurement_source": "fuel_meter"},
@@ -93,9 +93,9 @@ def test_monitoring_dashboard_reports_traceable_local_alerts(
         "missing_actual",
     }
     assert all(alert["resolved_at"] is None for alert in body["active_alerts"])
-    assert page.status_code == 200
-    assert "Pemantauan Operasi dan Alert" in page.text
-    assert "Tidak ada promosi model otomatis" in page.text
+    assert health_page.status_code == 200
+    assert "Kesehatan Sistem" in health_page.text
+    assert "Tidak ada promosi model otomatis" in health_page.text
     assert recorded.status_code == 201
     assert recovered.json()["missing_actual_prediction_count"] == 0
     assert "missing_actual" not in {alert["kind"] for alert in recovered.json()["active_alerts"]}

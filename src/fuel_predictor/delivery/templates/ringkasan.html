@@ -6,7 +6,7 @@
 {% if is_healthy %}
 {{ ui.banner('success', 'Layanan berjalan normal', 'Tidak ada peringatan kritis saat ini.') }}
 {% else %}
-{{ ui.banner('danger', 'Perlu perhatian', critical_alert_count ~ ' peringatan kritis aktif. Lihat Kesehatan Sistem untuk detail.', 'Buka Kesehatan Sistem', '/pemantauan-operasi') }}
+{{ ui.banner('danger', 'Perlu perhatian', critical_alert_count ~ ' peringatan kritis aktif. Lihat Kesehatan Sistem untuk detail.', 'Buka Kesehatan Sistem', '/pemantauan/kesehatan-sistem') }}
 {% endif %}
 
 <div class="grid grid--metrics">
