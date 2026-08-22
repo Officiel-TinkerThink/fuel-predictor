@@ -12,6 +12,8 @@ docs/production/implementation-progress.md for what's next. Steps 6-9
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from hashlib import sha256
+from hmac import compare_digest
 from typing import Any, Protocol
 
 from fuel_predictor.domain.model_package import (
@@ -23,6 +25,69 @@ from fuel_predictor.domain.model_package import (
     ModelPackageValidationError,
     TargetDefinition,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class ModelPackageArchiveLimits:
+    """Bounds an uploaded archive must respect before anything inside it is trusted.
+
+    Every one of these exists to stop a specific attack: an oversized upload
+    exhausting disk, a decompression bomb exhausting memory, or a
+    many-tiny-members archive exhausting time.
+    """
+
+    max_archive_bytes: int
+    max_extracted_bytes: int
+    max_member_count: int
+    max_compression_ratio: int
+
+
+class ModelPackageArchiveReader(Protocol):
+    """Safely turns archive bytes into named members held in memory.
+
+    Implementations must enforce `ModelPackageArchiveLimits` and reject any
+    member whose name is absolute or escapes the package root, raising
+    `ModelPackageValidationError`. Production generates its own storage paths
+    from the validated model version (ADR 0009) and never uses these names as
+    filesystem paths, but a hostile name is still evidence of a hostile
+    package and is refused outright.
+    """
+
+    def read_members(self, archive_bytes: bytes) -> Mapping[str, bytes]: ...
+
+
+def verify_member_checksums(
+    members: Mapping[str, bytes], declared_checksums: Mapping[str, str]
+) -> None:
+    """Confirm the archive's contents are exactly what the manifest declares.
+
+    `manifest.json` itself is excluded: it cannot meaningfully carry a
+    checksum of the bytes that contain that very checksum. Everything else
+    must match, with no unexplained extras in either direction.
+    """
+    errors: list[tuple[str, str]] = []
+    verifiable = {name: payload for name, payload in members.items() if name != "manifest.json"}
+    declared = {
+        name: digest
+        for name, digest in declared_checksums.items()
+        if name != "manifest.json"
+    }
+
+    for name in sorted(set(verifiable) - set(declared)):
+        errors.append(
+            ("package_checksums", f"Berkas '{name}' ada dalam arsip tetapi tidak dalam manifest.")
+        )
+    for name in sorted(set(declared) - set(verifiable)):
+        errors.append(
+            ("package_checksums", f"Berkas '{name}' disebut manifest tetapi tidak ada dalam arsip.")
+        )
+    for name in sorted(set(verifiable) & set(declared)):
+        actual = sha256(verifiable[name]).hexdigest()
+        if not compare_digest(actual, declared[name]):
+            errors.append(("package_checksums", f"Checksum berkas '{name}' tidak cocok."))
+
+    if errors:
+        raise ModelPackageValidationError(errors)
 
 
 class ManifestSchemaValidator(Protocol):

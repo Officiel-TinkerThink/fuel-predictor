@@ -32,6 +32,13 @@ class ApplicationSettings(BaseSettings):
     # app cannot see the original scheme (for example behind a proxy that has
     # not been configured to forward it yet).
     session_cookies_require_https: bool = False
+    # Bounds on an uploaded model package (ADR 0009). Defaults are generous
+    # for a small ONNX/skops pipeline and deliberately far below the plan's
+    # 1-2 GB VM envelope, so a hostile upload cannot exhaust it.
+    model_package_max_archive_bytes: int = Field(default=64 * 1024 * 1024, gt=0)
+    model_package_max_extracted_bytes: int = Field(default=256 * 1024 * 1024, gt=0)
+    model_package_max_member_count: int = Field(default=32, gt=0)
+    model_package_max_compression_ratio: int = Field(default=100, gt=0)
 
     @field_validator("database_url")
     @classmethod

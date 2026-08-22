@@ -196,8 +196,26 @@ rollback yet — see "Not done" below for exactly where it stops.
       `types-jsonschema` for mypy).
       Tests: `tests/test_model_package_manifest.py`, 13 cases including "every simultaneous problem is
       reported together, not just the first one" and the forbidden-format parametrized case.
-- [ ] **Not done** — everything after manifest validation: archive handling (size limits, path-traversal-safe
-      extraction, per-member checksum verification against the manifest, optional signature check),
+- [x] Archive handling — plan validation steps 1-3. `infrastructure/zip_model_package_archive.py`'s
+      `ZipModelPackageArchiveReader` reads an uploaded ZIP into memory under
+      `ModelPackageArchiveLimits` (archive bytes, total extracted bytes, member count, per-member
+      compression ratio — all configurable via `FUEL_PREDICTOR_MODEL_PACKAGE_MAX_*`), rejecting
+      absolute paths, drive letters, and `..` traversal in member names under *both* POSIX and Windows
+      separator conventions (a ZIP built on either platform can be uploaded to a server running the
+      other). `verify_member_checksums` in the application layer then confirms archive contents match
+      the manifest exactly — no unexplained extras in either direction — excluding `manifest.json`
+      itself, which cannot carry a checksum of the bytes containing that checksum.
+      Tests: `tests/test_model_package_archive.py`, 21 adversarial cases.
+      **Two testing notes worth keeping.** First, the original "tampered declared size" test passed for
+      the wrong reason — `zipfile`'s own CRC/size consistency check rejects such an archive as
+      malformed, so the bounded-read path was never exercised. It's now split into two honest tests,
+      one pinning `zipfile`'s behaviour and one asserting our *specific* size-limit message. Second,
+      that size-limit test deliberately does **not** claim to prove reading is bounded: a
+      read-in-full-then-reject implementation passes it identically. The bounded read in `_read_one`
+      is a memory-exhaustion defence a unit test can't practically detect, so its rationale lives in a
+      code comment rather than a test name that would overstate what's verified.
+- [ ] **Not done** — everything after archive handling and manifest validation: optional package
+      signature verification,
       `input-schema.json`/`reference-statistics.json`/`smoke-tests.json` schemas and validation, the
       production upload endpoint, isolated ONNX/skops loading (needs `onnxruntime`/`skops` as new
       dependencies — not added yet), deterministic smoke-test execution, metric-vs-policy comparison,
@@ -228,7 +246,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (100 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (121 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref
