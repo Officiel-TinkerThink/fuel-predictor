@@ -66,6 +66,31 @@ class ModelPackageManifest:
         return tuple(entry.name for entry in self.feature_schema)
 
 
+@dataclass(frozen=True, slots=True)
+class SmokeTestCase:
+    """One deterministic case a package asserts about its own model.
+
+    `tolerance` is absolute and defaults to a small non-zero value: floating
+    point differs across platforms and runtime versions, so demanding exact
+    equality would fail packages for reasons unrelated to model correctness.
+    """
+
+    name: str
+    features: dict[str, str | float | bool]
+    expected_prediction: float
+    tolerance: float = 0.01
+
+    def failure_against(self, actual: float) -> str | None:
+        """Describe the mismatch, or None when the model answered acceptably."""
+        deviation = abs(actual - self.expected_prediction)
+        if deviation <= self.tolerance:
+            return None
+        return (
+            f"{self.name}: diharapkan {self.expected_prediction:g} "
+            f"(toleransi {self.tolerance:g}), diperoleh {actual:g}"
+        )
+
+
 class ModelPackageValidationError(ValueError):
     """One or more fields of an uploaded package failed validation.
 

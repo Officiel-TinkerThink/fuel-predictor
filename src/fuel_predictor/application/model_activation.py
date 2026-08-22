@@ -18,6 +18,7 @@ from fuel_predictor.domain.model_activation import (
     ModelCapacityError,
     ModelLoadFailedError,
     ModelSmokeTestFailedError,
+    ModelVersionNotFoundError,
     PostActivationHealthCheckFailedError,
 )
 from fuel_predictor.domain.prediction import ModelVersion
@@ -193,3 +194,66 @@ class ActivateModelVersion:
         available = self.memory_probe.available_bytes()
         if required_bytes > available:
             raise ModelCapacityError(required_bytes, available)
+
+
+class RetainedModelReader(Protocol):
+    """Reads a version that may be retired, for rollback to target."""
+
+    def get(self, model_version_id: str) -> ModelVersion | None: ...
+
+
+class RollbackAuditWriter(Protocol):
+    def record_rollback(
+        self, target_version_id: str, previous_version_id: str | None, actor: str, reason: str
+    ) -> None: ...
+
+
+@dataclass(frozen=True, slots=True)
+class RollbackModelVersion:
+    """Return to a retained known-good version (ADR 0010).
+
+    Deliberately a separate use case from `ActivateModelVersion` rather than a
+    flag on it. Rollback and promotion differ in what they *mean* and in what
+    they require: rollback names an administrator and a reason, and those are
+    recorded before the change is attempted, so the intent survives even if
+    the activation then loses a concurrency race.
+
+    The mechanics are identical, so the sequence itself is reused rather than
+    duplicated — the same capacity check, load, smoke tests, conditional
+    persist, swap, and health check apply.
+    """
+
+    activate: ActivateModelVersion
+    retained_reader: RetainedModelReader
+    audit: RollbackAuditWriter
+
+    def execute(
+        self,
+        target_version_id: str,
+        expected_active_version_id: str | None,
+        actor: str,
+        reason: str,
+        required_memory_bytes: int,
+    ) -> ActivationResult:
+        if not reason.strip():
+            raise ValueError("Alasan rollback wajib diisi.")
+
+        target = self.retained_reader.get(target_version_id)
+        if target is None:
+            raise ModelVersionNotFoundError(target_version_id)
+
+        # Recorded before the attempt, not after: an operator's decision to
+        # roll back is worth keeping even when the attempt then loses a race
+        # or fails its smoke tests, because that is exactly the situation
+        # someone will be reconstructing later.
+        self.audit.record_rollback(
+            target_version_id=target_version_id,
+            previous_version_id=expected_active_version_id,
+            actor=actor,
+            reason=reason.strip(),
+        )
+        return self.activate.execute(
+            candidate=target,
+            expected_active_version_id=expected_active_version_id,
+            required_memory_bytes=required_memory_bytes,
+        )

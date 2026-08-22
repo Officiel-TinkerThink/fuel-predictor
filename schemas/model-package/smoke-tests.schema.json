@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fuel-predictor.internal/schemas/model-package/smoke-tests.schema.json",
+  "title": "Model package smoke tests",
+  "description": "Deterministic cases the packager asserts its own model answers correctly. Production replays them against the loaded candidate before activation (ADR 0010); any failure stops the activation with the previous model still serving.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["cases"],
+  "properties": {
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "description": "At least one case is required: a package that asserts nothing about its own behaviour cannot be smoke-tested, and silently activating it would defeat the purpose of the step.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "features", "expected_prediction"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Shown to the operator when the case fails, so it must describe the scenario rather than be an opaque index."
+          },
+          "features": {
+            "type": "object",
+            "minProperties": 1,
+            "description": "One complete feature record, keyed by the feature names the manifest declares.",
+            "additionalProperties": {
+              "type": ["string", "number", "boolean"]
+            }
+          },
+          "expected_prediction": { "type": "number" },
+          "tolerance": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0.01,
+            "description": "Absolute tolerance. Floating-point arithmetic differs across platforms and runtime versions, so an exact-equality default would make packages fail for reasons unrelated to model correctness."
+          }
+        }
+      }
+    }
+  }
+}

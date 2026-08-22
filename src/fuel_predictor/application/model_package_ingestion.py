@@ -23,6 +23,7 @@ from fuel_predictor.domain.model_package import (
     ModelFormat,
     ModelPackageManifest,
     ModelPackageValidationError,
+    SmokeTestCase,
     TargetDefinition,
 )
 
@@ -168,6 +169,55 @@ class ParseModelPackageManifest:
             )
 
         return errors
+
+
+@dataclass(frozen=True, slots=True)
+class ParseSmokeTests:
+    """Validate and load a package's `smoke-tests.json`."""
+
+    schema_validator: ManifestSchemaValidator
+
+    def execute(self, raw: Mapping[str, Any]) -> tuple[SmokeTestCase, ...]:
+        errors = self.schema_validator.validate(raw)
+        if errors:
+            raise ModelPackageValidationError(
+                [("smoke-tests.json", message) for message in errors]
+            )
+        return tuple(
+            SmokeTestCase(
+                name=case["name"],
+                features=dict(case["features"]),
+                expected_prediction=case["expected_prediction"],
+                tolerance=case.get("tolerance", 0.01),
+            )
+            for case in raw["cases"]
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class DeterministicSmokeTestRunner:
+    """Replays a package's own declared cases against the loaded candidate.
+
+    Every case runs even after one fails, so the operator sees the full
+    picture in one pass instead of fixing and re-uploading repeatedly. A case
+    that raises is a failure too, not a crash: a model that errors on a case
+    it declared it could answer is exactly what this step exists to catch.
+    """
+
+    cases: tuple[SmokeTestCase, ...]
+
+    def run(self, loaded: Any) -> list[str]:
+        failures: list[str] = []
+        for case in self.cases:
+            try:
+                actual = loaded.predict(case.features)
+            except Exception as error:  # noqa: BLE001 - a raising case is a failure
+                failures.append(f"{case.name}: model gagal memproses kasus ({error})")
+                continue
+            failure = case.failure_against(float(actual))
+            if failure is not None:
+                failures.append(failure)
+        return failures
 
 
 def _build_manifest(raw: Mapping[str, Any]) -> ModelPackageManifest:

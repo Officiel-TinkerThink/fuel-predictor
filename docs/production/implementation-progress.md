@@ -255,14 +255,31 @@ rollback yet — see "Not done" below for exactly where it stops.
       three values are all handled. It exists because the plan's state diagram adds `rejected`, and a
       rejected package must never become active by accident. Rather than leave untested defensive
       code, the test drives it by writing the status directly, so the guard is genuinely exercised.
+- [x] Smoke-test contract and runner — `schemas/model-package/smoke-tests.schema.json` plus
+      `ParseSmokeTests` and `DeterministicSmokeTestRunner` in `application/model_package_ingestion.py`.
+      A package must declare at least one case: one that asserts nothing about its own behaviour
+      cannot be smoke-tested, so silently activating it would defeat the step. `tolerance` is
+      absolute and defaults to a small non-zero value, because floating-point results differ across
+      platforms and runtime versions and exact equality would fail packages for reasons unrelated to
+      model correctness; the boundary is inclusive. The runner executes every case even after one
+      fails, so an operator sees the whole picture in one pass, and treats a case that *raises* as a
+      failure rather than a crash — a model erroring on a case it declared it could answer is exactly
+      what this step exists to catch. `JsonSchemaValidator` is now generic over schema files, with
+      `JsonSchemaManifestValidator` kept as a convenience binding.
+      Tests: `tests/test_model_package_smoke_tests.py`, 9 cases.
+- [x] `RollbackModelVersion` (ADR 0010) — a separate use case from `ActivateModelVersion` rather than
+      a flag on it, because the two differ in meaning and in what they require: rollback names an
+      administrator and a reason. The mechanics are identical, so the activation sequence is reused
+      rather than duplicated. The rollback intent is recorded **before** the attempt, so an operator's
+      decision survives even when the activation then loses a concurrency race or fails smoke tests —
+      that is precisely the situation someone reconstructs later. An empty reason and an unknown
+      target are both refused before anything is recorded.
+      Tests: 4 cases in `tests/test_model_activation.py`.
 - [ ] **Not done** — the remaining Phase 2 scope, roughly in dependency order:
       1. Real `ModelArtifactLoader` (isolated ONNX/skops loading — needs `onnxruntime`/`skops` as new
          dependencies, not added yet), `SmokeTestRunner`, and `MemoryProbe`.
-      2. `smoke-tests.json`, `input-schema.json`, and `reference-statistics.json` schemas and their
-         validation, mirroring what `manifest.schema.json` already does.
-      3. `RollbackModelVersion` — re-activates a retained version through the same sequence, requires
-         `expected_current_version`, and records the administrator and a required reason. The
-         repository already supports the retired→active transition it needs.
+      2. `input-schema.json` and `reference-statistics.json` schemas and their validation, mirroring
+         what `manifest.schema.json` and `smoke-tests.schema.json` already do.
       4. Metric-vs-policy comparison (plan validation step 8) and the persistence + audit record
          (step 9).
       5. The production upload endpoint and its UI (the "Unggah Kandidat" and "Riwayat dan Rollback"
@@ -297,7 +314,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (140 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (153 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref
