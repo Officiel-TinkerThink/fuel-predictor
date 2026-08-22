@@ -391,13 +391,23 @@ rollback yet — see "Not done" below for exactly where it stops.
       even import the app. `onnxruntime` and `skops` are now imported lazily inside the functions that
       use them: serving a prediction page should not pay that cost, and a machine that never uploads a
       package should never load those libraries at all.
+- [x] `ActiveModelHolder` is on the serving path — `GenerateFuelPrediction` now takes an optional
+      holder and reads it **exactly once per request**, keeping that reference for the whole request
+      so an activation swapping mid-request cannot make a prediction attribute one model's numbers to
+      another model's version (ADR 0010). While the holder is empty, prediction falls back to the
+      MLflow-backed store unchanged, which is what ADR 0011 requires until package ingestion reaches
+      parity — so this is additive, not a cutover, and every pre-existing test still passes untouched.
+      `ensure_model_available` accepts a holder-only deployment, since a package-only install has no
+      MLflow active row and that is legitimate rather than an error.
+      Tests: `tests/test_prediction_uses_active_holder.py`, 7 cases including one asserting the
+      reported version matches the model that actually produced the number.
 - [ ] **Not done** — the remaining Phase 2 scope, roughly in dependency order:
-      1. Wiring `ActiveModelHolder` into `GenerateFuelPrediction` so prediction reads the holder
-         instead of loading through `BaselineModelStore` per request — until that happens the holder
-         and activation sequence are built and tested but not yet on the serving path, and the
-         governance page still promotes via the older `PromoteCandidateModel` route rather than
-         `ActivateModelVersion`. Connecting these two is the last structural step in Phase 2.
-      2. Optional package signature verification (ADR 0009 lists it as optional).
+      1. Optional package signature verification (ADR 0009 lists it as optional, and checksums
+         already cover integrity; signing adds provenance).
+      2. Connecting the governance page's promote button to `ActivateModelVersion` instead of the
+         older `PromoteCandidateModel`, so activation of an ingested package runs the full ADR 0010
+         sequence from the UI. Everything it needs now exists and is tested; this is UI wiring.
+      3. Retention/cleanup of old artefacts, which must never delete the version rollback targets.
       Retention policy is a correctness concern here, not just disk hygiene (ADR 0010): the retention
       job must never delete the artefact rollback would target.
 
@@ -422,7 +432,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (209 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (216 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref

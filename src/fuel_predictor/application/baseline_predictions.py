@@ -1,7 +1,7 @@
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 from uuid import uuid4
 
 from fuel_predictor.application.daily_operations import (
@@ -19,6 +19,9 @@ from fuel_predictor.application.prediction_features import (
 )
 from fuel_predictor.domain.historical_dataset import HistoricalDailyOperation
 from fuel_predictor.domain.prediction import FuelPrediction, ModelLifecycleStatus, ModelVersion
+
+if TYPE_CHECKING:
+    from fuel_predictor.application.model_activation import ActiveModelHolder, LoadedModel
 
 
 class BaselineModelStore(Protocol):
@@ -89,20 +92,35 @@ class GenerateFuelPrediction:
     prediction_writer: PredictionWriter
     safety_margin_liters: float
     now: Callable[[], datetime] = lambda: datetime.now(UTC)
+    # Set once an externally-ingested package has been activated (ADR 0010).
+    # While it is empty, prediction keeps using the MLflow-backed store, which
+    # is what ADR 0011 requires until package ingestion reaches parity.
+    holder: "ActiveModelHolder | None" = None
 
     def ensure_model_available(self) -> None:
-        if self.model_reader.get_active() is None:
+        if self._resident_model() is None and self.model_reader.get_active() is None:
             raise BaselineModelNotFoundError()
 
     def execute(self, operation_id: str) -> FuelPrediction:
         operation = self.operation_reader.get(operation_id)
         if operation is None:
             raise DailyOperationNotFoundError(operation_id)
-        model = self.model_reader.get_active()
-        if model is None:
-            raise BaselineModelNotFoundError()
         features = feature_values(operation)
-        estimate = max(0.0, self.model_store.predict(model.artifact_uri, features))
+
+        # Read the holder exactly once and keep that reference for the rest of
+        # the request (ADR 0010): an activation swapping mid-request must not
+        # make this prediction attribute one model's numbers to another's
+        # version.
+        resident = self._resident_model()
+        if resident is not None:
+            model = resident.version
+            estimate = max(0.0, resident.predict(features))
+        else:
+            active = self.model_reader.get_active()
+            if active is None:
+                raise BaselineModelNotFoundError()
+            model = active
+            estimate = max(0.0, self.model_store.predict(model.artifact_uri, features))
         lower = max(0.0, estimate - model.uncertainty_liters)
         upper = estimate + model.uncertainty_liters
         recommended = max(estimate, upper, estimate + self.safety_margin_liters)
@@ -127,3 +145,6 @@ class GenerateFuelPrediction:
         )
         self.prediction_writer.add(prediction)
         return prediction
+
+    def _resident_model(self) -> "LoadedModel | None":
+        return self.holder.current() if self.holder is not None else None
