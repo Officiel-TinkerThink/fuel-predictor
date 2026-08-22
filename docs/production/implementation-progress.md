@@ -361,13 +361,26 @@ rollback yet — see "Not done" below for exactly where it stops.
       database URL through the environment rather than Alembic's config, because `alembic/env.py`
       deliberately reads it from `ApplicationSettings` and would otherwise override the config and
       try to reach the real PostgreSQL (this is the existing convention in `tests/test_migrations.py`).
+- [x] External packager — `src/fuel_predictor/packaging/model_packager.py`. Lives in this
+      repository, not the training environment, so the package contract has exactly one
+      implementation (ADR 0009); a separately-maintained packager would drift from the validator and
+      produce packages rejected for reasons the trainer cannot reproduce locally.
+      Checksums, `model_size_bytes`, and the member list are **computed from the bytes being
+      written** rather than accepted from the caller — they are facts about those bytes, and a caller
+      able to state them separately could state them wrongly. JSON is serialised canonically
+      (sorted keys, fixed separators) so a rebuild is byte-identical and checksums are stable.
+      Rejects a forbidden format, an empty artefact, duplicate feature names, a missing smoke case,
+      and a smoke case that omits a declared feature — all caught at packaging time so the trainer
+      sees them immediately instead of diagnosing a remote production rejection.
+      Tests: `tests/test_model_packager_roundtrip.py`, 8 cases. **The central one feeds the
+      packager's output straight into the validator**: packager and validator are separate code with
+      schemas between them, and only a round-trip proves they agree. Testing either side alone would
+      not.
 - [ ] **Not done** — the remaining Phase 2 scope, roughly in dependency order:
       1. The production upload endpoint and its UI (the "Unggah Kandidat" and "Riwayat dan Rollback"
          nav items still deliberately absent from `rendering.NAVIGATION`), plus optional package
          signature verification.
-      2. The external packager tool itself, which lives in this repo so the package contract has one
-         implementation (ADR 0009).
-      3. Wiring `ActiveModelHolder` into `GenerateFuelPrediction` so prediction reads the holder
+      2. Wiring `ActiveModelHolder` into `GenerateFuelPrediction` so prediction reads the holder
          instead of loading through `BaselineModelStore` per request — until that happens the holder
          is built and tested but not yet on the serving path.
       Retention policy is a correctness concern here, not just disk hygiene (ADR 0010): the retention
@@ -394,7 +407,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (198 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (206 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref
