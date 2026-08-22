@@ -214,16 +214,45 @@ rollback yet — see "Not done" below for exactly where it stops.
       read-in-full-then-reject implementation passes it identically. The bounded read in `_read_one`
       is a memory-exhaustion defence a unit test can't practically detect, so its rationale lives in a
       code comment rather than a test name that would overstate what's verified.
-- [ ] **Not done** — everything after archive handling and manifest validation: optional package
-      signature verification,
-      `input-schema.json`/`reference-statistics.json`/`smoke-tests.json` schemas and validation, the
-      production upload endpoint, isolated ONNX/skops loading (needs `onnxruntime`/`skops` as new
-      dependencies — not added yet), deterministic smoke-test execution, metric-vs-policy comparison,
-      persistence + audit record, the external packager tool itself, the in-process active-model
-      holder with `expected_current_version` optimistic concurrency (ADR 0010), atomic activation,
-      post-activation health check, and rollback. This is most of Phase 2's actual scope — the
-      manifest-validation slice above is the foundation everything else builds on, not the bulk of the
-      work.
+- [x] In-process active-model holder and the activation sequence (ADR 0010) —
+      `application/model_activation.py` and `domain/model_activation.py`. `ActiveModelHolder` keeps one
+      `LoadedModel` (model + the version it came from, as one immutable pair so a reader can never see
+      a model from one version beside metadata from another). Reads are lock-free; writes are
+      serialised by a separate lock so only one candidate is loaded and warmed at a time.
+      `ActivateModelVersion` runs ADR 0010's ordered sequence: capacity check → load and warm →
+      smoke tests → conditional persist → swap → post-activation health check. Every failure before
+      the swap leaves the previous model both active and loaded; the post-swap health-check failure is
+      surfaced and deliberately **not** auto-reverted, per the ADR's reasoning that a silent revert
+      hides a real problem.
+      Ports defined but not yet implemented: `ModelArtifactLoader`, `SmokeTestRunner`, `MemoryProbe`,
+      `ActivationRepository` — this slice is the orchestration and its concurrency semantics, tested
+      against fakes. The SQLAlchemy `ActivationRepository` (a conditional `UPDATE ... WHERE` whose
+      zero-row result is the conflict) and the real loader/probe are still to come.
+      Tests: `tests/test_model_activation.py`, 9 cases including a genuine two-thread race asserting
+      exactly one activation wins and the loser neither persists nor swaps.
+      **Fixed while writing this**: the health check originally re-read `holder.current()` after
+      releasing the lock, so a later activation could swap in between and this call would report on —
+      and blame — the wrong model. It now health-checks the specific `LoadedModel` this activation
+      swapped in.
+- [ ] **Not done** — the remaining Phase 2 scope, roughly in dependency order:
+      1. The SQLAlchemy `ActivationRepository` — a conditional `UPDATE ... WHERE active version =
+         :expected` whose zero-row result is the conflict, plus an Alembic revision if the model
+         tables need columns for retained-artefact paths.
+      2. Real `ModelArtifactLoader` (isolated ONNX/skops loading — needs `onnxruntime`/`skops` as new
+         dependencies, not added yet), `SmokeTestRunner`, and `MemoryProbe`.
+      3. `smoke-tests.json`, `input-schema.json`, and `reference-statistics.json` schemas and their
+         validation, mirroring what `manifest.schema.json` already does.
+      4. `RollbackModelVersion` — re-activates a retained version through the same sequence, requires
+         `expected_current_version`, and records the administrator and a required reason.
+      5. Metric-vs-policy comparison (plan validation step 8) and the persistence + audit record
+         (step 9).
+      6. The production upload endpoint and its UI (the "Unggah Kandidat" and "Riwayat dan Rollback"
+         nav items still deliberately absent from `rendering.NAVIGATION`), plus optional package
+         signature verification.
+      7. The external packager tool itself, which lives in this repo so the package contract has one
+         implementation (ADR 0009).
+      Retention policy is a correctness concern here, not just disk hygiene (ADR 0010): the retention
+      job must never delete the artefact rollback would target.
 
 ## Phase 3 — Operational monitoring
 
@@ -246,7 +275,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (121 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (130 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref
