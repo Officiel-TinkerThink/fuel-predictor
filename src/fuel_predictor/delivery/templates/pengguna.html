@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{{ ui.error_summary(errors, 'Pengguna belum dapat disimpan') }}
+
+<div class="grid grid--two">
+  <section class="card">
+    <h2>Tambah pengguna</h2>
+    <form method="post" action="/pengguna" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      {{ ui.text_field('username', 'Nama pengguna', form_values.get('username', ''), hint='Huruf, angka, titik, garis, dan garis bawah.', errors=errors, required=true, autocomplete='username') }}
+      {{ ui.text_field('full_name', 'Nama lengkap', form_values.get('full_name', ''), errors=errors, required=true) }}
+      {{ ui.text_field('password', 'Kata sandi awal', '', hint='Minimal 12 karakter. Sampaikan secara aman kepada pengguna.', errors=errors, required=true, type='password', autocomplete='new-password') }}
+      {{ ui.select_field('role', 'Peran', role_options, form_values.get('role', 'operator'), errors=errors, required=true) }}
+      <button type="submit">Simpan pengguna</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Daftar pengguna</h2>
+    {% if users %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Nama pengguna</th><th>Nama lengkap</th><th>Peran</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for user in users %}
+          <tr>
+            <td>{{ user.username }}</td>
+            <td>{{ user.full_name }}</td>
+            <td>{{ role_options | selectattr('0', 'equalto', user.role.value) | map(attribute='1') | first }}</td>
+            <td>{{ ui.badge('Aktif', 'success') if user.is_active else ui.badge('Nonaktif', 'neutral') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    {{ ui.empty_state('Belum ada pengguna lain.') }}
+    {% endif %}
+  </section>
+</div>
+
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{% if is_healthy %}
+{{ ui.banner('success', 'Layanan berjalan normal', 'Tidak ada peringatan kritis saat ini.') }}
+{% else %}
+{{ ui.banner('danger', 'Perlu perhatian', critical_alert_count ~ ' peringatan kritis aktif. Lihat Kesehatan Sistem untuk detail.', 'Buka Kesehatan Sistem', '/pemantauan-operasi') }}
+{% endif %}
+
+<div class="grid grid--metrics">
+  {% if governance.active_model %}
+  {{ ui.metric('Model aktif', 'v' ~ governance.active_model.version, context=governance.active_model.algorithm) }}
+  {% else %}
+  {{ ui.metric('Model aktif', 'Belum ada', unavailable=true, context='Latih dan promosikan kandidat baseline.') }}
+  {% endif %}
+
+  {% if governance.active_performance and governance.active_performance.mae_liters is not none %}
+  {{ ui.metric('MAE model aktif', governance.active_performance.mae_liters | angka, unit='L', context=governance.active_performance.matched_record_count ~ ' pasangan tercocokkan') }}
+  {% else %}
+  {{ ui.metric('MAE model aktif', 'Belum cukup data', unavailable=true, context='Perlu hasil aktual yang tercocokkan dengan prediksi.') }}
+  {% endif %}
+
+  {% if monitoring.feature_drift.status == 'ready' %}
+    {% if monitoring.feature_drift.drift_share is not none and monitoring.feature_drift.drift_share >= monitoring.feature_drift.threshold %}
+    {{ ui.metric('Pergeseran data', (monitoring.feature_drift.drift_share * 100) | angka(0) ~ '%', context='Melewati ambang ' ~ (monitoring.feature_drift.threshold * 100) | angka(0) ~ '%') }}
+    {% else %}
+    {{ ui.metric('Pergeseran data', 'Stabil', context='Di bawah ambang pemantauan') }}
+    {% endif %}
+  {% else %}
+  {{ ui.metric('Pergeseran data', 'Belum tersedia', unavailable=true, context='Menunggu data referensi dan data terkini.') }}
+  {% endif %}
+
+  {{ ui.metric('Aktual BBM belum tercatat', monitoring.missing_actual_prediction_count, context='Lebih dari ' ~ monitoring.missing_actual_after_days ~ ' hari sejak prediksi') }}
+</div>
+
+<div class="grid grid--two">
+  <section class="card">
+    <div class="card__title"><h2>Peringatan aktif</h2>{{ ui.badge(monitoring.active_alerts | length, 'warning' if monitoring.active_alerts else 'success') }}</div>
+    {% if monitoring.active_alerts %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Jenis</th><th>Pesan</th><th>Tingkat</th></tr></thead>
+        <tbody>
+          {% for alert in monitoring.active_alerts %}
+          <tr>
+            <td>{{ alert.kind.value }}</td>
+            <td>{{ alert.message }}</td>
+            <td>{{ ui.badge('Kritis' if alert.severity.value == 'critical' else 'Peringatan', 'danger' if alert.severity.value == 'critical' else 'warning') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    {{ ui.empty_state('Tidak ada peringatan aktif.') }}
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Rekomendasi model</h2>
+    <p>{{ governance.recommendation }}</p>
+    <dl class="detail-list">
+      <dt>Kandidat menunggu tinjauan</dt><dd>{{ governance.candidate_models | length }}</dd>
+      <dt>Data kualitas belum diperbaiki</dt><dd>{{ monitoring.unresolved_data_quality_issue_count }}</dd>
+      <dt>Pemantauan terjadwal</dt><dd>{{ ui.badge('Belum tersedia', 'neutral') }}</dd>
+      <dt>Cadangan (backup) terakhir</dt><dd>{{ ui.badge('Belum tersedia', 'neutral') }}</dd>
+    </dl>
+    <p class="hint">Status pemantauan terjadwal dan cadangan tersedia setelah Fase 3 selesai.</p>
+  </section>
+</div>
+
+{% endblock %}

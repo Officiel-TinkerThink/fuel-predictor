@@ -25,6 +25,13 @@ class ApplicationSettings(BaseSettings):
     monitoring_rolling_error_window: int = Field(default=7, ge=1)
     monitoring_min_matched_outcomes: int = Field(default=3, ge=1)
     google_maps_api_key: SecretStr | None = None
+    bootstrap_admin_username: str | None = None
+    bootstrap_admin_password: SecretStr | None = None
+    # A request actually arriving over HTTPS always gets a Secure cookie
+    # regardless of this flag; set it true only to force Secure even when the
+    # app cannot see the original scheme (for example behind a proxy that has
+    # not been configured to forward it yet).
+    session_cookies_require_https: bool = False
 
     @field_validator("database_url")
     @classmethod

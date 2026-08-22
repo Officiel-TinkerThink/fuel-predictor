@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+<section class="card">
+  <div class="table-toolbar">
+    <div class="field">
+      <label for="filter-audit">Cari catatan</label>
+      <input id="filter-audit" type="search" data-table-filter="tabel-audit" aria-describedby="filter-audit-status" placeholder="Cari pelaku, tindakan, atau subjek">
+    </div>
+    <p id="filter-audit-status" role="status" class="hint"></p>
+  </div>
+  {% if records %}
+  <div class="table-wrap">
+    <table id="tabel-audit">
+      <caption>{{ records | length }} catatan terbaru</caption>
+      <thead><tr><th>Waktu</th><th>Pelaku</th><th>Tindakan</th><th>Subjek</th><th>Hasil</th></tr></thead>
+      <tbody>
+        {% for record in records %}
+        <tr>
+          <td>{{ record.occurred_at | waktu }}</td>
+          <td>{{ record.actor }}</td>
+          <td>{{ record.action }}</td>
+          <td>{{ record.subject or '-' }}</td>
+          <td>
+            {% if record.outcome.value == 'succeeded' %}{{ ui.badge('Berhasil', 'success') }}
+            {% elif record.outcome.value == 'denied' %}{{ ui.badge('Ditolak', 'warning') }}
+            {% else %}{{ ui.badge('Gagal', 'danger') }}{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ ui.empty_state('Belum ada catatan audit.') }}
+  {% endif %}
+</section>
+
+{% endblock %}

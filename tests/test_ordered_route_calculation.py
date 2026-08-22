@@ -149,7 +149,7 @@ def test_indonesian_form_exposes_ordered_stop_controls_and_submits_them(tmp_path
     with TestClient(
         create_app(database_path=tmp_path / "operations.sqlite3", routing_provider=provider)
     ) as client:
-        form = client.get("/")
+        form = client.get("/prediksi")
         response = client.post(
             "/operasi-harian",
             content=urlencode(

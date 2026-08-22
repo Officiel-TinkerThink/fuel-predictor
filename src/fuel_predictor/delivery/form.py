@@ -73,7 +73,7 @@ def build_form_router(
 ) -> APIRouter:
     router = APIRouter()
 
-    @router.get("/", response_class=HTMLResponse)
+    @router.get("/prediksi", response_class=HTMLResponse)
     def show_form() -> HTMLResponse:
         return HTMLResponse(_render_form({}, []))
 

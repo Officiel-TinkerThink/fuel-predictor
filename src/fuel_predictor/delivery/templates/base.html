@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ page_title }}{% endblock %} · Perencana Operasi Harian</title>
+  <link rel="stylesheet" href="/statis/app.css">
+  <link rel="icon" href="data:,">
+</head>
+<body>
+<a class="skip-link" href="#konten-utama">Lewati ke konten utama</a>
+<div class="app">
+  <header class="app__nav">
+    <a class="app__brand" href="/">Perencana Operasi Harian<span>Prediksi kebutuhan BBM</span></a>
+    <nav aria-label="Navigasi utama">
+      {% for group in navigation %}
+      <div class="nav-group">
+        {% if group.title %}<p class="nav-group__title" id="nav-{{ loop.index }}">{{ group.title }}</p>{% endif %}
+        <ul class="nav-list"{% if group.title %} aria-labelledby="nav-{{ loop.index }}"{% endif %}>
+          {% for item in group.items %}
+          <li><a href="{{ item.href }}"{% if item.href == active_path %} aria-current="page"{% endif %}>{{ item.label }}</a></li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+    </nav>
+    {% if caller_user %}
+    <div class="app__account">
+      <strong>{{ caller_user.full_name }}</strong>
+      <span class="role">{{ role_label }}</span>
+      <form method="post" action="/keluar">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="button button--secondary">Keluar</button>
+      </form>
+    </div>
+    {% endif %}
+  </header>
+
+  <main class="app__main" id="konten-utama" tabindex="-1">
+    {% if breadcrumbs %}
+    <nav class="breadcrumbs" aria-label="Remah roti">
+      <ol>
+        {% for crumb in breadcrumbs %}
+        <li>{% if crumb.href and not loop.last %}<a href="{{ crumb.href }}">{{ crumb.label }}</a>{% else %}<span aria-current="page">{{ crumb.label }}</span>{% endif %}</li>
+        {% endfor %}
+      </ol>
+    </nav>
+    {% endif %}
+
+    <div class="page-header">
+      {% if eyebrow %}<p class="eyebrow">{{ eyebrow }}</p>{% endif %}
+      <h1>{{ page_title }}</h1>
+      {% if page_lead %}<p class="lead">{{ page_lead }}</p>{% endif %}
+    </div>
+
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<script src="/statis/app.js" defer></script>
+</body>
+</html>

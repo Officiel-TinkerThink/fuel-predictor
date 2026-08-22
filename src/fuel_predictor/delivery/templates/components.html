@@ -1,0 +1,159 @@
+{# Reusable interface components (ADR 0007).
+   Every status carries text as well as colour, and every numeric input shows its unit. #}
+
+{% macro badge(text, tone='neutral') -%}
+<span class="badge badge--{{ tone }}">{{ text }}</span>
+{%- endmacro %}
+
+{% macro metric(label, value, unit=none, context=none, unavailable=false) -%}
+<div class="metric">
+  <p class="metric__label">{{ label }}</p>
+  {% if unavailable %}
+  <p class="metric__value metric__value--unavailable">{{ value }}</p>
+  {% else %}
+  <p class="metric__value">{{ value }}{% if unit %}<span class="metric__unit">{{ unit }}</span>{% endif %}</p>
+  {% endif %}
+  {% if context %}<p class="metric__context">{{ context }}</p>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro banner(tone, title, body, action=none, action_href=none) -%}
+<div class="banner banner--{{ tone }}" role="{{ 'alert' if tone in ('danger', 'warning') else 'status' }}">
+  <h2 class="banner__title">{{ title }}</h2>
+  <p>{{ body }}</p>
+  {% if action and action_href %}
+  <p class="banner__action"><a href="{{ action_href }}">{{ action }}</a></p>
+  {% elif action %}
+  <p class="banner__action">{{ action }}</p>
+  {% endif %}
+</div>
+{%- endmacro %}
+
+{% macro error_summary(errors, title='Isian belum dapat disimpan') -%}
+{% if errors %}
+<div class="error-summary" role="alert" tabindex="-1" id="ringkasan-kesalahan">
+  <h2>{{ title }}</h2>
+  <ul>
+    {% for error in errors %}
+    <li><a href="#field-{{ error.field }}">{{ error.message }}</a></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{%- endmacro %}
+
+{% macro _error_for(errors, name) -%}
+{%- for error in errors or [] -%}{%- if error.field == name -%}{{ error.message }}{%- endif -%}{%- endfor -%}
+{%- endmacro %}
+
+{% macro text_field(name, label, value='', hint=none, errors=none, required=false, type='text', autocomplete=none) -%}
+{% set message = _error_for(errors, name) | trim %}
+<div class="field">
+  <label for="field-{{ name }}">{{ label }}{% if required %} <span aria-hidden="true">*</span><span class="visually-hidden">wajib diisi</span>{% endif %}</label>
+  <input id="field-{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value }}"
+    {% if required %}required{% endif %}
+    {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
+    {% if message %}aria-invalid="true" aria-describedby="error-{{ name }}"{% elif hint %}aria-describedby="hint-{{ name }}"{% endif %}>
+  {% if hint %}<span class="hint" id="hint-{{ name }}">{{ hint }}</span>{% endif %}
+  {% if message %}<span class="field-error" id="error-{{ name }}">{{ message }}</span>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro number_field(name, label, unit, value='', hint=none, errors=none, required=false, min=none, step='0.01') -%}
+{% set message = _error_for(errors, name) | trim %}
+<div class="field">
+  <label for="field-{{ name }}">{{ label }}{% if required %} <span aria-hidden="true">*</span><span class="visually-hidden">wajib diisi</span>{% endif %}</label>
+  <div class="unit-input">
+    <input id="field-{{ name }}" name="{{ name }}" type="number" inputmode="decimal" value="{{ value }}"
+      step="{{ step }}"{% if min is not none %} min="{{ min }}"{% endif %}
+      {% if required %}required{% endif %}
+      {% if message %}aria-invalid="true" aria-describedby="error-{{ name }}"{% elif hint %}aria-describedby="hint-{{ name }}"{% endif %}>
+    <span class="unit" aria-hidden="true">{{ unit }}</span>
+  </div>
+  <span class="visually-hidden">Satuan: {{ unit }}</span>
+  {% if hint %}<span class="hint" id="hint-{{ name }}">{{ hint }}</span>{% endif %}
+  {% if message %}<span class="field-error" id="error-{{ name }}">{{ message }}</span>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro select_field(name, label, options, value='', hint=none, errors=none, required=false) -%}
+{% set message = _error_for(errors, name) | trim %}
+<div class="field">
+  <label for="field-{{ name }}">{{ label }}{% if required %} <span aria-hidden="true">*</span><span class="visually-hidden">wajib diisi</span>{% endif %}</label>
+  <select id="field-{{ name }}" name="{{ name }}"
+    {% if required %}required{% endif %}
+    {% if message %}aria-invalid="true" aria-describedby="error-{{ name }}"{% elif hint %}aria-describedby="hint-{{ name }}"{% endif %}>
+    {% for option_value, option_label in options %}
+    <option value="{{ option_value }}"{% if option_value == value %} selected{% endif %}>{{ option_label }}</option>
+    {% endfor %}
+  </select>
+  {% if hint %}<span class="hint" id="hint-{{ name }}">{{ hint }}</span>{% endif %}
+  {% if message %}<span class="field-error" id="error-{{ name }}">{{ message }}</span>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro file_field(name, label, accept, hint=none, errors=none, required=true) -%}
+{% set message = _error_for(errors, name) | trim %}
+<div class="field">
+  <label for="field-{{ name }}">{{ label }}</label>
+  <input id="field-{{ name }}" name="{{ name }}" type="file" accept="{{ accept }}"
+    {% if required %}required{% endif %}
+    {% if message %}aria-invalid="true" aria-describedby="error-{{ name }}"{% elif hint %}aria-describedby="hint-{{ name }}"{% endif %}>
+  {% if hint %}<span class="hint" id="hint-{{ name }}">{{ hint }}</span>{% endif %}
+  {% if message %}<span class="field-error" id="error-{{ name }}">{{ message }}</span>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro steps(labels, current) -%}
+<ol class="steps" aria-label="Tahapan">
+  {% for label in labels %}
+  <li {% if loop.index == current %}aria-current="step"{% elif loop.index < current %}data-state="done"{% endif %}>{{ label }}</li>
+  {% endfor %}
+</ol>
+{%- endmacro %}
+
+{% macro empty_state(message, action=none, action_href=none) -%}
+<div class="empty-state">
+  <p>{{ message }}</p>
+  {% if action and action_href %}<p><a class="button button--secondary" href="{{ action_href }}">{{ action }}</a></p>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro confirm_button(dialog_id, label, title, body, form_action, csrf_token, tone='danger', reason_field=false, hidden_fields=none) -%}
+<button type="button" class="button button--{{ tone }}" data-dialog="{{ dialog_id }}">{{ label }}</button>
+<dialog id="{{ dialog_id }}" aria-labelledby="{{ dialog_id }}-title">
+  <form method="dialog"><button class="visually-hidden" value="batal">Tutup</button></form>
+  <h2 id="{{ dialog_id }}-title">{{ title }}</h2>
+  <p>{{ body }}</p>
+  <form method="post" action="{{ form_action }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% for field_name, field_value in (hidden_fields or {}).items() %}
+    <input type="hidden" name="{{ field_name }}" value="{{ field_value }}">
+    {% endfor %}
+    {% if reason_field %}
+    <div class="field">
+      <label for="{{ dialog_id }}-reason">Alasan</label>
+      <input id="{{ dialog_id }}-reason" name="reason" type="text" required
+             aria-describedby="{{ dialog_id }}-reason-hint">
+      <span class="hint" id="{{ dialog_id }}-reason-hint">Alasan ini disimpan dalam catatan audit.</span>
+    </div>
+    {% endif %}
+    <div class="button-row">
+      <button type="submit" class="button button--{{ tone }}">{{ label }}</button>
+      <button type="button" class="button button--secondary" data-dialog-close="{{ dialog_id }}">Batal</button>
+    </div>
+  </form>
+</dialog>
+{%- endmacro %}
+
+{% macro sparkline(points, label) -%}
+{% if points %}
+<svg class="sparkline" viewBox="0 0 320 110" role="img" aria-label="{{ label }}" preserveAspectRatio="none">
+  <line class="axis" x1="0" y1="100" x2="320" y2="100"></line>
+  <polyline class="series" points="{{ points | map(attribute='svg_point') | join(' ') }}"></polyline>
+  {% for point in points %}
+  <circle class="point" cx="{{ point.x }}" cy="{{ point.y }}" r="2.5"></circle>
+  {% endfor %}
+</svg>
+{% endif %}
+{%- endmacro %}

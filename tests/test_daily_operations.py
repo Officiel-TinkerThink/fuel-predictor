@@ -72,7 +72,7 @@ def test_api_rejects_lifting_mode_without_positive_lifting_hours(tmp_path: Path)
 
 def test_indonesian_form_creates_daily_operation_with_same_behavior(tmp_path: Path) -> None:
     with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
-        form = client.get("/")
+        form = client.get("/prediksi")
         response = client.post(
             "/operasi-harian",
             data={

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Masuk · Perencana Operasi Harian</title>
+  <link rel="stylesheet" href="/statis/app.css">
+  <link rel="icon" href="data:,">
+</head>
+<body>
+<div class="signin">
+  <main class="signin__card">
+    <h1>Masuk</h1>
+    <p class="lead">Gunakan akun yang diberikan administrator untuk membuka Perencana Operasi Harian.</p>
+
+    {% if error %}
+    <div class="error-summary" role="alert" tabindex="-1" id="ringkasan-kesalahan">
+      <h2>Belum dapat masuk</h2>
+      <p>{{ error }}</p>
+    </div>
+    {% endif %}
+
+    <form method="post" action="/masuk" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="tujuan" value="{{ destination }}">
+      <div class="field">
+        <label for="field-username">Nama pengguna</label>
+        <input id="field-username" name="username" type="text" required autocomplete="username"
+               value="{{ username }}" autocapitalize="none" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="field-password">Kata sandi</label>
+        <input id="field-password" name="password" type="password" required
+               autocomplete="current-password">
+      </div>
+      <button type="submit">Masuk</button>
+    </form>
+
+    <p class="hint" style="margin-top: var(--space-5)">
+      Lupa kata sandi? Hubungi administrator untuk mengatur ulang.
+    </p>
+  </main>
+</div>
+<script src="/statis/app.js" defer></script>
+</body>
+</html>

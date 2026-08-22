@@ -1,0 +1,179 @@
+"""Jinja2 environment, navigation, and the page-context helper (ADR 0007).
+
+Templates receive plain data assembled here. They never touch a repository, a
+use case, or a domain object's behaviour.
+"""
+
+from collections.abc import Sequence
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from types import SimpleNamespace
+
+from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
+
+from fuel_predictor.application.identity import ActiveCaller
+from fuel_predictor.domain.identity import Capability, UserRole
+
+TEMPLATE_DIRECTORY = Path(__file__).parent / "templates"
+STATIC_DIRECTORY = Path(__file__).parent / "static"
+
+_ROLE_LABELS = {
+    UserRole.OPERATOR: "Operator",
+    UserRole.MANAGER: "Manajer",
+    UserRole.ADMINISTRATOR: "Administrator",
+}
+
+
+@dataclass(frozen=True, slots=True)
+class NavigationItem:
+    label: str
+    href: str
+    capability: Capability
+
+
+@dataclass(frozen=True, slots=True)
+class NavigationGroup:
+    title: str | None
+    items: tuple[NavigationItem, ...]
+
+
+NAVIGATION: tuple[NavigationGroup, ...] = (
+    NavigationGroup(
+        title=None,
+        items=(NavigationItem("Ringkasan", "/", Capability.VIEW_MONITORING),),
+    ),
+    NavigationGroup(
+        title="Operasi Harian",
+        items=(
+            NavigationItem("Buat Prediksi", "/prediksi", Capability.CREATE_PREDICTION),
+            NavigationItem("Prediksi Massal", "/prediksi-massal", Capability.IMPORT_OPERATIONS),
+            NavigationItem("Riwayat Prediksi", "/riwayat-prediksi", Capability.VIEW_MONITORING),
+        ),
+    ),
+    NavigationGroup(
+        title="BBM Aktual",
+        items=(
+            NavigationItem("Catat Aktual", "/bbm-aktual", Capability.RECORD_ACTUAL_FUEL),
+            NavigationItem("Impor Massal", "/bbm-aktual/impor", Capability.RECORD_ACTUAL_FUEL),
+        ),
+    ),
+    NavigationGroup(
+        title="Pemantauan",
+        items=(
+            NavigationItem(
+                "Kinerja Model", "/pemantauan/kinerja-model", Capability.VIEW_MONITORING
+            ),
+            NavigationItem(
+                "Pergeseran Data", "/pemantauan/pergeseran-data", Capability.VIEW_MONITORING
+            ),
+            NavigationItem(
+                "Kesehatan Sistem", "/pemantauan/kesehatan-sistem", Capability.VIEW_MONITORING
+            ),
+        ),
+    ),
+    NavigationGroup(
+        title="Model",
+        items=(
+            NavigationItem("Model Aktif", "/model", Capability.VIEW_MODELS),
+            NavigationItem("Unggah Kandidat", "/model/unggah", Capability.MANAGE_MODELS),
+            NavigationItem("Riwayat dan Rollback", "/model/riwayat", Capability.VIEW_MODELS),
+        ),
+    ),
+    NavigationGroup(
+        title="Pengaturan",
+        items=(
+            NavigationItem("Integrasi Agen", "/integrasi-agen", Capability.MANAGE_USERS),
+            NavigationItem("Pengguna", "/pengguna", Capability.MANAGE_USERS),
+            NavigationItem("Catatan Audit", "/audit", Capability.VIEW_AUDIT),
+        ),
+    ),
+)
+
+
+def build_environment() -> Environment:
+    environment = Environment(
+        loader=FileSystemLoader(TEMPLATE_DIRECTORY),
+        autoescape=select_autoescape(("html", "xml")),
+        undefined=StrictUndefined,
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
+    environment.filters["angka"] = format_decimal
+    environment.filters["waktu"] = format_datetime
+    return environment
+
+
+def navigation_for(caller: ActiveCaller | None) -> list[SimpleNamespace]:
+    """Show only what this caller may actually open.
+
+    Groups and items are ``SimpleNamespace``, not ``dict``: Jinja resolves
+    ``group.items`` as attribute access first, and a plain dict's own
+    ``items()`` method would shadow a same-named "items" key.
+    """
+    if caller is None:
+        return []
+    groups: list[SimpleNamespace] = []
+    for group in NAVIGATION:
+        entries = [
+            SimpleNamespace(label=item.label, href=item.href)
+            for item in group.items
+            if caller.allows(item.capability)
+        ]
+        if entries:
+            groups.append(SimpleNamespace(title=group.title, items=entries))
+    return groups
+
+
+def render(
+    template_name: str,
+    *,
+    caller: ActiveCaller | None,
+    page_title: str,
+    active_path: str = "",
+    eyebrow: str | None = None,
+    page_lead: str | None = None,
+    breadcrumbs: Sequence[dict[str, str | None]] | None = None,
+    **context: object,
+) -> str:
+    template = _ENVIRONMENT.get_template(template_name)
+    return template.render(
+        caller_user=caller.user if caller else None,
+        role_label=_ROLE_LABELS[caller.user.role] if caller else None,
+        csrf_token=caller.csrf_token if caller else "",
+        navigation=navigation_for(caller),
+        active_path=active_path,
+        page_title=page_title,
+        eyebrow=eyebrow,
+        page_lead=page_lead,
+        breadcrumbs=list(breadcrumbs or []),
+        **context,
+    )
+
+
+def render_standalone(template_name: str, **context: object) -> str:
+    """Render a page that has no application shell, such as sign-in."""
+    return _ENVIRONMENT.get_template(template_name).render(**context)
+
+
+def render_error_page(title: str, message: str) -> str:
+    return render_standalone("kesalahan.html", page_title=title, message=message)
+
+
+def format_decimal(value: float | None, digits: int = 2) -> str:
+    """Indonesian number formatting: '.' groups thousands, ',' is the decimal mark."""
+    if value is None:
+        return "-"
+    formatted = f"{value:,.{digits}f}"
+    grouped, _, fraction = formatted.partition(".")
+    grouped = grouped.replace(",", ".")
+    return f"{grouped},{fraction}" if fraction else grouped
+
+
+def format_datetime(value: datetime | None) -> str:
+    if value is None:
+        return "-"
+    return value.strftime("%d/%m/%Y %H:%M")
+
+
+_ENVIRONMENT = build_environment()

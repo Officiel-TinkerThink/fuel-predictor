@@ -178,6 +178,49 @@ class ActualFuelRecordRow(Base):
     source_row_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
+class UserRow(Base):
+    __tablename__ = "users"
+
+    user_id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    full_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    role: Mapped[str] = mapped_column(String(32), nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(512), nullable=False)
+    is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class UserSessionRow(Base):
+    __tablename__ = "user_sessions"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    csrf_token: Mapped[str] = mapped_column(String(128), nullable=False)
+
+
+class AuditRecordRow(Base):
+    __tablename__ = "audit_records"
+    __table_args__ = (
+        Index("ix_audit_records_action_subject", "action", "subject", "occurred_at"),
+    )
+
+    audit_id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    actor: Mapped[str] = mapped_column(String(128), nullable=False)
+    actor_kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    action: Mapped[str] = mapped_column(String(64), nullable=False)
+    outcome: Mapped[str] = mapped_column(String(16), nullable=False)
+    subject: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    details: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
+
+
 class MonitoringAlertRow(Base):
     __tablename__ = "monitoring_alerts"
 
