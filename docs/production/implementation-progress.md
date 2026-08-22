@@ -349,14 +349,25 @@ rollback yet — see "Not done" below for exactly where it stops.
       `verify_member_checksums` deliberately excluded it (it cannot checksum itself), making a
       well-formed package impossible to construct. Each unit test passed in isolation because each
       only ever saw one side of the contradiction.
+- [x] Persisted validation verdicts (plan step 9) — `model_package_validations` table with Alembic
+      revision `20260822_09`, `application/model_package_records.py`, and its SQLAlchemy repository.
+      **Rejections are recorded too, and that is the point**: "why was this package refused?" is a
+      question asked days later, and it can only be answered if the refusal was written down at the
+      time. `manifest` and `artifact_path` are nullable precisely so a package rejected *before* its
+      manifest could be parsed still leaves a record instead of vanishing.
+      Tests: `tests/test_model_package_records.py`, 7 cases including one that runs the real Alembic
+      migration and then exercises the ORM against it — the two are hand-written in separate places,
+      so nothing else would catch a column added to one and missed in the other. That test sets the
+      database URL through the environment rather than Alembic's config, because `alembic/env.py`
+      deliberately reads it from `ApplicationSettings` and would otherwise override the config and
+      try to reach the real PostgreSQL (this is the existing convention in `tests/test_migrations.py`).
 - [ ] **Not done** — the remaining Phase 2 scope, roughly in dependency order:
-      1. The persistence + audit record for a completed validation (plan step 9).
-      3. The production upload endpoint and its UI (the "Unggah Kandidat" and "Riwayat dan Rollback"
+      1. The production upload endpoint and its UI (the "Unggah Kandidat" and "Riwayat dan Rollback"
          nav items still deliberately absent from `rendering.NAVIGATION`), plus optional package
          signature verification.
-      4. The external packager tool itself, which lives in this repo so the package contract has one
+      2. The external packager tool itself, which lives in this repo so the package contract has one
          implementation (ADR 0009).
-      5. Wiring `ActiveModelHolder` into `GenerateFuelPrediction` so prediction reads the holder
+      3. Wiring `ActiveModelHolder` into `GenerateFuelPrediction` so prediction reads the holder
          instead of loading through `BaselineModelStore` per request — until that happens the holder
          is built and tested but not yet on the serving path.
       Retention policy is a correctness concern here, not just disk hygiene (ADR 0010): the retention
@@ -383,7 +394,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (191 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (198 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref

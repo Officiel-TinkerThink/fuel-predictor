@@ -221,6 +221,30 @@ class AuditRecordRow(Base):
     details: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
 
 
+class ModelPackageValidationRow(Base):
+    """One recorded verdict on an uploaded package (plan validation step 9).
+
+    Kept even when the verdict is a rejection: an operator asking "why was
+    this package refused?" needs the answer to still exist, and a rejected
+    upload is exactly the thing someone reconstructs later.
+    """
+
+    __tablename__ = "model_package_validations"
+
+    validation_id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    model_version: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    validated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    actor: Mapped[str] = mapped_column(String(128), nullable=False)
+    outcome: Mapped[str] = mapped_column(String(16), nullable=False)
+    eligible: Mapped[bool] = mapped_column(nullable=False, default=False)
+    reasons: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    warnings: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    manifest: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    artifact_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+
+
 class MonitoringAlertRow(Base):
     __tablename__ = "monitoring_alerts"
 
