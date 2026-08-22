@@ -147,12 +147,16 @@ session (or a different model) can resume without re-deriving context.
 - [ ] Accessibility/browser-level workflow tests — the design system follows the plan's checklist
       (focus visibility, semantic status, table equivalents for charts) but nothing automated
       verifies it yet (e.g. axe-core or Playwright a11y checks).
-- [ ] Systematic `ROUTE_CAPABILITIES` coverage test. One real gap was found by inspection this way
-      (`POST /dataset-versions/{id}/latih-kandidat-baseline` had no entry at all — see above) and
-      there is no reason to believe it was the only one; nothing currently proves that every entry in
-      `security.ROUTE_CAPABILITIES` matches a route that actually exists, or that every route that
-      exists has an entry. A good next step: a test that walks the FastAPI app's route table and
-      cross-checks it against `ROUTE_CAPABILITIES`.
+- [x] Systematic `ROUTE_CAPABILITIES` coverage test — `tests/test_route_capability_coverage.py`.
+      Confirmed after the fact that the one gap found during migration
+      (`POST /dataset-versions/{id}/latih-kandidat-baseline`) was the only one: every non-public route
+      now has an entry, every entry matches a real route, and no entry is duplicated (a duplicate
+      would silently hide the real capability, since the lookup returns the first match). Enumerates
+      routes via `app.openapi()["paths"]` rather than walking `app.routes` — this FastAPI version
+      wraps included routers in an internal `_IncludedRouter` object, so `app.routes` doesn't expose
+      flat `APIRoute` instances the way older versions did; the OpenAPI schema is the stable,
+      version-independent way to see what's actually registered. Extend this test, don't write a
+      parallel one, if route enumeration ever needs to change again.
 
 **Phase 1's UI redesign is complete**: every human-facing page renders through the Jinja design
 system, `delivery/form.py` is deleted, and the three remaining unchecked items above are additive
@@ -188,7 +192,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (43 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (87 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref
