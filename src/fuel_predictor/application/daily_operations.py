@@ -1,0 +1,92 @@
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Protocol
+from uuid import uuid4
+
+from fuel_predictor.application.routing import (
+    RoutingProvider,
+    RoutingProviderUnavailable,
+    UnavailableRoutingProvider,
+)
+from fuel_predictor.domain.daily_operation import (
+    ActivityMode,
+    DailyOperation,
+    DistanceSource,
+    VehicleCategory,
+    validate_stop_sequence,
+)
+
+
+class DailyOperationWriter(Protocol):
+    def add(self, operation: DailyOperation) -> None: ...
+
+
+class DailyOperationReader(Protocol):
+    def get(self, operation_id: str) -> DailyOperation | None: ...
+
+
+class DailyOperationNotFoundError(LookupError):
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class CreateDailyOperationCommand:
+    vehicle_category: VehicleCategory
+    activity_mode: ActivityMode
+    lifting_hours: float | None
+    total_distance_km: float
+    distance_source: DistanceSource
+    stop_sequence: tuple[str, ...] = ()
+
+
+class CreateDailyOperation:
+    def __init__(
+        self,
+        repository: DailyOperationWriter,
+        routing_provider: RoutingProvider | None = None,
+        operation_id_factory: Callable[[], str] | None = None,
+    ) -> None:
+        self._repository = repository
+        self._routing_provider = routing_provider or UnavailableRoutingProvider()
+        self._operation_id_factory = operation_id_factory or _new_operation_id
+
+    def execute(self, command: CreateDailyOperationCommand) -> DailyOperation:
+        validate_stop_sequence(command.stop_sequence)
+        total_distance_km = command.total_distance_km
+        distance_source = command.distance_source
+        route_distance_manual_fallback = False
+        if command.stop_sequence:
+            try:
+                route_distance = self._routing_provider.calculate_distance(command.stop_sequence)
+            except RoutingProviderUnavailable:
+                route_distance_manual_fallback = True
+            else:
+                total_distance_km = route_distance.total_distance_km
+                distance_source = DistanceSource.ROUTING_PROVIDER
+        operation = DailyOperation(
+            operation_id=self._operation_id_factory(),
+            vehicle_category=command.vehicle_category,
+            activity_mode=command.activity_mode,
+            lifting_hours=command.lifting_hours,
+            total_distance_km=total_distance_km,
+            distance_source=distance_source,
+            stop_sequence=command.stop_sequence,
+            route_distance_manual_fallback=route_distance_manual_fallback,
+        )
+        self._repository.add(operation)
+        return operation
+
+
+class GetDailyOperation:
+    def __init__(self, repository: DailyOperationReader) -> None:
+        self._repository = repository
+
+    def execute(self, operation_id: str) -> DailyOperation:
+        operation = self._repository.get(operation_id)
+        if operation is None:
+            raise DailyOperationNotFoundError(operation_id)
+        return operation
+
+
+def _new_operation_id() -> str:
+    return f"OPR-{uuid4().hex.upper()}"

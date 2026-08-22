@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.py[cod]
+data/
+.env
+.ua/
+dist/
+*.egg-info/
+.fuel_predictor/
+
+# Transient local test output.
+.test-*/
+.scratch/*
+!.scratch/fuel-prediction-mvp/
+.scratch/fuel-prediction-mvp/**/*.sqlite3

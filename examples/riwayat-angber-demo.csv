@@ -1,0 +1,10 @@
+Kategori ANGBER,Mode Aktivitas,Jam Lifting,Jarak Total (km),Bahan Bakar Disiapkan (L),Sumber Jarak
+ANGBER,transport,,18,16,manual
+ANGBER,transport,,32,24,manual
+ANGBER,transport,,48,31,manual
+ANGBER,transport,,76,44,manual
+ANGBER,lifting,1.5,20,22,manual
+ANGBER,lifting,2.5,28,29,manual
+ANGBER,transport_and_lifting,1,36,31,manual
+ANGBER,transport_and_lifting,2,54,42,manual
+ANGBER,transport_and_lifting,3.5,72,55,manual

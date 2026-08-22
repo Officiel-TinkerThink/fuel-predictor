@@ -1,0 +1,1 @@
+"""Fuel Prediction MVP application."""
