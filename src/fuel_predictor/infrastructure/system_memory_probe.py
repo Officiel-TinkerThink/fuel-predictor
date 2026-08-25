@@ -1,8 +1,13 @@
 """Available-memory probe for the activation capacity check (ADR 0010)."""
 
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field
 
 import psutil
+
+
+def _system_available_bytes() -> int:
+    return int(psutil.virtual_memory().available)
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,7 +26,12 @@ class SystemMemoryProbe:
     """
 
     safety_margin_bytes: int = 128 * 1024 * 1024
+    # Injectable so the margin arithmetic can be tested against a fixed
+    # reading. Testing it against two live samples cannot work: available
+    # memory moves between the calls, so the comparison is really asserting
+    # that nothing else on the machine allocated or freed anything in between.
+    read_available_bytes: Callable[[], int] = field(default=_system_available_bytes)
 
     def available_bytes(self) -> int:
-        usable = int(psutil.virtual_memory().available) - self.safety_margin_bytes
+        usable = self.read_available_bytes() - self.safety_margin_bytes
         return max(0, usable)

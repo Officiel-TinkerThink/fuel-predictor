@@ -37,9 +37,25 @@ trap "rm -rf '$WORK'" EXIT
 echo "Mengambil cadangan $SOURCE/$STAMP ..."
 rclone copy "$BACKUP_RCLONE_REMOTE/$SOURCE/$STAMP" "$WORK"
 
+# An unmatched glob expands to the pattern itself, so without this check a
+# mistyped timestamp reaches `age` as a literal "*.age" and fails with an
+# argument error that says nothing about the actual mistake. Wrong stamp is
+# the most likely error at 2am, so it gets a message that names the fix.
+if [ -z "$(find "$WORK" -name '*.age' -print -quit 2>/dev/null)" ]; then
+	echo "Cadangan '$SOURCE/$STAMP' tidak ditemukan atau kosong." >&2
+	echo "Daftar cadangan yang tersedia:" >&2
+	rclone lsf --dirs-only "$BACKUP_RCLONE_REMOTE/$SOURCE" >&2 || true
+	exit 1
+fi
+
 echo "Mendekripsi ..."
 for encrypted in "$WORK"/*.age; do
-	age --decrypt --identity "$BACKUP_AGE_KEY_FILE" --output "${encrypted%.age}" "$encrypted"
+	age --decrypt --identity "$BACKUP_AGE_KEY_FILE" --output "${encrypted%.age}" "$encrypted" || {
+		echo "Dekripsi gagal untuk $(basename "$encrypted")." >&2
+		echo "Periksa BACKUP_AGE_KEY_FILE — kunci privat harus pasangan dari" >&2
+		echo "BACKUP_AGE_RECIPIENT yang dipakai saat mencadangkan." >&2
+		exit 1
+	}
 done
 
 DUMP="$(ls "$WORK"/db-*.dump 2>/dev/null | head -1)"

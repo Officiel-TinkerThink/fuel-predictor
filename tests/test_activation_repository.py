@@ -213,6 +213,60 @@ def test_only_one_of_two_racing_activations_can_win(
     assert active.model_version_id in {"MDL-X", "MDL-Y"}
 
 
+def test_two_candidates_racing_for_an_empty_slot_produce_one_active(
+    repository: SqlAlchemyPredictionRepository,
+    session_factory: sessionmaker[Session],
+) -> None:
+    """Both callers expect *no* active model, so the arbiter is the index.
+
+    The other race test has both callers naming the same expected version, so
+    the conditional UPDATE decides it. When `expected_active_version_id` is
+    None there is no row to conditionally update, and the partial unique index
+    on `lifecycle_status = 'active'` is what stops both from winning — a
+    different branch, reached only by racing on an empty slot.
+    """
+    repository.create(_candidate("MDL-P"))
+    repository.create(_candidate("MDL-Q"))
+
+    started = threading.Barrier(2)
+    results: list[bool] = []
+    results_lock = threading.Lock()
+
+    def attempt(candidate_id: str) -> None:
+        started.wait(timeout=5)
+        try:
+            succeeded = repository.activate(candidate_id, None, _NOW).succeeded
+        except Exception:  # noqa: BLE001 - a losing racer must not crash the test
+            succeeded = False
+        with results_lock:
+            results.append(succeeded)
+
+    threads = [
+        threading.Thread(target=attempt, args=("MDL-P",)),
+        threading.Thread(target=attempt, args=("MDL-Q",)),
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=15)
+
+    assert sum(results) == 1, f"exactly one activation must win, got {results}"
+    # Asserted against the table, not the repository: this holds whatever the
+    # interleaving turned out to be, including the case where the threads did
+    # not genuinely overlap.
+    with session_factory() as session:
+        active = [
+            row[0]
+            for row in session.execute(
+                text(
+                    "SELECT model_version_id FROM model_versions"
+                    " WHERE lifecycle_status = 'active'"
+                )
+            )
+        ]
+    assert active in (["MDL-P"], ["MDL-Q"]), active
+
+
 def test_a_version_in_an_unactivatable_state_is_refused(
     repository: SqlAlchemyPredictionRepository,
     session_factory: sessionmaker[Session],
