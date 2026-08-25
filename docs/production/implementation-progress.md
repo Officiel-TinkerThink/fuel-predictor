@@ -4,6 +4,32 @@ Tracks work against [self-service-production-plan.md](self-service-production-pl
 sessions. Update this file whenever a phase item lands or a design decision is made, so a fresh
 session (or a different model) can resume without re-deriving context.
 
+## Status at a glance
+
+All six phases are implemented. 274 tests pass; `ruff` and `mypy --strict` are clean.
+
+| Phase | State |
+|---|---|
+| 1 — UI redesign and identity | Done |
+| 2 — External model pipeline | Done. Package signature verification remains, and is optional |
+| 3 — Operational monitoring | Done, including alert delivery with remediation |
+| 4 — MCP read-only launch | Done |
+| 5 — Privileged MCP operations | Implemented, **shipped disabled** behind an explicit config gate |
+| 6 — Deployment hardening and handoff | Code and docs done; two people-based exercises open |
+
+**Four things remain, and three of them cannot be done by writing code:**
+
+1. **Usability test** with a non-technical participant ([protocol](handoff-drill.md)).
+2. **Handoff drill** with an incoming technical owner ([protocol](handoff-drill.md)).
+3. **Security review** before enabling the Phase 5 privileged MCP tools.
+4. Package signature verification — optional; adds provenance, not integrity.
+
+Screenshots for [`panduan-operator.md`](panduan-operator.md) also need capturing against a real
+deployment; placeholders are marked in the text.
+
+These are recorded as open rather than marked done. Every one of them is a check on work performed
+by the person who built it, which is exactly the kind of check that cannot be self-administered.
+
 ## How the codebase is organized right now
 
 - `docs/adr/0007`-`0012` record the six decisions the plan deferred. Read them before changing
