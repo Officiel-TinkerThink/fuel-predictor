@@ -11,6 +11,7 @@ import threading
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from math import isfinite
 from typing import Any, Protocol
 
 from fuel_predictor.domain.model_activation import (
@@ -115,6 +116,32 @@ class ActiveModelHolder:
     @property
     def activation_lock(self) -> threading.Lock:
         return self._activation_lock
+
+
+def answers_a_representative_case(
+    features: dict[str, str | float],
+) -> Callable[[LoadedModel], str | None]:
+    """Post-activation health check: ask the swapped-in model one live question.
+
+    The package's own smoke tests already ran before the swap, against the
+    model loaded in isolation. This asks the model that is now actually
+    serving, which is the only thing that proves the swap itself produced a
+    working predictor. A non-finite or negative litre figure is a failure: a
+    model that returns NaN would otherwise poison every prediction silently.
+    """
+
+    def check(loaded: LoadedModel) -> str | None:
+        try:
+            value = loaded.predict(features)
+        except Exception as error:  # noqa: BLE001 - reported, not raised
+            return f"model gagal menjawab kasus pemeriksaan ({error})"
+        if not isfinite(value):
+            return f"model mengembalikan nilai tidak berhingga ({value})"
+        if value < 0:
+            return f"model mengembalikan kebutuhan bahan bakar negatif ({value} L)"
+        return None
+
+    return check
 
 
 @dataclass(frozen=True, slots=True)

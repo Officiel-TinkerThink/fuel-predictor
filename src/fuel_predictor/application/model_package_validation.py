@@ -74,7 +74,7 @@ class ValidateModelPackage:
         # Steps 1-2: bounded, traversal-safe extraction.
         members = self.archive_reader.read_members(archive_bytes)
 
-        manifest = self.parse_manifest.execute(_json_member(members, "manifest.json"))
+        manifest = self.parse_manifest.execute(json_member(members, "manifest.json"))
 
         # Step 3, and it must come before the artefact is touched: the bytes
         # about to be loaded are only trustworthy once they match a manifest
@@ -82,9 +82,9 @@ class ValidateModelPackage:
         verify_member_checksums(members, manifest.package_checksums)
 
         statistics = self.parse_reference_statistics.execute(
-            _json_member(members, "reference-statistics.json"), manifest
+            json_member(members, "reference-statistics.json"), manifest
         )
-        cases = self.parse_smoke_tests.execute(_json_member(members, "smoke-tests.json"))
+        cases = self.parse_smoke_tests.execute(json_member(members, "smoke-tests.json"))
 
         # Steps 6-7: load in isolation, then replay the package's own cases.
         loader = self.build_artifact_loader(manifest, members)
@@ -107,7 +107,7 @@ class ValidateModelPackage:
         )
 
 
-def _json_member(members: Mapping[str, bytes], name: str) -> Mapping[str, Any]:
+def json_member(members: Mapping[str, bytes], name: str) -> Mapping[str, Any]:
     if name not in members:
         raise ModelPackageValidationError([("archive", f"Paket tidak memuat '{name}'.")])
     try:

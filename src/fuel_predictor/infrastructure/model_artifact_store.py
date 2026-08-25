@@ -41,6 +41,27 @@ class FilesystemModelArtifactStore:
             member_path.write_bytes(payload)
         return destination
 
+    def read_members(self, model_version: str) -> dict[str, bytes]:
+        """Read a retained package back so it can be loaded and activated.
+
+        The version is re-checked exactly as `store` re-checks it: this is the
+        second place a string becomes a filesystem path, so it owns that
+        decision too rather than assuming the caller kept it safe.
+        """
+        if not _SAFE_VERSION.match(model_version):
+            raise ArtifactStorageError(
+                f"Versi model '{model_version}' tidak aman untuk dijadikan nama direktori."
+            )
+
+        directory = self.path_for(model_version)
+        if not directory.is_dir():
+            raise ArtifactStorageError(
+                f"Artefak untuk versi model '{model_version}' tidak ada di penyimpanan."
+            )
+        return {
+            member.name: member.read_bytes() for member in directory.iterdir() if member.is_file()
+        }
+
     def path_for(self, model_version: str) -> Path:
         return self.root / model_version
 

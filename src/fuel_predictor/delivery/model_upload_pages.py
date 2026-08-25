@@ -19,6 +19,7 @@ from fuel_predictor.application.model_package_records import (
     ValidationOutcome,
 )
 from fuel_predictor.application.model_package_validation import ValidateModelPackage
+from fuel_predictor.application.retained_package_activation import RegisterIngestedPackage
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.model_package import ModelPackageValidationError
@@ -46,6 +47,7 @@ def build_model_upload_pages_router(
     validate_package: ValidateModelPackage,
     validation_records: ModelPackageValidationRepository,
     artifact_store: Any,
+    register_package: RegisterIngestedPackage,
     guard: SecurityGuard,
 ) -> APIRouter:
     router = APIRouter()
@@ -91,6 +93,10 @@ def build_model_upload_pages_router(
         stored_path = artifact_store.store(
             validated.manifest.model_version, dict(validated.members)
         )
+        # Registered as a candidate straight away. Retained bytes with no model
+        # version row are unreachable: nothing could activate them, and nothing
+        # could roll back to them.
+        register_package.execute(validated.manifest, artifact_uri=str(stored_path))
         validation_records.add(
             ModelPackageValidationRecord(
                 validation_id=validation_id,

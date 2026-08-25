@@ -402,15 +402,39 @@ rollback yet — see "Not done" below for exactly where it stops.
       MLflow active row and that is legitimate rather than an error.
       Tests: `tests/test_prediction_uses_active_holder.py`, 7 cases including one asserting the
       reported version matches the model that actually produced the number.
-- [ ] **Not done** — the remaining Phase 2 scope, roughly in dependency order:
-      1. Optional package signature verification (ADR 0009 lists it as optional, and checksums
-         already cover integrity; signing adds provenance).
-      2. Connecting the governance page's promote button to `ActivateModelVersion` instead of the
-         older `PromoteCandidateModel`, so activation of an ingested package runs the full ADR 0010
-         sequence from the UI. Everything it needs now exists and is tested; this is UI wiring.
-      3. Retention/cleanup of old artefacts, which must never delete the version rollback targets.
-      Retention policy is a correctness concern here, not just disk hygiene (ADR 0010): the retention
-      job must never delete the artefact rollback would target.
+- [x] **Ingested packages are now activatable end to end.** This was recorded here as "UI wiring",
+      which understated it. The real gap was that a validated, retained package was never registered
+      as a model version at all: `ActivateModelVersion` was not constructed anywhere in `main.py`,
+      the active-model holder was never handed to the prediction path, and the artefact store had no
+      way to read bytes back. Retained bytes with no model version row are unreachable — nothing
+      could activate them and nothing could roll back to them. Now:
+      - `RegisterIngestedPackage` records each accepted package as a candidate at upload time, keyed
+        by the manifest's own `model_version`, which is also the directory the store retains it
+        under, so "the row exists" and "the bytes exist" cannot drift apart.
+      - `FilesystemModelArtifactStore.read_members` reads a retained package back, re-checking the
+        version against the same pattern `store` uses — this is the second place a string becomes a
+        filesystem path, so it owns that decision too.
+      - `ActivateRetainedModelPackage` rebuilds the loader and smoke-test runner from the retained
+        bytes and **re-verifies their checksums against the manifest** before loading. That is the
+        difference between "these bytes were trustworthy once" and "these bytes are what we are
+        about to load".
+      - The governance promote button dispatches: a candidate with retained bytes runs the full
+        ADR 0010 sequence; a model trained in this process keeps the simpler path, because it has no
+        package to load.
+      - `answers_a_representative_case` is the post-activation health check. The package's own smoke
+        tests already ran pre-swap against the isolated model; this asks the model that is *now
+        serving*, and treats a non-finite or negative litre figure as a failure — a model returning
+        NaN would otherwise poison every prediction silently.
+      - The holder is now on the serving path, so predictions come from the activated package.
+      Proven by `tests/test_retained_package_activation.py`: a model packaged by this repo's own
+      packager, uploaded through the UI, activated through the governance page, then predicting
+      `17.0 L` — the packaged model's own arithmetic — under the package's own version id.
+- [ ] **Still not done**, and genuinely optional:
+      1. Optional package signature verification (ADR 0009 lists it as optional; checksums already
+         cover integrity, signing would add provenance).
+      2. Retention/cleanup of old artefacts. Note this is a *correctness* concern, not disk hygiene
+         (ADR 0010): the retention job must never delete the artefact rollback would target. Nothing
+         currently deletes anything, so there is no live risk — only unbounded growth.
 
 **Phase 2 is functionally complete.** The external model pipeline runs end to end and has been
 verified live against a running server: a model trained with scikit-learn is packaged by this repo's
@@ -506,7 +530,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (242 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (245 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref

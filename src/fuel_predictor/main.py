@@ -33,6 +33,10 @@ from fuel_predictor.application.identity import (
     SignIn,
     SignOut,
 )
+from fuel_predictor.application.model_activation import (
+    ActiveModelHolder,
+    answers_a_representative_case,
+)
 from fuel_predictor.application.model_lifecycle import (
     GetCandidateModelComparison,
     GetModelGovernanceDashboard,
@@ -50,6 +54,10 @@ from fuel_predictor.application.model_promotion_policy import (
     PromotionPolicy,
 )
 from fuel_predictor.application.monitoring import GetMonitoringDashboard
+from fuel_predictor.application.retained_package_activation import (
+    ActivateRetainedModelPackage,
+    RegisterIngestedPackage,
+)
 from fuel_predictor.application.routing import RoutingProvider, UnavailableRoutingProvider
 from fuel_predictor.configuration import ApplicationSettings
 from fuel_predictor.delivery.actual_fuel_pages import build_actual_fuel_pages_router
@@ -118,7 +126,20 @@ from fuel_predictor.infrastructure.sqlalchemy_monitoring_runs import (
     SqlAlchemyMonitoringRunRepository,
 )
 from fuel_predictor.infrastructure.sqlalchemy_predictions import SqlAlchemyPredictionRepository
+from fuel_predictor.infrastructure.system_memory_probe import SystemMemoryProbe
 from fuel_predictor.infrastructure.zip_model_package_archive import ZipModelPackageArchiveReader
+
+# One representative operation the post-activation health check asks the
+# newly-swapped model to answer. Mid-range values on purpose: a case at the
+# edge of the training distribution would fail for reasons that say nothing
+# about whether the swap worked.
+_HEALTH_CHECK_FEATURES: dict[str, str | float] = {
+    "vehicle_category": "ANGBER",
+    "activity_mode": "transport",
+    "distance_source": "manual",
+    "total_distance_km": 30.0,
+    "lifting_hours": 0.0,
+}
 
 
 def create_app(
@@ -163,12 +184,17 @@ def create_app(
     train_baseline_candidate = TrainBaselineCandidate(
         historical_dataset_repository, model_store, prediction_repository
     )
+    # One holder, shared by the serving path and the activation path. Until a
+    # package is activated it stays empty and prediction falls back to the
+    # MLflow store, which is what ADR 0011 requires.
+    active_model_holder = ActiveModelHolder()
     generate_fuel_prediction = GenerateFuelPrediction(
         repository,
         prediction_repository,
         model_store,
         prediction_repository,
         settings.initial_safety_margin_liters,
+        holder=active_model_holder,
     )
     bulk_operation_prediction = BulkOperationPrediction(
         SpreadsheetHistoricalDatasetSourceReader(),
@@ -222,6 +248,18 @@ def create_app(
     backup_run_repository = SqlAlchemyBackupRunRepository(session_factory)
     validation_records = SqlAlchemyModelPackageValidationRepository(session_factory)
     artifact_store = FilesystemModelArtifactStore(root=settings.model_artifact_directory)
+    parse_model_package_manifest = ParseModelPackageManifest(
+        schema_validator=JsonSchemaManifestValidator(),
+        supported_feature_contract_versions=frozenset(
+            _split_setting(settings.supported_feature_contract_versions)
+        ),
+        supported_runtime_compatibility_versions=frozenset(
+            _split_setting(settings.supported_runtime_compatibility_versions)
+        ),
+    )
+    parse_package_smoke_tests = ParseSmokeTests(
+        schema_validator=JsonSchemaValidator(SMOKE_TESTS_SCHEMA)
+    )
     validate_package = ValidateModelPackage(
         archive_reader=ZipModelPackageArchiveReader(
             ModelPackageArchiveLimits(
@@ -231,21 +269,11 @@ def create_app(
                 max_compression_ratio=settings.model_package_max_compression_ratio,
             )
         ),
-        parse_manifest=ParseModelPackageManifest(
-            schema_validator=JsonSchemaManifestValidator(),
-            supported_feature_contract_versions=frozenset(
-                _split_setting(settings.supported_feature_contract_versions)
-            ),
-            supported_runtime_compatibility_versions=frozenset(
-                _split_setting(settings.supported_runtime_compatibility_versions)
-            ),
-        ),
+        parse_manifest=parse_model_package_manifest,
         parse_reference_statistics=ParseReferenceStatistics(
             schema_validator=JsonSchemaValidator(REFERENCE_STATISTICS_SCHEMA)
         ),
-        parse_smoke_tests=ParseSmokeTests(
-            schema_validator=JsonSchemaValidator(SMOKE_TESTS_SCHEMA)
-        ),
+        parse_smoke_tests=parse_package_smoke_tests,
         evaluate_policy=EvaluateCandidateAgainstPolicy(
             policy=PromotionPolicy(
                 max_mae_liters=settings.max_active_model_mae_liters,
@@ -254,6 +282,18 @@ def create_app(
             )
         ),
         build_artifact_loader=build_loader,
+    )
+    register_ingested_package = RegisterIngestedPackage(models=prediction_repository)
+    activate_retained_package = ActivateRetainedModelPackage(
+        store=artifact_store,
+        models=prediction_repository,
+        parse_manifest=parse_model_package_manifest,
+        parse_smoke_tests=parse_package_smoke_tests,
+        build_artifact_loader=build_loader,
+        holder=active_model_holder,
+        repository=prediction_repository,
+        memory_probe=SystemMemoryProbe(),
+        health_check=answers_a_representative_case(_HEALTH_CHECK_FEATURES),
     )
     agent_client_repository = SqlAlchemyAgentClientRepository(session_factory)
     issue_agent_credential = IssueAgentCredential(agent_client_repository, record_audit)
@@ -364,6 +404,7 @@ def create_app(
     app.include_router(
         build_model_governance_pages_router(
             promote_candidate_model,
+            activate_retained_package,
             get_candidate_model_comparison,
             get_model_governance_dashboard,
             guard,
@@ -374,6 +415,7 @@ def create_app(
             validate_package,
             validation_records,
             artifact_store,
+            register_ingested_package,
             guard,
         )
     )
