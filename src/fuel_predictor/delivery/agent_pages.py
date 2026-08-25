@@ -12,7 +12,11 @@ from fuel_predictor.application.agent_credentials import (
 )
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
-from fuel_predictor.domain.identity import AgentScope, IdentityValidationError
+from fuel_predictor.domain.identity import (
+    DEFAULT_AGENT_SCOPES,
+    AgentScope,
+    IdentityValidationError,
+)
 
 if TYPE_CHECKING:
     from fuel_predictor.application.identity import ActiveCaller
@@ -88,4 +92,8 @@ def _render(
         issued_token=issued_token,
         error=error,
         available_scopes=[str(scope) for scope in AgentScope],
+        # Only the read/compute scopes are pre-checked. A privileged scope must
+        # be a deliberate tick, not something a credential inherits from an
+        # administrator accepting the form as presented.
+        default_scopes=[str(scope) for scope in DEFAULT_AGENT_SCOPES],
     )

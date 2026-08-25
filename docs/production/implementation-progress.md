@@ -546,8 +546,42 @@ exists. Those are Phase 5 and stay unavailable until read-only operation has pro
 
 ## Phase 5 — Privileged MCP operations
 
-Not started. Phase 4 is now in place, so the remaining dependency is the read-only surface actually
-running in production long enough to trust, plus the Phase 2 leftovers below.
+Implemented and **shipped disabled**. The plan says "expose validate/activate/rollback by artifact
+ID *only if required*" and "perform a security review before enabling these tools", so the gate is
+enforced by configuration rather than by the absence of code — an operator turns them on
+deliberately, after the read-only surface has proven itself.
+
+- [x] Three tools: `validate_model_package`, `activate_model_version`, `rollback_model_version`.
+      Off unless `FUEL_PREDICTOR_MCP_PRIVILEGED_TOOLS_ENABLED` is set, **and** only visible to
+      credentials holding the new `models:admin` scope.
+- [x] `models:admin` is never in `DEFAULT_AGENT_SCOPES`, and the issue form does not pre-tick it.
+      A regression test holds both: the form pre-checked every scope at one point, which would
+      have handed the privileged scope to every credential issued by an administrator accepting
+      the page as presented. That was found by driving the live page, not by the unit tests.
+- [x] **Identifiers, never bytes.** No tool accepts an artefact. A model reaches the system only by
+      a human uploading a package through the web UI, so a compromised agent can choose among
+      models a person already vetted but cannot introduce one. A test asserts every privileged
+      schema is `additionalProperties: false` and mentions no byte-carrying field — this is a
+      stated acceptance criterion, so it is checked rather than assumed.
+- [x] **Two-call confirmation.** The first call reports what *would* happen and returns a token;
+      nothing changes. The token is an HMAC over the operation, the target version, and the
+      currently-active version, so it cannot be replayed against a different version or reused to
+      authorise a different operation. It is derived, not stored: a restart invalidates outstanding
+      confirmations, which is the safe direction to fail.
+- [x] **Optimistic concurrency.** Activation and rollback pass the caller's view of the active
+      version into the same conditional UPDATE the web UI uses, so an agent acting on a stale
+      reading loses the race rather than overwriting a change it never saw.
+- [x] **Rollback requires a reason**, recorded before the attempt, so the decision survives an
+      attempt that then fails.
+- [x] Every call is audited through the same path as the read-only tools.
+- [ ] **Security review before enabling in production.** Like the usability test and handoff drill,
+      this is a human activity and is not marked done. The properties above are what the review
+      should check, not a substitute for it.
+
+Verified live with the flag enabled: a `models:read` credential is refused with
+`Cakupan models:admin diperlukan untuk alat ini`, an admin credential sees all three tools, an
+unconfirmed activation changes nothing, a token issued for one version is refused for another, and
+rollback without a reason is rejected.
 
 ## Phase 6 — Deployment hardening and handoff
 
@@ -608,7 +642,7 @@ the bottom of this section.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (253 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (265 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref

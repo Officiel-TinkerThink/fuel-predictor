@@ -98,14 +98,21 @@ class AgentScope(StrEnum):
     PREDICT = "fuel:predict"
     MONITOR = "fuel:monitor"
     MODELS_READ = "models:read"
+    # Phase 5. Never in DEFAULT_AGENT_SCOPES, and the tools it unlocks are
+    # additionally gated by configuration: granting the scope alone is not
+    # enough to enable them.
+    MODELS_ADMIN = "models:admin"
 
 
 _SCOPE_CAPABILITIES: dict[AgentScope, frozenset[Capability]] = {
     AgentScope.PREDICT: frozenset({Capability.CREATE_PREDICTION}),
     AgentScope.MONITOR: frozenset({Capability.VIEW_MONITORING}),
     AgentScope.MODELS_READ: frozenset({Capability.VIEW_MODELS}),
+    AgentScope.MODELS_ADMIN: frozenset({Capability.VIEW_MODELS, Capability.MANAGE_MODELS}),
 }
 
+# Read/compute only. An administrator has to choose MODELS_ADMIN deliberately;
+# it is not something a credential acquires by accepting the defaults.
 DEFAULT_AGENT_SCOPES = frozenset(
     {AgentScope.PREDICT, AgentScope.MONITOR, AgentScope.MODELS_READ}
 )

@@ -55,6 +55,11 @@ class ApplicationSettings(BaseSettings):
     # Where monitoring alerts are delivered. Both channels are optional; with
     # neither set the monitoring job says plainly that nobody is being told,
     # rather than appearing to succeed at notifying no one.
+    # Phase 5 privileged MCP tools (validate/activate/rollback). Off by
+    # default: the plan gates these on the read-only surface proving itself in
+    # production first, and on a security review. Shipping them disabled makes
+    # that gate an operator's explicit decision rather than the absence of code.
+    mcp_privileged_tools_enabled: bool = False
     alert_webhook_url: str = ""
     alert_smtp_host: str = ""
     alert_smtp_port: int = Field(default=587, ge=1, le=65535)

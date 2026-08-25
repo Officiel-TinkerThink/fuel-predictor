@@ -46,6 +46,12 @@ class RetainedPackageStore(Protocol):
     def exists(self, model_version: str) -> bool: ...
 
 
+class RollbackRecorder(Protocol):
+    def __call__(
+        self, *, target_version_id: str, previous_version_id: str | None, actor: str, reason: str
+    ) -> None: ...
+
+
 class ModelVersionWriter(Protocol):
     def create(self, model: ModelVersion) -> ModelVersion: ...
 
@@ -108,6 +114,7 @@ class ActivateRetainedModelPackage:
     repository: ActivationRepository
     memory_probe: MemoryProbe
     health_check: Callable[[LoadedModel], str | None]
+    record_rollback: "RollbackRecorder"
     now: Callable[[], datetime] = lambda: datetime.now(UTC)
 
     def can_activate(self, model_version_id: str) -> bool:
@@ -117,6 +124,64 @@ class ActivateRetainedModelPackage:
         which activation path applies before offering one.
         """
         return self.store.exists(model_version_id)
+
+    def inspect(self, model_version_id: str) -> dict[str, object]:
+        """Answer "would this activate cleanly?" without changing anything.
+
+        Runs the same checks activation runs up to the point of loading: the
+        version exists, its bytes are retained, and those bytes still match the
+        manifest they were accepted under.
+        """
+        candidate = self.models.get(model_version_id)
+        if candidate is None:
+            return {"model_version_id": model_version_id, "activatable": False,
+                    "reason": "Versi model tidak ditemukan."}
+        if not self.store.exists(model_version_id):
+            return {"model_version_id": model_version_id, "activatable": False,
+                    "reason": "Berkas paket untuk versi ini tidak tersimpan."}
+        try:
+            members = self.store.read_members(model_version_id)
+            manifest = self.parse_manifest.execute(json_member(members, "manifest.json"))
+            verify_member_checksums(members, manifest.package_checksums)
+        except Exception as error:  # noqa: BLE001 - reported, not raised
+            return {"model_version_id": model_version_id, "activatable": False,
+                    "reason": f"{type(error).__name__}: {error}"}
+        return {
+            "model_version_id": model_version_id,
+            "activatable": True,
+            "lifecycle_status": candidate.lifecycle_status.value,
+            "expected_memory_bytes": manifest.expected_memory_bytes,
+            "trained_at": manifest.trained_at.isoformat(),
+        }
+
+    def rollback(
+        self,
+        target_version_id: str,
+        expected_active_version_id: str | None,
+        actor: str,
+        reason: str,
+    ) -> ActivationResult:
+        """Return to a retained known-good version (ADR 0010).
+
+        Not `RollbackModelVersion`, which takes a prebuilt `ActivateModelVersion`
+        as a collaborator. For a package the loader and smoke-test runner are
+        package-specific and must be rebuilt from the retained bytes, which is
+        exactly what this class does — so the audit-before-attempt rule is
+        applied here over the same sequence rather than duplicating the rebuild
+        into that class.
+        """
+        if not reason.strip():
+            raise ValueError("Alasan rollback wajib diisi.")
+        # Recorded before the attempt: an operator's decision to roll back is
+        # worth keeping even when the attempt then loses a concurrency race,
+        # because that is exactly the situation someone reconstructs later.
+        self.record_rollback(
+            target_version_id=target_version_id,
+            previous_version_id=expected_active_version_id,
+            actor=actor,
+            reason=reason.strip(),
+        )
+        return self.execute(target_version_id)
 
     def execute(self, model_version_id: str) -> ActivationResult:
         candidate = self.models.get(model_version_id)

@@ -1,6 +1,8 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from secrets import token_bytes
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -72,8 +74,13 @@ from fuel_predictor.delivery.historical_dataset_pages import (
     build_historical_dataset_pages_router,
 )
 from fuel_predictor.delivery.http import build_router, register_error_handlers
+from fuel_predictor.delivery.mcp_privileged import ConfirmationTokens, build_privileged_tools
 from fuel_predictor.delivery.mcp_routes import build_mcp_router
-from fuel_predictor.delivery.mcp_server import McpRequestHandler, build_registry
+from fuel_predictor.delivery.mcp_server import (
+    McpRequestHandler,
+    McpToolRegistry,
+    build_registry,
+)
 from fuel_predictor.delivery.model_governance_pages import build_model_governance_pages_router
 from fuel_predictor.delivery.model_upload_pages import build_model_upload_pages_router
 from fuel_predictor.delivery.monitoring_pages import build_monitoring_pages_router
@@ -84,6 +91,7 @@ from fuel_predictor.delivery.security import (
     install_session_middleware,
     register_security_error_handlers,
 )
+from fuel_predictor.domain.identity import AuditOutcome
 from fuel_predictor.infrastructure.database import (
     build_engine,
     build_session_factory,
@@ -140,6 +148,27 @@ _HEALTH_CHECK_FEATURES: dict[str, str | float] = {
     "total_distance_km": 30.0,
     "lifting_hours": 0.0,
 }
+
+
+def _rollback_recorder(record_audit: RecordAuditEvent) -> Any:
+    """Adapt the audit use case to the rollback recorder's keyword shape.
+
+    Rollback records the *intent* — who, which target, and why — before the
+    change is attempted, so the decision survives an attempt that then fails.
+    """
+
+    def record(
+        *, target_version_id: str, previous_version_id: str | None, actor: str, reason: str
+    ) -> None:
+        record_audit.execute(
+            actor=actor,
+            action="model_rollback_requested",
+            outcome=AuditOutcome.SUCCEEDED,
+            subject=target_version_id,
+            details={"previous_version_id": previous_version_id, "reason": reason[:500]},
+        )
+
+    return record
 
 
 def create_app(
@@ -294,20 +323,43 @@ def create_app(
         repository=prediction_repository,
         memory_probe=SystemMemoryProbe(),
         health_check=answers_a_representative_case(_HEALTH_CHECK_FEATURES),
+        record_rollback=_rollback_recorder(record_audit),
     )
     agent_client_repository = SqlAlchemyAgentClientRepository(session_factory)
     issue_agent_credential = IssueAgentCredential(agent_client_repository, record_audit)
     revoke_agent_credential = RevokeAgentCredential(agent_client_repository, record_audit)
     list_agent_clients = ListAgentClients(agent_client_repository)
+    mcp_registry = build_registry(
+        generate_prediction=generate_fuel_prediction,
+        create_operation=create_daily_operation,
+        monitoring_dashboard=get_monitoring_dashboard,
+        prediction_performance=get_prediction_performance,
+        model_reader=prediction_repository,
+        monitoring_runs=monitoring_run_repository,
+    )
+    if settings.mcp_privileged_tools_enabled:
+        # Off by default. The plan gates validate/activate/rollback on the
+        # read-only surface proving itself in production and on a security
+        # review, so enabling them is an operator's explicit decision.
+        mcp_registry = McpToolRegistry(
+            tools=mcp_registry.tools
+            + build_privileged_tools(
+                activate_retained_package=activate_retained_package,
+                rollback_model_version=lambda version_id, expected, reason: (
+                    activate_retained_package.rollback(
+                        target_version_id=version_id,
+                        expected_active_version_id=expected,
+                        actor="mcp-agent",
+                        reason=reason,
+                    )
+                ),
+                model_reader=prediction_repository,
+                validate_retained_package=activate_retained_package.inspect,
+                tokens=ConfirmationTokens(secret=token_bytes(32)),
+            )
+        )
     mcp_handler = McpRequestHandler(
-        registry=build_registry(
-            generate_prediction=generate_fuel_prediction,
-            create_operation=create_daily_operation,
-            monitoring_dashboard=get_monitoring_dashboard,
-            prediction_performance=get_prediction_performance,
-            model_reader=prediction_repository,
-            monitoring_runs=monitoring_run_repository,
-        ),
+        registry=mcp_registry,
         resolve_credential=ResolveAgentCredential(agent_client_repository),
         record_audit=record_audit,
     )
