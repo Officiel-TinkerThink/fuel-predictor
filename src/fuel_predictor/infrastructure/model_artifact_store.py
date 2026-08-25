@@ -62,6 +62,25 @@ class FilesystemModelArtifactStore:
             member.name: member.read_bytes() for member in directory.iterdir() if member.is_file()
         }
 
+    def delete(self, model_version: str) -> None:
+        """Remove one retained package.
+
+        Same pattern check as `store` and `read_members`: this is the third
+        place a string becomes a filesystem path, and a recursive delete is the
+        one where getting it wrong costs the most.
+        """
+        if not _SAFE_VERSION.match(model_version):
+            raise ArtifactStorageError(
+                f"Versi model '{model_version}' tidak aman untuk dijadikan nama direktori."
+            )
+        directory = self.path_for(model_version)
+        if not directory.is_dir():
+            return
+        for member in directory.iterdir():
+            if member.is_file():
+                member.unlink()
+        directory.rmdir()
+
     def path_for(self, model_version: str) -> Path:
         return self.root / model_version
 

@@ -46,9 +46,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     backup.add_argument("--size-bytes", type=int, default=None)
     backup.add_argument("--failure-reason", default=None)
 
+    prune = subcommands.add_parser(
+        "prune-packages",
+        help="Hapus paket model lama yang bukan sasaran rollback. Bawaan: hanya menampilkan.",
+    )
+    prune.add_argument(
+        "--apply",
+        action="store_true",
+        help="Benar-benar menghapus. Tanpa ini hanya rencananya yang ditampilkan.",
+    )
+    prune.add_argument("--keep-retired", type=int, default=3)
+
     arguments = parser.parse_args(argv)
     if arguments.command == "monitor":
         return _run_monitoring(arguments.trigger)
+    if arguments.command == "prune-packages":
+        return _prune_packages(apply=arguments.apply, keep_retired=arguments.keep_retired)
     if arguments.command == "record-backup":
         return _record_backup(
             outcome=arguments.outcome,
@@ -57,6 +70,41 @@ def main(argv: Sequence[str] | None = None) -> int:
             failure_reason=arguments.failure_reason,
         )
     return 2
+
+
+def _prune_packages(apply: bool, keep_retired: int) -> int:
+    """Report the retention plan, and act on it only when asked.
+
+    Dry-run by default because the failure mode is asymmetric: keeping too much
+    wastes disk, while deleting a rollback target removes the recovery path and
+    nobody finds out until the day they need it.
+    """
+    from fuel_predictor.application.package_retention import PruneRetainedPackages
+    from fuel_predictor.infrastructure.model_artifact_store import FilesystemModelArtifactStore
+    from fuel_predictor.infrastructure.sqlalchemy_predictions import SqlAlchemyPredictionRepository
+
+    settings = ApplicationSettings()
+    try:
+        factory = build_session_factory(build_engine(settings.database_url))
+        plan = PruneRetainedPackages(
+            models=SqlAlchemyPredictionRepository(factory),
+            store=FilesystemModelArtifactStore(root=settings.model_artifact_directory),
+            keep_retired=keep_retired,
+        ).execute(dry_run=not apply)
+    except Exception as error:  # noqa: BLE001 - the operator needs a readable message
+        print(f"Pemangkasan paket gagal: {error}", file=sys.stderr)
+        return 1
+
+    for model_version, reason in plan.reasons.items():
+        print(f"  simpan  {model_version}  ({reason})")
+    for model_version in plan.prune:
+        print(f"  {'hapus  ' if apply else 'akan dihapus'}  {model_version}")
+    if not plan.prune:
+        print("Tidak ada paket yang perlu dihapus.")
+    elif not apply:
+        print("")
+        print(f"{len(plan.prune)} paket dapat dihapus. Jalankan ulang dengan --apply.")
+    return 0
 
 
 def _record_backup(

@@ -69,6 +69,14 @@ class SqlAlchemyPredictionRepository(
             )
             return tuple(_to_model(row) for row in rows)
 
+    def list_all(self) -> tuple[ModelVersion, ...]:
+        """Every model version, newest first. Used by artefact retention."""
+        with self._session_factory() as session:
+            rows = session.scalars(
+                select(ModelVersionRow).order_by(ModelVersionRow.version.desc())
+            )
+            return tuple(_to_model(row) for row in rows)
+
     def promote(self, model_version_id: str, promoted_at: datetime) -> ModelVersion | None:
         with self._session_factory.begin() as session:
             row = session.scalar(

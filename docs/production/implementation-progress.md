@@ -429,12 +429,21 @@ rollback yet — see "Not done" below for exactly where it stops.
       Proven by `tests/test_retained_package_activation.py`: a model packaged by this repo's own
       packager, uploaded through the UI, activated through the governance page, then predicting
       `17.0 L` — the packaged model's own arithmetic — under the package's own version id.
-- [ ] **Still not done**, and genuinely optional:
-      1. Optional package signature verification (ADR 0009 lists it as optional; checksums already
-         cover integrity, signing would add provenance).
-      2. Retention/cleanup of old artefacts. Note this is a *correctness* concern, not disk hygiene
-         (ADR 0010): the retention job must never delete the artefact rollback would target. Nothing
-         currently deletes anything, so there is no live risk — only unbounded growth.
+- [x] **Artefact retention** — `PruneRetainedPackages` and `python -m fuel_predictor
+      prune-packages`. Correctness, not disk hygiene (ADR 0010): the rule is stated as what is
+      *kept*, never as what is deleted, so anything not positively identified as keepable is left
+      alone. Kept: the active model, every candidate awaiting review, and the most recent retired
+      versions (default 3) as rollback targets. **Dry-run by default** — the failure mode is
+      asymmetric, since keeping too much wastes disk while deleting a rollback target removes the
+      recovery path and nobody finds out until the day they need it. Each kept version reports the
+      reason it was kept, so an operator reading the plan sees why and not just what.
+      `FilesystemModelArtifactStore.delete` re-checks the version against the same pattern `store`
+      and `read_members` use: it is the third place a string becomes a filesystem path, and a
+      recursive delete is the one where getting it wrong costs the most.
+- [ ] **Still not done, and genuinely optional:** package signature verification. ADR 0009 lists it
+      as optional and checksums already cover integrity end to end — including re-verification of
+      retained bytes at activation time. Signing would add *provenance* (who built this package),
+      not integrity. Worth doing if packages ever arrive from more than one trusted builder.
 
 **Phase 2 is functionally complete.** The external model pipeline runs end to end and has been
 verified live against a running server: a model trained with scikit-learn is packaged by this repo's
@@ -642,7 +651,7 @@ the bottom of this section.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (265 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (274 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref
