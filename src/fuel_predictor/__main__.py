@@ -10,6 +10,7 @@ alerting depends on — a job that always exits zero cannot be monitored.
 import argparse
 import sys
 from collections.abc import Sequence
+from typing import Any
 
 from fuel_predictor.application.monitoring_runs import RunScheduledMonitoring
 from fuel_predictor.configuration import ApplicationSettings
@@ -81,10 +82,50 @@ def _run_monitoring(trigger: str) -> int:
             f"Pemantauan selesai: {summary['active_alert_count']} peringatan aktif, "
             f"{summary['missing_actual_prediction_count']} aktual tertunda."
         )
+        _deliver_alerts(settings, monitoring_repository, session_factory)
         return 0
 
     print(f"Pemantauan gagal: {run.failure_reason}", file=sys.stderr)
     return 1
+
+
+def _deliver_alerts(
+    settings: ApplicationSettings, monitoring_repository: Any, factory: Any
+) -> None:
+    """Tell someone, if a channel is configured and the picture changed.
+
+    Deliberately does not affect the exit code. Monitoring itself succeeded;
+    turning a notification problem into a failed monitoring run would make the
+    scheduler report the wrong thing. The outcome is printed instead, and an
+    unconfigured channel is stated plainly rather than passing silently — "no
+    alerts were sent" and "nobody is listening" must not look the same.
+    """
+    from datetime import UTC, datetime
+
+    from fuel_predictor.application.alert_delivery import DeliverMonitoringAlerts
+    from fuel_predictor.infrastructure.alert_notifiers import build_notifier
+    from fuel_predictor.infrastructure.sqlalchemy_alert_delivery import (
+        SqlAlchemyAlertDeliveryStore,
+    )
+
+    try:
+        result = DeliverMonitoringAlerts(
+            notifier=build_notifier(settings),
+            store=SqlAlchemyAlertDeliveryStore(factory),
+        ).execute(monitoring_repository.list_active_alerts(), datetime.now(UTC))
+    except Exception as error:  # noqa: BLE001 - never fails the monitoring run
+        print(f"Pengiriman peringatan gagal: {error}", file=sys.stderr)
+        return
+
+    if result.sent:
+        print(
+            f"Peringatan terkirim: {len(result.new_alerts)} baru, "
+            f"{len(result.changed_alerts)} berubah, {len(result.resolved_alerts)} teratasi."
+        )
+    elif result.error is not None:
+        print(f"Peringatan tidak terkirim ({result.reason}): {result.error}", file=sys.stderr)
+    elif result.new_alerts or result.changed_alerts or result.resolved_alerts:
+        print(f"Peringatan tidak terkirim: {result.reason}.", file=sys.stderr)
 
 
 if __name__ == "__main__":

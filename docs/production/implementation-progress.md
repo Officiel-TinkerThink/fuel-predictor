@@ -475,10 +475,36 @@ The three remaining items above are genuinely optional or small UI wiring, not m
       2. A run that completed but could not be persisted was reported as a success. That would leave
          the dashboard showing a stale picture while the scheduler saw green and raised no alarm; it
          is now reported as a failure.
-- [ ] **Not done**: external alerting with plain-language remediation. The state it needs is now
-      recorded (failed runs, stale monitoring, failed backups); what is missing is a delivery channel
-      — email or webhook — and the plan explicitly wants remediation wording, not just a notification.
-      The alert *content* already exists in `MonitoringAlert.message` and `MonitoringFreshness`.
+- [x] **External alerting with plain-language remediation.** Recording an alert in the database is
+      not delivery: nobody watches a dashboard they have no reason to open.
+      - Two channels, on dependencies the project already has: a webhook (`httpx`) and SMTP email
+        (`smtplib`, stdlib). A self-hosted single-VM deployment should not need a paid notification
+        service to learn that its predictions have started drifting. The webhook wins when both are
+        configured — it is the one that can point at a chat group someone already watches.
+      - `domain/alert_remediation.py` holds the plain-Indonesian next action for every alert kind,
+        in the order a non-specialist would take them, plus an urgency line per severity. It lives
+        in the domain because the wording is part of what the system promises an operator, not a
+        detail of how a message is delivered. A test asserts every kind has text, so a new alert
+        kind cannot ship without guidance.
+      - Delivery fires only when the picture *changes*: a new alert, a severity change, or one that
+        cleared. A job that mails the same warning every hour trains its reader to ignore it.
+        Resolution is reported too — without it an operator never learns the problem ended.
+      - Delivery state is persisted (`alert_notifications`, Alembic `20260825_12`) because the
+        monitoring job is a separate short-lived process; an in-memory record of "already told them"
+        would be empty on every run.
+      - A failed send records nothing, so the next run retries. Recording on failure would mark an
+        alert handled that nobody received.
+      - An unconfigured channel is stated plainly rather than passing silently. "No alerts were
+        sent" and "nobody is listening" must never look the same in a log. Nothing is recorded as
+        sent either, so configuring a channel later delivers the existing backlog instead of
+        starting from a clean slate that hides current problems.
+      - Delivery never changes the monitoring exit code. Monitoring itself succeeded; turning a
+        notification problem into a failed run would make the scheduler report the wrong thing.
+      Verified live: a real webhook receiver got the alert with its remediation, got nothing on the
+      repeat run, and got the resolution notice when the alert cleared.
+- [ ] **Known limitation, needs an external watchdog**: nothing in this process can detect that the
+      monitoring job *stopped running altogether*. A dead-man's-switch has to live outside the thing
+      it watches. The non-zero exit code is the hook for that (ADR 0012, Phase 6).
 
 ## Phase 4 — MCP read-only launch
 
@@ -530,7 +556,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (245 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (253 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref

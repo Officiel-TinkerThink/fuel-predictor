@@ -179,6 +179,21 @@ class SqlAlchemyMonitoringRepository(MonitoringDataReader, MonitoringAlertStore)
             for row in rows
         )
 
+    def list_active_alerts(self) -> tuple[MonitoringAlert, ...]:
+        """Alerts currently unresolved, for delivery after a monitoring run.
+
+        Read back rather than carried out of `reconcile` so delivery works
+        from what was actually committed, not from what the run believed it
+        was about to commit.
+        """
+        with self._session_factory() as session:
+            rows = session.scalars(
+                select(MonitoringAlertRow)
+                .where(MonitoringAlertRow.resolved_at.is_(None))
+                .order_by(MonitoringAlertRow.alert_key)
+            ).all()
+        return tuple(_to_monitoring_alert(row) for row in rows)
+
     def reconcile(
         self, active_alerts: Sequence[MonitoringAlert], observed_at: datetime
     ) -> tuple[MonitoringAlert, ...]:

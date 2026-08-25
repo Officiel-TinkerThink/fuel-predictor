@@ -332,3 +332,19 @@ def build_session_factory(engine: Engine) -> sessionmaker[Session]:
 
 def create_schema_for_tests(engine: Engine) -> None:
     Base.metadata.create_all(engine)
+
+
+class AlertNotificationRow(Base):
+    """Which alerts an operator has already been told about (Phase 3).
+
+    Persisted because the monitoring job is a separate short-lived process: an
+    in-memory record of "already sent" would be empty on every run, and the
+    operator would receive the same warning on every tick until they stopped
+    reading them.
+    """
+
+    __tablename__ = "alert_notifications"
+
+    alert_key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    severity: Mapped[str] = mapped_column(String(16), nullable=False)
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

@@ -52,6 +52,17 @@ class ApplicationSettings(BaseSettings):
     # A daily schedule with room for one missed run before the dashboard calls
     # the picture stale, so a single transient failure is not alarming.
     monitoring_stale_after_hours: int = Field(default=26, ge=1)
+    # Where monitoring alerts are delivered. Both channels are optional; with
+    # neither set the monitoring job says plainly that nobody is being told,
+    # rather than appearing to succeed at notifying no one.
+    alert_webhook_url: str = ""
+    alert_smtp_host: str = ""
+    alert_smtp_port: int = Field(default=587, ge=1, le=65535)
+    alert_smtp_username: str = ""
+    alert_smtp_password: SecretStr = SecretStr("")
+    alert_smtp_use_starttls: bool = True
+    alert_email_sender: str = ""
+    alert_email_recipients: str = ""
 
     @field_validator("database_url")
     @classmethod
