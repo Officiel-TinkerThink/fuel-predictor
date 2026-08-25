@@ -88,7 +88,7 @@ NAVIGATION: tuple[NavigationGroup, ...] = (
     NavigationGroup(
         title="Pengaturan",
         items=(
-            # "Integrasi Agen" is Phase 4 (MCP); not linked until it exists.
+            NavigationItem("Integrasi Agen", "/integrasi-agen", Capability.MANAGE_USERS),
             NavigationItem("Pengguna", "/pengguna", Capability.MANAGE_USERS),
             NavigationItem("Catatan Audit", "/audit", Capability.VIEW_AUDIT),
         ),

@@ -49,7 +49,18 @@ class BaselineTrainingError(ValueError):
 
 
 class BaselineModelNotFoundError(LookupError):
-    pass
+    """No trained model is available to serve a prediction.
+
+    Carries its own message so callers that surface the exception generically
+    — the MCP tool surface, logs — still say something an operator can act on.
+    The HTTP and page handlers override it with their own wording.
+    """
+
+    def __init__(
+        self,
+        message: str = "Belum ada kandidat baseline terlatih untuk membuat prediksi.",
+    ) -> None:
+        super().__init__(message)
 
 
 @dataclass(frozen=True, slots=True)

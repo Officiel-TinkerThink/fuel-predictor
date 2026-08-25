@@ -6,6 +6,12 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from fuel_predictor.application.actual_fuel import GetPredictionPerformance, RecordActualFuel
+from fuel_predictor.application.agent_credentials import (
+    IssueAgentCredential,
+    ListAgentClients,
+    ResolveAgentCredential,
+    RevokeAgentCredential,
+)
 from fuel_predictor.application.baseline_predictions import (
     GenerateFuelPrediction,
     TrainBaselineCandidate,
@@ -47,6 +53,7 @@ from fuel_predictor.application.monitoring import GetMonitoringDashboard
 from fuel_predictor.application.routing import RoutingProvider, UnavailableRoutingProvider
 from fuel_predictor.configuration import ApplicationSettings
 from fuel_predictor.delivery.actual_fuel_pages import build_actual_fuel_pages_router
+from fuel_predictor.delivery.agent_pages import build_agent_pages_router
 from fuel_predictor.delivery.authentication import (
     build_authentication_router,
     register_identity_error_handlers,
@@ -57,6 +64,8 @@ from fuel_predictor.delivery.historical_dataset_pages import (
     build_historical_dataset_pages_router,
 )
 from fuel_predictor.delivery.http import build_router, register_error_handlers
+from fuel_predictor.delivery.mcp_routes import build_mcp_router
+from fuel_predictor.delivery.mcp_server import McpRequestHandler, build_registry
 from fuel_predictor.delivery.model_governance_pages import build_model_governance_pages_router
 from fuel_predictor.delivery.model_upload_pages import build_model_upload_pages_router
 from fuel_predictor.delivery.monitoring_pages import build_monitoring_pages_router
@@ -95,6 +104,7 @@ from fuel_predictor.infrastructure.sqlalchemy_historical_datasets import (
     SqlAlchemyHistoricalDatasetRepository,
 )
 from fuel_predictor.infrastructure.sqlalchemy_identity import (
+    SqlAlchemyAgentClientRepository,
     SqlAlchemyAuditRepository,
     SqlAlchemySessionRepository,
     SqlAlchemyUserRepository,
@@ -245,6 +255,22 @@ def create_app(
         ),
         build_artifact_loader=build_loader,
     )
+    agent_client_repository = SqlAlchemyAgentClientRepository(session_factory)
+    issue_agent_credential = IssueAgentCredential(agent_client_repository, record_audit)
+    revoke_agent_credential = RevokeAgentCredential(agent_client_repository, record_audit)
+    list_agent_clients = ListAgentClients(agent_client_repository)
+    mcp_handler = McpRequestHandler(
+        registry=build_registry(
+            generate_prediction=generate_fuel_prediction,
+            create_operation=create_daily_operation,
+            monitoring_dashboard=get_monitoring_dashboard,
+            prediction_performance=get_prediction_performance,
+            model_reader=prediction_repository,
+            monitoring_runs=monitoring_run_repository,
+        ),
+        resolve_credential=ResolveAgentCredential(agent_client_repository),
+        record_audit=record_audit,
+    )
     guard = SecurityGuard()
 
     @asynccontextmanager
@@ -348,6 +374,15 @@ def create_app(
             validate_package,
             validation_records,
             artifact_store,
+            guard,
+        )
+    )
+    app.include_router(build_mcp_router(mcp_handler, server_version="1.0.0"))
+    app.include_router(
+        build_agent_pages_router(
+            issue_agent_credential,
+            revoke_agent_credential,
+            list_agent_clients,
             guard,
         )
     )

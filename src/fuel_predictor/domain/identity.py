@@ -87,6 +87,63 @@ class User:
         return self.is_active and role_allows(self.role, capability)
 
 
+class AgentScope(StrEnum):
+    """What an agent client may do (ADR 0008).
+
+    Deliberately coarser and more restrictive than human capabilities: the
+    initial set is read/compute only. Privileged model operations are Phase 5
+    and stay unavailable until read-only MCP has proven itself in production.
+    """
+
+    PREDICT = "fuel:predict"
+    MONITOR = "fuel:monitor"
+    MODELS_READ = "models:read"
+
+
+_SCOPE_CAPABILITIES: dict[AgentScope, frozenset[Capability]] = {
+    AgentScope.PREDICT: frozenset({Capability.CREATE_PREDICTION}),
+    AgentScope.MONITOR: frozenset({Capability.VIEW_MONITORING}),
+    AgentScope.MODELS_READ: frozenset({Capability.VIEW_MODELS}),
+}
+
+DEFAULT_AGENT_SCOPES = frozenset(
+    {AgentScope.PREDICT, AgentScope.MONITOR, AgentScope.MODELS_READ}
+)
+
+
+def capabilities_for_scopes(scopes: frozenset[AgentScope]) -> frozenset[Capability]:
+    granted: set[Capability] = set()
+    for scope in scopes:
+        granted |= _SCOPE_CAPABILITIES[scope]
+    return frozenset(granted)
+
+
+@dataclass(frozen=True, slots=True)
+class AgentClient:
+    """One MCP client with its own revocable credential and scope set.
+
+    Each client gets a distinct identity so a compromised or misbehaving
+    agent can be revoked without disturbing the others, and so every audited
+    call names which agent made it.
+    """
+
+    client_id: str
+    name: str
+    scopes: frozenset[AgentScope]
+    token_hash: str
+    created_at: datetime
+    is_active: bool
+    revoked_at: datetime | None = None
+
+    def allows(self, capability: Capability) -> bool:
+        if not self.is_active:
+            return False
+        return capability in capabilities_for_scopes(self.scopes)
+
+    def has_scope(self, scope: AgentScope) -> bool:
+        return self.is_active and scope in self.scopes
+
+
 @dataclass(frozen=True, slots=True)
 class AuthenticatedSession:
     """A live browser session. `token_hash` is stored; the raw token never is."""

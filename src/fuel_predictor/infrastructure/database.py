@@ -245,6 +245,24 @@ class ModelPackageValidationRow(Base):
     artifact_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
 
 
+class AgentClientRow(Base):
+    """An MCP client credential (ADR 0008, Phase 4).
+
+    Only the token hash is stored. A lost credential is reissued, never
+    recovered, so a database read cannot yield a working token.
+    """
+
+    __tablename__ = "agent_clients"
+
+    client_id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    scopes: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class MonitoringRunRow(Base):
     """One completed scheduled monitoring run (Phase 3).
 

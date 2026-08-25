@@ -458,11 +458,46 @@ The three remaining items above are genuinely optional or small UI wiring, not m
 
 ## Phase 4 — MCP read-only launch
 
-Not started.
+Done, and verified against a live server (issue a credential in the browser, use it as a bearer
+token against `/mcp`, revoke it, watch the next call 401).
+
+- [x] Agent clients are a first-class identity: `AgentClient` with its own scopes
+      (`fuel:predict`, `fuel:monitor`, `models:read`), its own revocable credential, and its own
+      audit actor. Each client is separate so a misbehaving agent can be revoked without
+      disturbing the others.
+- [x] Credentials are `fpa_`-prefixed random tokens. Only the sha256 hash is stored, so the raw
+      value is shown exactly once at issue time — a lost credential is reissued, not looked up.
+      The prefix makes a leaked token recognisable to secret scanners.
+- [x] `/integrasi-agen` (admin-only, `MANAGE_USERS`) issues, lists, and revokes credentials.
+- [x] `/mcp` speaks JSON-RPC 2.0: `initialize`, `notifications/initialized`, `tools/list`,
+      `tools/call`. It is public to the *session* middleware only because it does its own bearer
+      authentication; it is not unauthenticated.
+- [x] Seven read/compute tools, each declaring the one scope it needs: `predict_fuel`,
+      `get_service_health`, `get_drift_summary`, `get_performance_summary`, `get_current_model`,
+      `list_model_versions`, `get_prediction_input_schema`. Every one calls the same application
+      use case the web pages call, so a rule cannot drift between the human and agent surfaces.
+- [x] `tools/list` is filtered by the caller's scopes. Advertising a tool the credential cannot
+      call invites an agent to plan around a capability it does not have, then fail partway.
+- [x] Every call is audited — caller, tool, outcome, short note. Arguments are summarised rather
+      than stored verbatim, so the audit trail does not become its own retention problem.
+- [x] An invalid token and a revoked one are refused identically, so probing cannot tell them apart.
+- [x] `predict_fuel` carries `safety_policy` in its result: an agent must be able to tell an
+      estimate of *prepared* fuel from verified consumption.
+
+Bug found and fixed while testing this phase: the transport caught `LookupError` to mean "unknown
+tool", but `KeyError` is a `LookupError`. A prediction attempted with no trained model therefore
+came back as JSON-RPC `-32601 Method not found` with an empty message — telling the agent the tool
+did not exist rather than why the call failed. Replaced with an explicit `McpUnknownToolError`, and
+`BaselineModelNotFoundError` now carries a plain-language default message so generic
+stringification still says something an operator can act on. Both are covered by regression tests.
+
+Deliberately **not** in this phase: anything that writes. No upload, activation, or rollback tool
+exists. Those are Phase 5 and stay unavailable until read-only operation has proven itself.
 
 ## Phase 5 — Privileged MCP operations
 
-Not started. Depends on Phase 2 and Phase 4.
+Not started. Phase 4 is now in place, so the remaining dependency is the read-only surface actually
+running in production long enough to trust, plus the Phase 2 leftovers below.
 
 ## Phase 6 — Deployment hardening and handoff
 
@@ -471,7 +506,7 @@ Indonesian operator guide, recovery runbook, and handoff drill.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (228 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (242 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref

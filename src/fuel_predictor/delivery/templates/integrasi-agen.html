@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{% if error %}
+{{ ui.banner('danger', 'Kredensial belum dapat diterbitkan', error) }}
+{% endif %}
+
+{% if issued_token %}
+{{ ui.banner('warning', 'Salin kredensial ini sekarang', 'Nilai ini hanya ditampilkan satu kali. Sistem hanya menyimpan hash-nya, sehingga kredensial yang hilang harus diterbitkan ulang, bukan dilihat kembali.') }}
+<section class="card">
+  <p><code>{{ issued_token }}</code></p>
+</section>
+{% endif %}
+
+<div class="grid grid--two">
+  <section class="card">
+    <h2>Terbitkan kredensial</h2>
+    <form method="post" action="/integrasi-agen" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      {{ ui.text_field('name', 'Nama klien agen', '', hint='Misalnya nama harness atau tim yang memakainya.', required=true) }}
+      <fieldset>
+        <legend>Cakupan</legend>
+        {% for scope in available_scopes %}
+        <div class="field">
+          <label><input type="checkbox" name="scopes" value="{{ scope }}" checked> {{ scope }}</label>
+        </div>
+        {% endfor %}
+      </fieldset>
+      <button type="submit">Terbitkan</button>
+    </form>
+    <p class="hint">Cakupan awal hanya baca/hitung. Operasi model istimewa menyusul pada Fase 5,
+      setelah MCP baca-saja terbukti berjalan di produksi.</p>
+  </section>
+
+  <section class="card">
+    <h2>Klien terdaftar</h2>
+    {% if clients %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Nama</th><th>Cakupan</th><th>Status</th><th>Tindakan</th></tr></thead>
+        <tbody>
+          {% for client in clients %}
+          <tr>
+            <td>{{ client.name }}</td>
+            <td>{{ client.scopes | map('string') | sort | join(', ') }}</td>
+            <td>{% if client.is_active %}{{ ui.badge('Aktif', 'success') }}{% else %}{{ ui.badge('Dicabut', 'neutral') }}{% endif %}</td>
+            <td>
+              {% if client.is_active %}
+              <form method="post" action="/integrasi-agen/{{ client.client_id }}/cabut">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="button button--danger">Cabut</button>
+              </form>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    {{ ui.empty_state('Belum ada klien agen.') }}
+    {% endif %}
+  </section>
+</div>
+
+{% endblock %}

@@ -4,6 +4,8 @@ from typing import cast
 from sqlalchemy import delete, func, select
 
 from fuel_predictor.domain.identity import (
+    AgentClient,
+    AgentScope,
     AuditOutcome,
     AuditRecord,
     AuthenticatedSession,
@@ -11,6 +13,7 @@ from fuel_predictor.domain.identity import (
     UserRole,
 )
 from fuel_predictor.infrastructure.database import (
+    AgentClientRow,
     AuditRecordRow,
     SessionFactory,
     UserRow,
@@ -188,3 +191,63 @@ def _user(row: UserRow) -> User:
 def _aware(moment: datetime) -> datetime:
     """SQLite loses the timezone that PostgreSQL preserves; normalise to UTC."""
     return moment if moment.tzinfo is not None else moment.replace(tzinfo=UTC)
+
+
+class SqlAlchemyAgentClientRepository:
+    def __init__(self, session_factory: SessionFactory) -> None:
+        self._session_factory = session_factory
+
+    def add(self, client: AgentClient) -> None:
+        with self._session_factory.begin() as session:
+            session.add(
+                AgentClientRow(
+                    client_id=client.client_id,
+                    name=client.name,
+                    scopes=sorted(str(scope) for scope in client.scopes),
+                    token_hash=client.token_hash,
+                    created_at=client.created_at,
+                    is_active=client.is_active,
+                    revoked_at=client.revoked_at,
+                )
+            )
+
+    def get_by_token_hash(self, token_hash: str) -> AgentClient | None:
+        with self._session_factory() as session:
+            row = session.execute(
+                select(AgentClientRow).where(AgentClientRow.token_hash == token_hash)
+            ).scalar_one_or_none()
+            return _agent(row) if row is not None else None
+
+    def get(self, client_id: str) -> AgentClient | None:
+        with self._session_factory() as session:
+            row = session.get(AgentClientRow, client_id)
+            return _agent(row) if row is not None else None
+
+    def list_clients(self) -> tuple[AgentClient, ...]:
+        with self._session_factory() as session:
+            rows = session.execute(
+                select(AgentClientRow).order_by(AgentClientRow.created_at.desc())
+            ).scalars().all()
+        return tuple(_agent(row) for row in rows)
+
+    def replace(self, client: AgentClient) -> None:
+        with self._session_factory.begin() as session:
+            row = session.get(AgentClientRow, client.client_id)
+            if row is None:
+                return
+            row.name = client.name
+            row.scopes = sorted(str(scope) for scope in client.scopes)
+            row.is_active = client.is_active
+            row.revoked_at = client.revoked_at
+
+
+def _agent(row: AgentClientRow) -> AgentClient:
+    return AgentClient(
+        client_id=row.client_id,
+        name=row.name,
+        scopes=frozenset(AgentScope(scope) for scope in row.scopes),
+        token_hash=row.token_hash,
+        created_at=_aware(row.created_at),
+        is_active=row.is_active,
+        revoked_at=_aware(row.revoked_at) if row.revoked_at is not None else None,
+    )

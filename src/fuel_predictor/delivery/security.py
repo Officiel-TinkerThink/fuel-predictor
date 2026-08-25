@@ -26,7 +26,19 @@ _FORM_CONTENT_TYPES = ("application/x-www-form-urlencoded", "multipart/form-data
 
 # Reachable without a session even once the system is provisioned.
 _PUBLIC_PATHS = frozenset(
-    {"/masuk", "/keluar", "/sehat", "/statis", "/docs", "/redoc", "/openapi.json"}
+    {
+        "/masuk",
+        "/keluar",
+        "/sehat",
+        "/statis",
+        "/docs",
+        "/redoc",
+        "/openapi.json",
+        # /mcp carries its own bearer-token authentication and its own audit
+        # trail (Phase 4). It is "public" only to the *session* middleware —
+        # an unauthenticated MCP call is still rejected, by the MCP handler.
+        "/mcp",
+    }
 )
 
 # One entry per route: (method, path pattern, capability). A pattern segment of
@@ -58,6 +70,9 @@ ROUTE_CAPABILITIES: tuple[tuple[str, str, Capability], ...] = (
     ("GET", "/pemantauan/kesehatan-sistem", Capability.VIEW_MONITORING),
     ("GET", "/pemantauan/pergeseran-data", Capability.VIEW_MONITORING),
     ("GET", "/pemantauan/kinerja-model", Capability.VIEW_MONITORING),
+    ("GET", "/integrasi-agen", Capability.MANAGE_USERS),
+    ("POST", "/integrasi-agen", Capability.MANAGE_USERS),
+    ("POST", "/integrasi-agen/*/cabut", Capability.MANAGE_USERS),
     ("GET", "/pengguna", Capability.MANAGE_USERS),
     ("POST", "/pengguna", Capability.MANAGE_USERS),
     ("GET", "/audit", Capability.VIEW_AUDIT),
