@@ -35,10 +35,74 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="Label sumber pemicu, misalnya 'scheduled' atau 'manual'.",
     )
 
+    backup = subcommands.add_parser(
+        "record-backup",
+        help="Catat hasil satu percobaan pencadangan (dipanggil oleh skrip cadangan).",
+    )
+    backup.add_argument("--outcome", choices=("succeeded", "failed"), required=True)
+    backup.add_argument(
+        "--destination", required=True, help="Tujuan salinan, misalnya remote:bucket/path."
+    )
+    backup.add_argument("--size-bytes", type=int, default=None)
+    backup.add_argument("--failure-reason", default=None)
+
     arguments = parser.parse_args(argv)
     if arguments.command == "monitor":
         return _run_monitoring(arguments.trigger)
+    if arguments.command == "record-backup":
+        return _record_backup(
+            outcome=arguments.outcome,
+            destination=arguments.destination,
+            size_bytes=arguments.size_bytes,
+            failure_reason=arguments.failure_reason,
+        )
     return 2
+
+
+def _record_backup(
+    outcome: str, destination: str, size_bytes: int | None, failure_reason: str | None
+) -> int:
+    """Record what the backup script actually did.
+
+    Outcomes are reported by the job rather than inferred: the application
+    cannot see whether an off-VM upload succeeded, and guessing would produce a
+    reassuring dashboard with no basis behind it.
+    """
+    from datetime import UTC, datetime
+    from uuid import uuid4
+
+    from fuel_predictor.application.monitoring_runs import BackupRun, RunOutcome
+    from fuel_predictor.infrastructure.sqlalchemy_monitoring_runs import (
+        SqlAlchemyBackupRunRepository,
+    )
+
+    settings = ApplicationSettings()
+    try:
+        factory = build_session_factory(build_engine(settings.database_url))
+        SqlAlchemyBackupRunRepository(factory).add(
+            BackupRun(
+                run_id=f"BAK-{uuid4().hex[:20]}",
+                finished_at=datetime.now(UTC),
+                outcome=RunOutcome.SUCCEEDED if outcome == "succeeded" else RunOutcome.FAILED,
+                destination=destination,
+                size_bytes=size_bytes,
+                failure_reason=failure_reason,
+            )
+        )
+    except Exception as error:  # noqa: BLE001 - the operator needs a readable message
+        print(
+            "Hasil pencadangan gagal dicatat: basis data tidak dapat dihubungi. "
+            f"Detail: {error}",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(f"Hasil pencadangan dicatat: {outcome}.")
+    # A recorded failure is still a successful recording. The backup script's
+    # own exit code is what tells the scheduler the backup failed; making this
+    # command fail too would report the same problem twice and hide whether
+    # recording itself worked.
+    return 0
 
 
 def _run_monitoring(trigger: str) -> int:

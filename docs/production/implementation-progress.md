@@ -551,8 +551,60 @@ running in production long enough to trust, plus the Phase 2 leftovers below.
 
 ## Phase 6 — Deployment hardening and handoff
 
-Not started. Depends on ADR 0012 (Caddy + `age`/`rclone` backup) being implemented, plus the
-Indonesian operator guide, recovery runbook, and handoff drill.
+Code and documentation complete. The two people-based exercises are deliberately left open — see
+the bottom of this section.
+
+- [x] **HTTPS gateway** — `compose.prod.yaml` plus [`deploy/Caddyfile`](../../deploy/Caddyfile).
+      Caddy terminates TLS and renews Let's Encrypt certificates with no cron job and no operator
+      action. Security headers are set at the gateway so they cover responses rendered before any
+      application middleware runs.
+- [x] **Nothing but the gateway is published.** `compose.prod.yaml` is a *standalone* file rather
+      than an overlay on `compose.yaml`, and that is the whole point: Compose **merges** `ports`
+      across `-f` files and cannot unpublish a port an earlier file published. An overlay would
+      have left the application and MLflow reachable on the host, bypassing TLS entirely.
+      Duplicating a little configuration is the cheaper mistake. Verified:
+      `docker compose -f compose.prod.yaml config | grep -c published` returns 3 (80, 443/tcp,
+      443/udp) and nothing else.
+- [x] **Proxy header trust is bounded.** uvicorn runs with `--proxy-headers` *and*
+      `--forwarded-allow-ips`. Without the second flag any client could forge its own source
+      address by setting a header, which would poison the audit trail.
+- [x] **Encrypted off-VM backup** — [`deploy/backup.sh`](../../deploy/backup.sh): `pg_dump`
+      custom-format plus an archive of the retained model packages, both encrypted with `age` to a
+      recipient **public** key and uploaded with `rclone`. The job holds no secret capable of
+      decryption, so a compromised VM cannot read its own backup history. Retention is 7 daily,
+      4 weekly, 3 monthly. Pruning never fails a backup: a copy that uploaded fine must not be
+      reported failed because an old one could not be deleted.
+      The model packages travel with the dump deliberately — a database backup without them would
+      restore to a state that cannot roll back, since rollback needs the target's bytes.
+- [x] **Backup outcomes are recorded, not inferred** — `python -m fuel_predictor record-backup`,
+      called by the script. The application cannot see whether an off-VM upload succeeded, and
+      guessing would produce a reassuring dashboard with no basis. This closes the Phase 3 read
+      side that was already waiting for it. A *recorded failure* still exits 0: the backup script's
+      own exit code is what tells the scheduler the backup failed, and failing here too would
+      report the same problem twice while hiding whether recording itself worked.
+- [x] **Rehearsable restore** — [`deploy/restore.sh`](../../deploy/restore.sh). Fetches, decrypts,
+      `pg_restore`s with `--clean --if-exists`, unpacks the model packages, then prints the four
+      checks that decide whether the restore actually worked. A restore that loads rows but leaves
+      the active model unloadable is not a successful restore, and the script says so.
+- [x] **Scheduled monitoring ships with the deployment** — a `monitor` service rather than host
+      cron, so an operator cannot forget to install it.
+- [x] **Indonesian operator guide** — [`panduan-operator.md`](panduan-operator.md). No technical
+      commands. Leads with the distinction that matters most: the number is fuel *to prepare*, not
+      fuel *consumed*. Screenshot placeholders are marked; they need capturing against a real
+      deployment.
+- [x] **Technical recovery runbook** — [`recovery-runbook.md`](recovery-runbook.md). Written to be
+      usable at 2am by someone who did not build this: symptom-first triage table, then what you
+      will see / what it means / what to do.
+- [x] **Drill and usability protocols written** — [`handoff-drill.md`](handoff-drill.md), including
+      the two exercises people skip: forcing an activation failure by corrupting a retained
+      artefact, and restoring on a genuinely clean machine.
+- [ ] **Not done, and cannot be done by writing code:**
+      1. The **usability test** with a non-technical participant.
+      2. The **handoff drill** with an incoming technical owner.
+      Exercises 5–12 of the drill have each been verified individually against a running server
+      during implementation. What has not happened is *a person other than the builder* performing
+      them end to end. Marking these done from a code review would be false.
+      Screenshots for the operator guide also need capturing against a real deployment.
 
 ## Notes for whoever picks this up next
 

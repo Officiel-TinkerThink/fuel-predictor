@@ -1,0 +1,36 @@
+# HTTPS entry point (ADR 0012).
+#
+# Caddy obtains and renews Let's Encrypt certificates automatically: no cron
+# job, no renewal hook, nothing for an operator without technical support to
+# forget. Set DOMAIN and ACME_EMAIL in .env before starting.
+#
+# Replacing Caddy with an existing proxy is supported: point that proxy at the
+# app container on port 8000 and drop the caddy service from compose.prod.yaml.
+# Whatever terminates TLS must set X-Forwarded-Proto and X-Forwarded-For, and
+# must be listed in FUEL_PREDICTOR_FORWARDED_ALLOW_IPS.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Sent by the gateway rather than the application so they cover every
+	# response, including errors rendered before application middleware runs.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "same-origin"
+		-Server
+	}
+
+	# The MCP endpoint authenticates with its own bearer token and is meant to
+	# be reachable by agent clients, so it is proxied like any other path. It
+	# is listed explicitly only to make that a deliberate decision rather than
+	# something inherited by accident.
+	reverse_proxy app:8000 {
+		header_up X-Forwarded-Proto {scheme}
+	}
+}

@@ -1,0 +1,9 @@
+# core.autocrlf=true on this Windows checkout would give these files CRLF
+# endings. A shell script with CRLF fails on Linux with a "bad interpreter"
+# error naming a path that looks correct, which is a miserable thing to debug
+# during an incident — and these are exactly the files an incident needs.
+*.sh text eol=lf
+Dockerfile text eol=lf
+Caddyfile text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf

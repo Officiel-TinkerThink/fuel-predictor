@@ -1,0 +1,130 @@
+# Production deployment (ADR 0012). Standalone, not an overlay on compose.yaml.
+#
+#   docker compose -f compose.prod.yaml up -d
+#
+# Deliberately a complete file rather than `-f compose.yaml -f compose.prod.yaml`:
+# Compose *merges* `ports` lists across files and cannot unpublish a port an
+# earlier file published. An overlay would therefore leave the application and
+# MLflow reachable on the host, bypassing the gateway entirely. Duplicating a
+# little configuration is the cheaper mistake.
+#
+# Nothing here publishes a host port except Caddy. The application, database,
+# and MLflow are reachable only on the internal Compose network.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fuel_predictor
+      POSTGRES_USER: fuel_predictor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fuel_predictor -d fuel_predictor"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  mlflow:
+    build: .
+    restart: unless-stopped
+    command: >
+      mlflow server
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --default-artifact-root /mlflow/artifacts
+      --host 0.0.0.0
+      --port 5000
+    environment:
+      MLFLOW_SERVER_ALLOWED_HOSTS: "mlflow:5000,mlflow,localhost,localhost:5000,127.0.0.1,127.0.0.1:5000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - mlflow_data:/mlflow
+
+  app:
+    build: .
+    restart: unless-stopped
+    # --proxy-headers makes uvicorn honour X-Forwarded-Proto/For, and
+    # --forwarded-allow-ips restricts that trust to the gateway. Without the
+    # second flag any client could claim any source address by setting a
+    # header, which would poison the audit trail and the rate limiter.
+    command: >
+      sh -c "alembic upgrade head &&
+      uvicorn fuel_predictor.main:app --host 0.0.0.0 --port 8000
+      --proxy-headers --forwarded-allow-ips=${FUEL_PREDICTOR_FORWARDED_ALLOW_IPS:-*}"
+    environment:
+      FUEL_PREDICTOR_DATABASE_URL: postgresql+psycopg://fuel_predictor:${POSTGRES_PASSWORD}@db:5432/fuel_predictor
+      FUEL_PREDICTOR_MLFLOW_TRACKING_URI: http://mlflow:5000
+      FUEL_PREDICTOR_BOOTSTRAP_ADMIN_USERNAME: ${FUEL_PREDICTOR_BOOTSTRAP_ADMIN_USERNAME:-}
+      FUEL_PREDICTOR_BOOTSTRAP_ADMIN_PASSWORD: ${FUEL_PREDICTOR_BOOTSTRAP_ADMIN_PASSWORD:-}
+      FUEL_PREDICTOR_ALERT_WEBHOOK_URL: ${FUEL_PREDICTOR_ALERT_WEBHOOK_URL:-}
+      FUEL_PREDICTOR_ALERT_SMTP_HOST: ${FUEL_PREDICTOR_ALERT_SMTP_HOST:-}
+      FUEL_PREDICTOR_ALERT_SMTP_PORT: ${FUEL_PREDICTOR_ALERT_SMTP_PORT:-587}
+      FUEL_PREDICTOR_ALERT_SMTP_USERNAME: ${FUEL_PREDICTOR_ALERT_SMTP_USERNAME:-}
+      FUEL_PREDICTOR_ALERT_SMTP_PASSWORD: ${FUEL_PREDICTOR_ALERT_SMTP_PASSWORD:-}
+      FUEL_PREDICTOR_ALERT_EMAIL_SENDER: ${FUEL_PREDICTOR_ALERT_EMAIL_SENDER:-}
+      FUEL_PREDICTOR_ALERT_EMAIL_RECIPIENTS: ${FUEL_PREDICTOR_ALERT_EMAIL_RECIPIENTS:-}
+      FUEL_PREDICTOR_MODEL_ARTIFACT_DIRECTORY: /data/model-packages
+    depends_on:
+      db:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+    volumes:
+      - model_packages:/data/model-packages
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates survive a restart. Without this volume Caddy re-requests
+      # them on every deploy and hits Let's Encrypt rate limits.
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+  # Runs the scheduled monitoring recompute and alert delivery. A plain sleep
+  # loop rather than host cron: it ships with the deployment, so an operator
+  # cannot forget to install it, and it exits non-zero into the container log
+  # where the restart policy makes a persistently failing job visible.
+  monitor:
+    build: .
+    restart: unless-stopped
+    command: >
+      sh -c "while true; do
+      python -m fuel_predictor monitor --trigger scheduled || true;
+      sleep 86400;
+      done"
+    environment:
+      FUEL_PREDICTOR_DATABASE_URL: postgresql+psycopg://fuel_predictor:${POSTGRES_PASSWORD}@db:5432/fuel_predictor
+      FUEL_PREDICTOR_ALERT_WEBHOOK_URL: ${FUEL_PREDICTOR_ALERT_WEBHOOK_URL:-}
+      FUEL_PREDICTOR_ALERT_SMTP_HOST: ${FUEL_PREDICTOR_ALERT_SMTP_HOST:-}
+      FUEL_PREDICTOR_ALERT_SMTP_PORT: ${FUEL_PREDICTOR_ALERT_SMTP_PORT:-587}
+      FUEL_PREDICTOR_ALERT_SMTP_USERNAME: ${FUEL_PREDICTOR_ALERT_SMTP_USERNAME:-}
+      FUEL_PREDICTOR_ALERT_SMTP_PASSWORD: ${FUEL_PREDICTOR_ALERT_SMTP_PASSWORD:-}
+      FUEL_PREDICTOR_ALERT_EMAIL_SENDER: ${FUEL_PREDICTOR_ALERT_EMAIL_SENDER:-}
+      FUEL_PREDICTOR_ALERT_EMAIL_RECIPIENTS: ${FUEL_PREDICTOR_ALERT_EMAIL_RECIPIENTS:-}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  mlflow_data:
+  model_packages:
+  caddy_data:
+  caddy_config:
