@@ -70,6 +70,7 @@ from fuel_predictor.delivery.authentication import (
 )
 from fuel_predictor.delivery.bulk_prediction_pages import build_bulk_prediction_pages_router
 from fuel_predictor.delivery.dashboard import build_dashboard_router
+from fuel_predictor.delivery.health import build_health_router
 from fuel_predictor.delivery.historical_dataset_pages import (
     build_historical_dataset_pages_router,
 )
@@ -177,6 +178,7 @@ def create_app(
     database_url: str | None = None,
     routing_provider: RoutingProvider | None = None,
     bootstrap_administrator: tuple[str, str] | None = None,
+    allow_unprovisioned_access: bool | None = None,
 ) -> FastAPI:
     if database_path is not None and database_url is not None:
         raise ValueError("Pilih salah satu: database_path atau database_url.")
@@ -262,7 +264,15 @@ def create_app(
     record_audit = RecordAuditEvent(audit_repository)
     sign_in = SignIn(user_repository, session_repository, password_hasher, record_audit)
     sign_out = SignOut(session_repository, record_audit)
-    resolve_session = ResolveSession(user_repository, session_repository)
+    resolve_session = ResolveSession(
+        user_repository,
+        session_repository,
+        allow_unprovisioned_access=(
+            settings.allow_unprovisioned_access
+            if allow_unprovisioned_access is None
+            else allow_unprovisioned_access
+        ),
+    )
     create_user = CreateUser(user_repository, password_hasher, record_audit)
     list_users = ListUsers(user_repository)
     list_audit_records = ListAuditRecords(audit_repository)
@@ -479,6 +489,13 @@ def create_app(
             revoke_agent_credential,
             list_agent_clients,
             guard,
+        )
+    )
+    app.include_router(
+        build_health_router(
+            session_factory,
+            monitoring_run_repository,
+            settings.monitoring_stale_after_hours,
         )
     )
     app.include_router(

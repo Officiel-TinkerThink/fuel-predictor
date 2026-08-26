@@ -242,15 +242,27 @@ class ResolveSession:
     session_repository: SessionRepository
     idle_timeout_seconds: int = SESSION_IDLE_TIMEOUT_SECONDS
     now: Callable[[], datetime] = lambda: datetime.now(UTC)
+    # Whether an empty users table is allowed to mean "open to everyone".
+    # False in production, so the system fails *closed*: see below.
+    allow_unprovisioned_access: bool = True
 
     def is_system_provisioned(self) -> bool:
-        """False until the first administrator account is created.
+        """Whether the application should enforce authentication.
 
-        Before that point the application behaves as the original
-        unauthenticated local MVP; production deployments always provision an
-        administrator at startup (see ``EnsureBootstrapAdministrator``), so
-        this state is never reached once a system is actually deployed.
+        An empty users table means one of two very different things: a brand
+        new local checkout that has never been set up, or a deployed system
+        whose accounts have gone missing — a restore that predates them, a
+        botched migration, a manual cleanup. Treating both as "let everyone
+        in with administrator rights" is safe only for the first.
+
+        Production therefore sets `allow_unprovisioned_access=False` and this
+        reports the system as provisioned regardless, so a missing users table
+        locks everybody out instead of opening the door. Being unable to sign
+        in is a loud, recoverable failure; silently serving an unauthenticated
+        administrator session is neither.
         """
+        if not self.allow_unprovisioned_access:
+            return True
         return bool(self.user_repository.list_users())
 
     def execute(self, session_token: str | None) -> ActiveCaller | None:

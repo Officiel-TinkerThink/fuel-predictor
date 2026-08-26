@@ -59,6 +59,12 @@ class ApplicationSettings(BaseSettings):
     # default: the plan gates these on the read-only surface proving itself in
     # production first, and on a security review. Shipping them disabled makes
     # that gate an operator's explicit decision rather than the absence of code.
+    # When the users table is empty, should the application serve everyone as an
+    # administrator? True is the original local-MVP behaviour. False — the
+    # default — makes a deployment that loses its accounts lock everyone out
+    # rather than silently open up. Being unable to sign in is loud and
+    # recoverable; an unauthenticated administrator session is neither.
+    allow_unprovisioned_access: bool = False
     mcp_privileged_tools_enabled: bool = False
     alert_webhook_url: str = ""
     alert_smtp_host: str = ""

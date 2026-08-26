@@ -40,6 +40,7 @@ docker compose -f compose.prod.yaml ps
 | Symptom | Go to |
 |---|---|
 | A container is restarting or exited | [§2 Service down](#2-service-down) |
+| Nobody can sign in at all | [§2 Service down](#2-service-down) |
 | All up, but HTTPS fails | [§3 TLS and gateway](#3-tls-and-gateway) |
 | App up, predictions fail | [§4 No active model](#4-no-active-model) |
 | Predictions wrong since an activation | [§5 Roll back a model](#5-roll-back-a-model) |
@@ -72,6 +73,23 @@ docker compose -f compose.prod.yaml exec db psql -U fuel_predictor -c "ALTER USE
 
 Do **not** delete the volume to force re-initialisation unless you have a restore
 ([§8](#8-restore-from-backup)) — that is the entire database.
+
+**Everyone is locked out and nobody can sign in.** Check whether the accounts survived:
+
+```bash
+docker compose -f compose.prod.yaml exec db psql -U fuel_predictor -tAc "SELECT count(*) FROM users;"
+```
+
+Zero means the accounts are gone — usually a restore that predates them. The application refuses
+every request rather than serving them unauthenticated, which is deliberate: with
+`FUEL_PREDICTOR_ALLOW_UNPROVISIONED_ACCESS=false` an empty users table locks the door instead of
+removing it. Recover by restoring a backup that contains the accounts
+([§8](#8-restore-from-backup)), or by setting `FUEL_PREDICTOR_BOOTSTRAP_ADMIN_USERNAME` and
+`FUEL_PREDICTOR_BOOTSTRAP_ADMIN_PASSWORD` in `.env` and restarting the `app` service, which
+recreates one administrator.
+
+Never set `FUEL_PREDICTOR_ALLOW_UNPROVISIONED_ACCESS=true` to get back in. It does not restore
+your accounts; it serves every visitor as an administrator with no sign-in at all.
 
 **Database unreachable.** `db` is likely unhealthy:
 
@@ -164,10 +182,26 @@ docker compose -f compose.prod.yaml run --rm monitor python -m fuel_predictor mo
 
 Exit code 0 means it recovered. Non-zero prints a readable reason.
 
-> **Known limitation.** Nothing inside this deployment can detect that the `monitor` service
-> stopped running altogether — a dead-man's-switch has to live outside the thing it watches. If you
-> need that guarantee, have an external uptime monitor check the deployment daily. The non-zero
-> exit code is the hook for it.
+**Set up the external watchdog.** Nothing inside a deployment can notice that the deployment
+stopped, so point an external uptime monitor at `/sehat`:
+
+```bash
+curl -s https://YOUR-DOMAIN/sehat
+{"status":"ok","database":"ok","monitoring_stale":false}
+```
+
+| Field | Alert when |
+|---|---|
+| HTTP status | not `200` — the instance is down or the database is unreachable |
+| `monitoring_stale` | `true` — the scheduled monitor stopped running |
+
+`monitoring_stale` is `null` before the first successful run, which is normal on a new deployment
+and deliberately not an alert. A stale monitor returns HTTP 200 on purpose: the application is
+still serving predictions, and pulling it out of a load balancer because a scheduled job is late
+would be the wrong response.
+
+The endpoint is unauthenticated — a watchdog that needs a session stops working exactly when
+sessions break — so it reports only those three fields and nothing about the system's internals.
 
 ---
 

@@ -70,6 +70,15 @@ services:
       FUEL_PREDICTOR_ALERT_EMAIL_SENDER: ${FUEL_PREDICTOR_ALERT_EMAIL_SENDER:-}
       FUEL_PREDICTOR_ALERT_EMAIL_RECIPIENTS: ${FUEL_PREDICTOR_ALERT_EMAIL_RECIPIENTS:-}
       FUEL_PREDICTOR_MODEL_ARTIFACT_DIRECTORY: /data/model-packages
+      # Pinned rather than left to the default, so this stays true even if the
+      # default is ever loosened: no accounts means locked, not wide open.
+      FUEL_PREDICTOR_ALLOW_UNPROVISIONED_ACCESS: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://localhost:8000/sehat')\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     depends_on:
       db:
         condition: service_healthy
