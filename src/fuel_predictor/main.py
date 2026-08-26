@@ -92,6 +92,7 @@ from fuel_predictor.delivery.security import (
     register_security_error_handlers,
 )
 from fuel_predictor.domain.identity import AuditOutcome
+from fuel_predictor.infrastructure.alert_notifiers import build_notifier
 from fuel_predictor.infrastructure.database import (
     build_engine,
     build_session_factory,
@@ -488,6 +489,9 @@ def create_app(
             monitoring_run_repository,
             backup_run_repository,
             settings.monitoring_stale_after_hours,
+            # Same source of truth the monitoring job uses, so the page cannot
+            # claim alerts are delivered when the job would say otherwise.
+            alert_channel_configured=build_notifier(settings).is_configured,
         )
     )
     return app

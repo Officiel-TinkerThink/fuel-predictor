@@ -35,7 +35,7 @@ suatu menu, berarti peran akun Anda memang tidak mencakupnya — itu bukan kerus
 **Kalau kata sandi ditolak:** periksa huruf besar/kecil. Setelah beberapa kali gagal, sistem
 menahan percobaan berikutnya sebentar. Tunggu, lalu coba lagi.
 
-> _Sisipkan tangkapan layar: halaman Masuk._
+![Halaman Masuk: kartu berisi kolom nama pengguna, kata sandi, dan tombol Masuk.](images/01-masuk.png)
 
 ---
 
@@ -48,7 +48,10 @@ menahan percobaan berikutnya sebentar. Tunggu, lalu coba lagi.
    - **Jam lifting** — wajib diisi kalau mode mencakup lifting.
    - **Jarak total (km)** — jarak seluruh perjalanan.
    - **Sumber jarak** — `manual` kalau Anda mengetik sendiri.
-3. Tekan **Hitung Prediksi**.
+3. Tekan **Simpan operasi harian**. Operasi tersimpan lebih dulu, jadi angkanya bisa
+   ditelusuri kembali nanti.
+4. Di halaman berikutnya (*Operasi harian tersimpan*), tekan
+   **Buat estimasi kebutuhan BBM**.
 
 Hasilnya menampilkan:
 
@@ -59,7 +62,9 @@ Hasilnya menampilkan:
 | Rentang ketidakpastian | Batas bawah dan atas yang masuk akal. Rentang lebar = model kurang yakin. |
 | Model yang dipakai | Versi model yang menghitung. Berguna saat menelusuri angka lama. |
 
-> _Sisipkan tangkapan layar: hasil prediksi._
+![Hasil prediksi: estimasi kebutuhan BBM 26,28 L, alokasi rekomendasi 31,28 L, rentang ketidakpastian 24,97–27,59 L, beserta ID operasi, model, dan kalimat kebijakan keselamatan.](images/02-hasil-prediksi.png)
+
+Perhatikan kotak hijau di atas: nilai ini **estimasi bahan bakar disiapkan**, bukan konsumsi aktual yang telah diverifikasi. Kalimat itu selalu ikut ditampilkan.
 
 **Kalau muncul "Belum ada kandidat baseline terlatih":** belum ada model yang aktif.
 Hubungi penanggung jawab model — lihat [bagian 6](#6-mengganti-model).
@@ -81,7 +86,9 @@ mencakup lifting`.
 Perbaiki baris tersebut di berkas asli, lalu unggah ulang. Baris yang sudah berhasil tidak
 terhitung dua kali.
 
-> _Sisipkan tangkapan layar: hasil unggah massal dengan baris tertahan._
+![Hasil unggah massal: 4 baris berhasil diprediksi, 3 baris dikarantina dengan alasan masing-masing — jam lifting kosong, jarak bukan angka, dan jarak bernilai negatif.](images/03-unggah-massal.png)
+
+Kolom **Alasan** pada Laporan koreksi menyebutkan persis apa yang salah pada tiap baris, sehingga Anda tahu apa yang perlu diperbaiki di berkas sumber.
 
 ---
 
@@ -123,7 +130,9 @@ belum cukup, itu jujur — bukan kerusakan. Isi lebih banyak angka aktual
 terakhir berhasil. Kalau tertulis **Kedaluwarsa**, angka di halaman ini mungkin sudah lama —
 hubungi penanggung jawab teknis.
 
-> _Sisipkan tangkapan layar: halaman Pemantauan dengan satu peringatan aktif._
+![Kesehatan Sistem: 3 peringatan aktif berjenis missing_actual, 0 isu kualitas data, 3 aktual BBM tertunda, pemantauan terjadwal Terkini.](images/04-kesehatan-sistem.png)
+
+Spanduk di atas juga memberi tahu apakah peringatan dikirim ke luar aplikasi. Bila tertulis *saluran pemberitahuan belum dikonfigurasi*, peringatan hanya terlihat di halaman ini — sampaikan ke penanggung jawab teknis.
 
 ---
 
@@ -131,13 +140,13 @@ hubungi penanggung jawab teknis.
 
 Hanya untuk akun dengan peran pengelola model.
 
-**Mengunggah paket model baru:** menu **Unggah Model**, pilih berkas `.zip` dari pembuat model.
+**Mengunggah paket model baru:** menu **Unggah Kandidat**, pilih berkas `.zip` dari pembuat model.
 
 Aplikasi memeriksa paket itu lebih dulu. Kalau ada yang tidak beres, paket **ditolak** dan
 alasannya ditampilkan. Model yang sedang berjalan **tidak tersentuh** — mengunggah tidak pernah
 mengganti model secara diam-diam.
 
-**Mengaktifkan:** menu **Pengelolaan Model**, bandingkan kandidat, lalu tekan **Promosikan**
+**Mengaktifkan:** menu **Pengelolaan Model**, bandingkan kandidat, lalu tekan **Promosikan manual**
 pada yang Anda pilih.
 
 Kalau aktivasi gagal, model lama **tetap melayani prediksi**. Anda akan melihat pesan yang
@@ -147,7 +156,9 @@ Kalau setelah aktivasi muncul pesan bahwa **pemeriksaan gagal**, model baru suda
 melayani. Segera aktifkan kembali versi sebelumnya dari halaman yang sama, lalu hubungi
 penanggung jawab teknis.
 
-> _Sisipkan tangkapan layar: Pengelolaan Model dengan dua kandidat._
+![Pengelolaan Model: model aktif dengan MAE 0,58 L, dan dua kandidat menunggu keputusan, masing-masing dengan tautan Bandingkan dan tombol Promosikan manual.](images/05-pengelolaan-model.png)
+
+Tombol **Promosikan manual** adalah satu-satunya cara model berganti. Tidak ada promosi otomatis.
 
 ---
 

@@ -30,6 +30,7 @@ def build_monitoring_pages_router(
     monitoring_runs: MonitoringRunRepository,
     backup_runs: BackupRunRepository,
     monitoring_stale_after_hours: int = 26,
+    alert_channel_configured: bool = False,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -65,6 +66,10 @@ def build_monitoring_pages_router(
                 missing_actual_after_days=dashboard.missing_actual_after_days,
                 freshness=_freshness(),
                 last_backup=backup_runs.latest(),
+                # Whether anyone is actually told about these alerts. "No
+                # alerts fired" and "nobody is listening" must not read the
+                # same on the page any more than they do in the log.
+                alert_channel_configured=alert_channel_configured,
             )
         )
 

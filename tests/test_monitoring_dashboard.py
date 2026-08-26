@@ -95,7 +95,13 @@ def test_monitoring_dashboard_reports_traceable_local_alerts(
     assert all(alert["resolved_at"] is None for alert in body["active_alerts"])
     assert health_page.status_code == 200
     assert "Kesehatan Sistem" in health_page.text
-    assert "Tidak ada promosi model otomatis" in health_page.text
+    # The page keeps promising promotion is never automatic.
+    assert "Promosi model tidak pernah otomatis" in health_page.text
+    # With no channel configured it must say so rather than implying the alerts
+    # reached someone. It used to claim outright that nothing is ever sent,
+    # which stopped being true once alert delivery shipped.
+    assert "Saluran pemberitahuan belum dikonfigurasi" in health_page.text
+    assert "hanya tersimpan di aplikasi lokal" not in health_page.text
     assert recorded.status_code == 201
     assert recovered.json()["missing_actual_prediction_count"] == 0
     assert "missing_actual" not in {alert["kind"] for alert in recovered.json()["active_alerts"]}

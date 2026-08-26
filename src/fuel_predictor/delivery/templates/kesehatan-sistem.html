@@ -4,9 +4,15 @@
 {% block content %}
 
 {% if active_alerts %}
-{{ ui.banner('warning', active_alerts | length ~ ' peringatan aktif', 'Alert ini hanya tersimpan di aplikasi lokal. Tidak ada email/pesan keluar. Tidak ada promosi model otomatis.') }}
+{% set pengiriman = 'Peringatan baru dikirim ke saluran pemberitahuan yang dikonfigurasi.'
+   if alert_channel_configured
+   else 'Saluran pemberitahuan belum dikonfigurasi, jadi peringatan ini hanya terlihat di halaman ini.' %}
+{{ ui.banner('warning', active_alerts | length ~ ' peringatan aktif', pengiriman ~ ' Promosi model tidak pernah otomatis.') }}
 {% else %}
-{{ ui.banner('success', 'Tidak ada peringatan aktif', 'Alert ini hanya tersimpan di aplikasi lokal. Tidak ada email/pesan keluar. Tidak ada promosi model otomatis.') }}
+{% set pengiriman = 'Peringatan baru akan dikirim ke saluran pemberitahuan yang dikonfigurasi.'
+   if alert_channel_configured
+   else 'Saluran pemberitahuan belum dikonfigurasi, jadi peringatan hanya akan terlihat di halaman ini.' %}
+{{ ui.banner('success', 'Tidak ada peringatan aktif', pengiriman ~ ' Promosi model tidak pernah otomatis.') }}
 {% endif %}
 
 <div class="grid grid--metrics">
@@ -20,7 +26,7 @@
   {{ ui.metric('Pemantauan terjadwal', freshness.status_text, context='Terakhir berhasil ' ~ (freshness.last_success | waktu)) }}
   {% endif %}
   {% if last_backup is none %}
-  {{ ui.metric('Cadangan (backup) terakhir', 'Belum pernah dijalankan', unavailable=true, context='Cadangan diatur pada Fase 6.') }}
+  {{ ui.metric('Cadangan (backup) terakhir', 'Belum pernah dijalankan', unavailable=true, context='Jalankan deploy/backup.sh, lalu hasilnya muncul di sini.') }}
   {% else %}
   {{ ui.metric('Cadangan (backup) terakhir', 'Berhasil' if last_backup.succeeded else 'Gagal', context=(last_backup.finished_at | waktu) ~ ' · ' ~ last_backup.destination) }}
   {% endif %}
