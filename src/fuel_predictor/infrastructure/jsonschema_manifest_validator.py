@@ -1,12 +1,18 @@
 import json
 from collections.abc import Mapping
+from importlib import resources
 from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
 
-SCHEMA_DIRECTORY = Path(__file__).resolve().parents[3] / "schemas" / "model-package"
+# Resolved as package data, not by walking up from __file__. Walking up works
+# from a source checkout and breaks the moment the package is pip-installed:
+# `parents[3]` then points at site-packages' parent, and the application dies
+# at startup with a FileNotFoundError. These schemas are the published package
+# contract, so they must travel with the distribution wherever it is installed.
+SCHEMA_DIRECTORY = Path(str(resources.files("fuel_predictor") / "schemas" / "model-package"))
 
 MANIFEST_SCHEMA = SCHEMA_DIRECTORY / "manifest.schema.json"
 SMOKE_TESTS_SCHEMA = SCHEMA_DIRECTORY / "smoke-tests.schema.json"

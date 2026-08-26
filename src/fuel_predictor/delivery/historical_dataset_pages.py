@@ -1,5 +1,6 @@
 """Historical dataset import and baseline training pages (ADR 0007)."""
 
+from importlib import resources
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -22,7 +23,11 @@ if TYPE_CHECKING:
     from fuel_predictor.application.identity import ActiveCaller
 
 _UPLOAD_FILE = File(...)
-_DEMO_HISTORICAL_DATA = Path(__file__).resolve().parents[3] / "examples" / "riwayat-angber-demo.csv"
+# Package data, for the same reason as the model-package schemas: resolving
+# this by walking up from __file__ works only from a source checkout.
+_DEMO_HISTORICAL_DATA = Path(
+    str(resources.files("fuel_predictor") / "examples" / "riwayat-angber-demo.csv")
+)
 
 _PAGE_LEAD = (
     "Unggah CSV atau Excel .xlsx. Baris kosong kalender diabaikan; baris yang perlu diperbaiki "

@@ -60,6 +60,19 @@ docker compose -f compose.prod.yaml logs --tail=100 app
 it never starts. Read the actual error — do not re-run blindly. If a migration partially applied,
 restore ([§8](#8-restore-from-backup)) rather than hand-editing `alembic_version`.
 
+**`password authentication failed for user "fuel_predictor"`.** The `db` volume
+already exists and still holds the password it was *initialised* with. Postgres applies
+`POSTGRES_PASSWORD` only when it creates an empty data directory, so changing it in `.env` after the
+first start has no effect on the database — and the app then cannot log in. Either restore the
+original password in `.env`, or change it inside the database:
+
+```bash
+docker compose -f compose.prod.yaml exec db psql -U fuel_predictor -c "ALTER USER fuel_predictor WITH PASSWORD 'the-new-one';"
+```
+
+Do **not** delete the volume to force re-initialisation unless you have a restore
+([§8](#8-restore-from-backup)) — that is the entire database.
+
 **Database unreachable.** `db` is likely unhealthy:
 
 ```bash
