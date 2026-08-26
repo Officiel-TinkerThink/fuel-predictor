@@ -12,6 +12,8 @@ quietly going stale.
 """
 
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -82,3 +84,36 @@ def test_the_guide_leads_with_the_estimate_versus_actual_distinction(guide: str)
 
     assert "bahan bakar yang perlu disiapkan" in opening
     assert "bukan catatan bahan bakar yang benar-benar terpakai" in opening
+
+
+def test_the_standalone_html_is_not_stale() -> None:
+    """The HTML copy must match the markdown it was built from.
+
+    A generated copy that drifts is worse than none: the participant reading it
+    has no way to tell it is out of date. Rebuilding is one command, so there is
+    no excuse for the committed file lagging behind.
+    """
+    build = _GUIDE.parent / "build-operator-guide-html.py"
+    html = _GUIDE.parent / "panduan-operator.html"
+    assert build.is_file() and html.is_file()
+
+    before = html.read_bytes()
+    subprocess.run(
+        [sys.executable, str(build)], check=True, capture_output=True, cwd=str(_GUIDE.parent)
+    )
+    after = html.read_bytes()
+
+    assert after == before, (
+        "docs/production/panduan-operator.html is out of date; "
+        "run python docs/production/build-operator-guide-html.py and commit the result"
+    )
+
+
+def test_the_standalone_html_references_nothing_external() -> None:
+    """It has to open with no network and no sibling files."""
+    html = (_GUIDE.parent / "panduan-operator.html").read_text(encoding="utf-8")
+
+    assert "http://" not in html and "https://" not in html
+    assert "<link" not in html and "<script" not in html
+    assert 'src="images/' not in html
+    assert html.count("data:image/png;base64,") == len(list(_IMAGES.glob("*.png")))
