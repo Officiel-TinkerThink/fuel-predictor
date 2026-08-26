@@ -11,7 +11,8 @@ dist/
 *.egg-info/
 .fuel_predictor/
 
-# Transient local test output.
+# Transient local test output. Everything pytest writes goes to .pytest-tmp/
+# (set in pyproject.toml); .test-*/ is kept as a net for older stray output.
 .test-*/
 .scratch/*
 !.scratch/fuel-prediction-mvp/

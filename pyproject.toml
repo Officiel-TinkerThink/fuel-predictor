@@ -42,6 +42,12 @@ packages = ["src/fuel_predictor"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# One fixed location for temp output, instead of a new `.test-*` directory per
+# run. The sandboxed dev environment blocks pytest's default temp root, so
+# every run needed an explicit --basetemp; passing a different one each time
+# left 32 stray directories and 67 MB behind. pytest clears this directory at
+# the start of each run, so it stays self-cleaning.
+addopts = "--basetemp=.pytest-tmp"
 
 [tool.mypy]
 python_version = "3.12"
