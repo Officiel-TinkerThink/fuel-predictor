@@ -24,9 +24,6 @@ All six phases are implemented. 274 tests pass; `ruff` and `mypy --strict` are c
 3. **Security review** before enabling the Phase 5 privileged MCP tools.
 4. Package signature verification — optional; adds provenance, not integrity.
 
-Screenshots for [`panduan-operator.md`](panduan-operator.md) also need capturing against a real
-deployment; placeholders are marked in the text.
-
 These are recorded as open rather than marked done. Every one of them is a check on work performed
 by the person who built it, which is exactly the kind of check that cannot be self-administered.
 
@@ -673,11 +670,12 @@ the bottom of this section.
       Exercises 5–12 of the drill have each been verified individually against a running server
       during implementation. What has not happened is *a person other than the builder* performing
       them end to end. Marking these done from a code review would be false.
-      Screenshots for the operator guide also need capturing against a real deployment.
+      The operator guide's screenshots are now captured and embedded, so it is ready to hand to
+      a usability-test participant.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (274 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (293 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref
