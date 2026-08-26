@@ -35,6 +35,22 @@ The training environment continues to use MLflow for experiment tracking. The bo
 two is the package format, not a shared tracking server, so production never reaches across the
 network to MLflow at prediction time.
 
+## Revisit, 2026-08-27
+
+The precondition — "remove the MLflow service once ingestion reaches parity" — is **not met**, and
+on closer reading it may never be met as written.
+
+External package ingestion now works end to end. But MLflow does not back ingestion; it backs
+*in-app training*, where an operator uploads a CSV and the application fits a baseline
+(`POST /api/v1/dataset-versions/{id}/baseline-candidates`). Ingestion handles models built
+elsewhere. Those are different capabilities, and one does not replace the other.
+
+Removing MLflow today would therefore not be reaching parity — it would drop the ability to produce
+a model without an external ML toolchain, which is the opposite of what a self-service plan wants.
+
+Decision: keep MLflow. Revisit only if in-app training is deliberately retired as a product
+decision, in which case this ADR should be superseded rather than quietly satisfied.
+
 ## Research and adaptation
 
 - [MLflow tracking](https://mlflow.org/docs/latest/tracking.html) is designed around experiment

@@ -53,6 +53,7 @@ def _package(model_version: str = "fuel-model-2026.08.25.1") -> bytes:
             }
         },
         test_set_size=50,
+        training_row_count=400,
         expected_memory_bytes=10_000_000,
     )
     return builder.build(
@@ -220,3 +221,77 @@ def test_a_package_whose_manifest_no_longer_matches_its_bytes_is_refused(
     # refuses the absurd footprint. Both are correct refusals; what must not
     # happen is a successful activation.
     assert activation.status_code == 409
+
+
+def test_the_training_row_count_survives_into_the_registered_model(
+    client: TestClient, tmp_path: Path
+) -> None:
+    """It used to be recorded as 0 because the manifest did not carry the figure.
+
+    Never borrowed from test_set_size: that counts the held-out rows the metrics
+    were computed from, and putting it in a field named for the training size
+    would mislabel one number as another.
+    """
+    assert _upload(client, _package()).status_code in (200, 201)
+
+    recorded = _training_row_count(tmp_path / "operations.sqlite3", _model_version_id(client))
+
+    assert recorded == 400
+    assert recorded != 50, "test_set_size leaked into the training count"
+
+
+def test_a_package_without_the_field_still_validates_and_registers(
+    client: TestClient, tmp_path: Path
+) -> None:
+    """Packages built before the field existed must keep working.
+
+    The field is optional in the schema for exactly this reason; only the
+    packager in this repository requires it.
+    """
+    archive = _package_without_training_row_count()
+
+    upload = _upload(client, archive)
+
+    assert upload.status_code in (200, 201), upload.text
+    recorded = _training_row_count(tmp_path / "operations.sqlite3", _model_version_id(client))
+    assert recorded == 0
+
+
+def _training_row_count(database: Path, model_version_id: str) -> int:
+    import sqlalchemy
+
+    engine = sqlalchemy.create_engine(f"sqlite+pysqlite:///{database.as_posix()}")
+    with engine.connect() as connection:
+        return int(
+            connection.execute(
+                sqlalchemy.text(
+                    "SELECT training_row_count FROM model_versions"
+                    " WHERE model_version_id = :id"
+                ),
+                {"id": model_version_id},
+            ).scalar_one()
+        )
+
+
+def _package_without_training_row_count() -> bytes:
+    """Rebuild a valid package with the field stripped from the manifest."""
+    import io
+    import json as _json
+    import zipfile
+
+    original = _package(model_version="fuel-model-2026.08.27.2")
+    with zipfile.ZipFile(io.BytesIO(original)) as source:
+        members = {name: source.read(name) for name in source.namelist()}
+
+    manifest = _json.loads(members["manifest.json"].decode("utf-8"))
+    manifest.pop("training_row_count", None)
+    members["manifest.json"] = _json.dumps(
+        manifest, indent=2, sort_keys=True, ensure_ascii=False
+    ).encode("utf-8")
+    # Checksums cover the other members, not the manifest itself, so editing the
+    # manifest alone keeps the package internally consistent.
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as rebuilt:
+        for name in sorted(members):
+            rebuilt.writestr(name, members[name])
+    return buffer.getvalue()

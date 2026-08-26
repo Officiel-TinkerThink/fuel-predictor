@@ -61,6 +61,10 @@ class ModelPackageManifest:
     model_size_bytes: int
     expected_memory_bytes: int
     package_checksums: dict[str, str]
+    # Rows the model was fitted on. Defaulted because packages built before the
+    # field existed remain valid; `test_set_size` counts the held-out rows the
+    # metrics came from and is not a substitute for it.
+    training_row_count: int | None = None
 
     def feature_names_in_order(self) -> tuple[str, ...]:
         return tuple(entry.name for entry in self.feature_schema)

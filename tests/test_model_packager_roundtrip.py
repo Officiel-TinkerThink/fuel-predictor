@@ -70,6 +70,7 @@ def _builder(**overrides: Any) -> ModelPackageBuilder:
             }
         },
         "test_set_size": 50,
+        "training_row_count": 400,
         "expected_memory_bytes": 10_000_000,
     }
     settings.update(overrides)

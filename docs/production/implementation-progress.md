@@ -168,7 +168,7 @@ by the person who built it, which is exactly the kind of check that cannot be se
       `rendering.NAVIGATION` rather than linked to a placeholder: "Riwayat Prediksi", "Unggah
       Kandidat", "Riwayat dan Rollback", "Integrasi Agen". Add each back to `NAVIGATION` as its page
       ships.
-- [ ] Accessibility/browser-level workflow tests — the design system follows the plan's checklist
+- [x] Accessibility tests — `tests/test_accessibility.py` checks the design system's checklist
       (focus visibility, semantic status, table equivalents for charts) but nothing automated
       verifies it yet (e.g. axe-core or Playwright a11y checks).
 - [x] Systematic `ROUTE_CAPABILITIES` coverage test — `tests/test_route_capability_coverage.py`.
@@ -675,7 +675,7 @@ the bottom of this section.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (293 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (317 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref

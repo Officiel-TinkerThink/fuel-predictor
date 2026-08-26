@@ -56,6 +56,7 @@ class ModelPackageBuilder:
     source_revision: str
     metrics: Mapping[str, Any]
     test_set_size: int
+    training_row_count: int
     expected_memory_bytes: int
 
     def build(
@@ -82,6 +83,7 @@ class ModelPackageBuilder:
             "source_revision": self.source_revision,
             "metrics": _plain(self.metrics),
             "test_set_size": self.test_set_size,
+            "training_row_count": self.training_row_count,
             "model_size_bytes": len(model_bytes),
             "expected_memory_bytes": self.expected_memory_bytes,
             # manifest.json is absent by design: it cannot carry a checksum of

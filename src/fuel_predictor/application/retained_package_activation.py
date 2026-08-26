@@ -84,10 +84,10 @@ class RegisterIngestedPackage:
                 algorithm=f"paket-eksternal ({manifest.model_format.value})",
                 artifact_uri=artifact_uri,
                 trained_at=manifest.trained_at,
-                # The package contract carries a *test* set size, not a training
-                # row count. Recording the test size here would quietly mislabel
-                # it, so this stays 0 until the manifest carries the real figure.
-                training_row_count=0,
+                # 0 when the package predates the manifest field. Never
+                # borrowed from test_set_size, which counts held-out rows and
+                # would quietly mislabel a different number as this one.
+                training_row_count=manifest.training_row_count or 0,
                 # Mean absolute error is the package's own summary of how far it
                 # typically lands from the truth, which is the right basis for
                 # the interval shown alongside a prediction.

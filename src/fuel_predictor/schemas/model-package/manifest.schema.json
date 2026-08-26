@@ -89,6 +89,11 @@
       "minimum": 1,
       "description": "Labeled, held-out test-set row count the declared metrics were computed from."
     },
+    "training_row_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Rows the model was fitted on. Distinct from test_set_size, which counts the held-out rows the metrics came from. Optional so packages built before this field still validate; the packager in this repository always emits it."
+    },
     "model_size_bytes": { "type": "integer", "minimum": 1 },
     "expected_memory_bytes": {
       "type": "integer",

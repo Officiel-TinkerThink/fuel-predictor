@@ -312,6 +312,7 @@ def _build_manifest(raw: Mapping[str, Any]) -> ModelPackageManifest:
             for entry in category_entries
         ),
         test_set_size=raw["test_set_size"],
+        training_row_count=raw.get("training_row_count"),
         model_size_bytes=raw["model_size_bytes"],
         expected_memory_bytes=raw["expected_memory_bytes"],
         package_checksums=dict(raw["package_checksums"]),
