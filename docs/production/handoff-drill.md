@@ -119,6 +119,18 @@ upload with quarantined rows, the three monitoring pages, model promotion, and i
 an agent credential. Run it before the usability test — a participant should not be the one to find
 a broken control — and keep the videos with the drill's results.
 
+`scripts/mcp_session_video.py` records the same idea for the agent surface: an operator's question
+answered through `/mcp` by the official MCP SDK client — initialize, tools/list, the input schema,
+`predict_fuel`, and the model behind the number. Useful for exercise 10, and for showing someone
+what the agent integration actually does.
+
+```bash
+python scripts/mcp_session_video.py http://127.0.0.1:8000 fpa_TOKEN .e2e/videos
+```
+
+The MCP exchange is real; the surrounding narration is scripted. It is a recording of the protocol
+working, not of a language model reasoning.
+
 It found a real defect on its first run: `app.js` queried `#activity_mode` and `#lifting_hours`
 while the form macro renders `field-`-prefixed ids, so the lifting-hours toggle had never run in
 production.
