@@ -111,7 +111,11 @@ class McpRequestHandler:
             )
             raise
 
-        self._audit(client, tool_name, AuditOutcome.SUCCEEDED, None)
+        # A privileged tool's first call only previews; it returns a status and
+        # changes nothing. Recording both calls as a bare "succeeded" would let
+        # the trail read as though the agent activated a model twice, which is
+        # exactly the wrong thing to be ambiguous about.
+        self._audit(client, tool_name, AuditOutcome.SUCCEEDED, _outcome_note(result))
         return result
 
     def _audit(
@@ -138,6 +142,15 @@ class McpRequestHandler:
             subject=tool_name,
             details=details,
         )
+
+
+def _outcome_note(result: Any) -> str | None:
+    """The tool's own status, when it reports one, so the audit is unambiguous."""
+    if isinstance(result, Mapping):
+        status = result.get("status")
+        if isinstance(status, str):
+            return status
+    return None
 
 
 def _bearer_token(header: str | None) -> str | None:

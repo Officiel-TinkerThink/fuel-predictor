@@ -25,3 +25,4 @@ dist/
 .pgtest/
 .shots/
 .mcptest/
+.mcpc/

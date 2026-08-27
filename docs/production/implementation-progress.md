@@ -582,6 +582,11 @@ did not exist rather than why the call failed. Replaced with an explicit `McpUnk
 `BaselineModelNotFoundError` now carries a plain-language default message so generic
 stringification still says something an operator can act on. Both are covered by regression tests.
 
+- [x] **Concurrency verified through the MCP surface itself.** Two agents racing a privileged
+      activation against PostgreSQL: exactly one wins, neither crashes, and the loser is not given
+      an error but a fresh `confirmation_required` naming the version that actually won — its
+      confirm token is an HMAC over the expected-active version, so a state change underneath makes
+      the token stop verifying. The token binding *is* the concurrency guard at this layer.
 - [x] **Verified against the official MCP SDK client**, not just hand-rolled JSON-RPC — the
       acceptance criterion asks for a *standards-compliant remote client*, and our own client
       agreeing with our own server proves nothing. `scripts/verify-mcp-client.py` drives the real
@@ -691,7 +696,7 @@ the bottom of this section.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (319 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (320 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref

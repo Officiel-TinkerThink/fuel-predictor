@@ -225,3 +225,20 @@ def test_the_issue_form_does_not_pre_tick_the_privileged_scope(tmp_path: Any) ->
     read_input = page[page.index('value="models:read"') :]
     read_input = read_input[: read_input.index(">") + 1]
     assert "checked" in read_input
+
+
+def test_the_audit_trail_distinguishes_a_preview_from_a_real_activation(tmp_path: Any) -> None:
+    """Two calls recorded as a bare "succeeded" read as two activations.
+
+    The first call to a privileged tool only previews and changes nothing. An
+    auditor reconstructing an incident must be able to tell which of an agent's
+    calls actually moved the active model.
+    """
+    from fuel_predictor.delivery.mcp_server import _outcome_note
+
+    assert _outcome_note({"status": "confirmation_required"}) == "confirmation_required"
+    assert _outcome_note({"status": "activated"}) == "activated"
+    assert _outcome_note({"status": "rolled_back"}) == "rolled_back"
+    # Read-only tools return lists or plain values and simply have no status.
+    assert _outcome_note([{"model_version_id": "MDL-1"}]) is None
+    assert _outcome_note(None) is None
