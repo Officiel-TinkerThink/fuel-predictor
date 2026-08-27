@@ -71,12 +71,18 @@
     });
   });
 
+  // The ids are `field-<name>`: that is what the form-field macro emits. This
+  // block queried `#activity_mode` and `#lifting_hours`, so the guard below was
+  // always false and the toggle never ran — the field stayed visible for
+  // transport-only trips and never became required. Nothing caught it because
+  // the Python suite asserts against server-rendered HTML and never executes
+  // this file.
   // Lifting-hours only applies to some activity modes. Without JS the field
   // just stays visible and optional; the server is the real source of truth
   // for whether it's required (DailyOperationValidationError), so hiding it
   // here is convenience only, never validation.
-  var mode = document.querySelector("#activity_mode");
-  var lifting = document.querySelector("#lifting_hours");
+  var mode = document.querySelector("#field-activity_mode");
+  var lifting = document.querySelector("#field-lifting_hours");
   var liftingField = document.querySelector("#lifting-field");
   if (mode && lifting && liftingField) {
     var syncLifting = function () {

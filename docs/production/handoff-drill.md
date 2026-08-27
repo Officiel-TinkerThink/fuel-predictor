@@ -103,6 +103,26 @@ whose key is lost is not a backup.
 
 ---
 
+## 2a. Browser scenarios (automated)
+
+`scripts/browser_e2e.py` drives real Chrome over the DevTools Protocol and records each scenario
+as an MP4. It exists because the Python suite never executes `app.js` — it asserts against the HTML
+the server rendered, so the lifting-hours toggle and the stop-sequence controls could break without
+a single test failing.
+
+```bash
+python scripts/browser_e2e.py http://127.0.0.1:8000 operator PASSWORD .e2e/videos
+```
+
+Twenty-four checks across six scenarios: sign-in, prediction with the route-stop controls, bulk
+upload with quarantined rows, the three monitoring pages, model promotion, and issuing then revoking
+an agent credential. Run it before the usability test — a participant should not be the one to find
+a broken control — and keep the videos with the drill's results.
+
+It found a real defect on its first run: `app.js` queried `#activity_mode` and `#lifting_hours`
+while the form macro renders `field-`-prefixed ids, so the lifting-hours toggle had never run in
+production.
+
 ## 3. Results log
 
 Copy this block per run.

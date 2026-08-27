@@ -175,6 +175,12 @@ by the person who built it, which is exactly the kind of check that cannot be se
       Kandidat", "Riwayat dan Rollback", "Integrasi Agen". Add each back to `NAVIGATION` as its page
       ships.
 - [x] Accessibility tests — `tests/test_accessibility.py` checks the design system's checklist
+- [x] **Browser scenarios that execute the JavaScript** — `scripts/browser_e2e.py`, 24 checks over
+      six recorded scenarios. The Python suite asserts against server-rendered HTML and never runs
+      `app.js`, so its 163 lines were entirely uncovered. The first run found that the
+      lifting-hours toggle had never worked: `app.js` queried `#activity_mode` and
+      `#lifting_hours` while the form macro emits `field-`-prefixed ids, so its guard was always
+      false. The field stayed visible for transport-only trips and never became required.
       (focus visibility, semantic status, table equivalents for charts) but nothing automated
       verifies it yet (e.g. axe-core or Playwright a11y checks).
 - [x] Systematic `ROUTE_CAPABILITIES` coverage test — `tests/test_route_capability_coverage.py`.

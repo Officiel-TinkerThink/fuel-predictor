@@ -26,3 +26,4 @@ dist/
 .shots/
 .mcptest/
 .mcpc/
+.e2e/
