@@ -70,6 +70,15 @@ class AuditRepository(Protocol):
 
     def count_recent(self, action: str, subject: str, since: datetime) -> int: ...
 
+    def count_recent_by_actor(self, actor: str, action_prefix: str, since: datetime) -> int:
+        """How many recent records one actor produced.
+
+        The sign-in throttle counts by action and subject; a per-client rate
+        limit needs the actor instead, because one agent's calls span many
+        tools.
+        """
+        ...
+
 
 class SignInFailedError(Exception):
     """Credentials did not match, or the account cannot sign in."""

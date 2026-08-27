@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from fuel_predictor.delivery.mcp_server import (
     McpAuthenticationError,
     McpAuthorizationError,
+    McpRateLimitError,
     McpRequestHandler,
     McpUnknownToolError,
     tool_result_to_text,
@@ -95,6 +96,15 @@ def build_mcp_router(handler: McpRequestHandler, server_version: str) -> APIRout
                 result = handler.call(client, name, arguments)
             except McpAuthorizationError as error:
                 return _error(request_id, -32003, str(error))
+            except McpRateLimitError as error:
+                # 429 as well as the JSON-RPC code: a proxy or client library
+                # that understands nothing about MCP still knows to back off,
+                # and Retry-After says for how long.
+                return JSONResponse(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    headers={"Retry-After": str(error.window_seconds)},
+                    content=_body(request_id, error=(-32004, str(error))),
+                )
             except McpUnknownToolError as error:
                 return _error(request_id, -32601, str(error))
             except Exception as error:  # noqa: BLE001 - reported as a tool error

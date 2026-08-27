@@ -252,6 +252,25 @@ must not be reported failed because an old one could not be deleted.
 
 ---
 
+## 9a. An agent is being throttled
+
+`/mcp` returns HTTP 429 with `Retry-After` and JSON-RPC code -32004 once a client
+exceeds `FUEL_PREDICTOR_MCP_MAX_CALLS_PER_WINDOW` calls (default 120) in
+`FUEL_PREDICTOR_MCP_RATE_LIMIT_WINDOW_SECONDS` (default 60). The limit is per
+client, so one noisy agent cannot starve the others.
+
+Throttled calls appear in **Catatan Audit** as `denied` with the note
+`melebihi batas laju`, naming the client. Check there first: a legitimate agent
+that has outgrown the default needs a higher limit, while one looping on the same
+tool every second is stuck and should be fixed or revoked
+([§9](#9-revoke-agent-credentials)) rather than given more headroom.
+
+Setting the limit to 0 disables it. Do that only if something else is limiting
+the traffic, because the failure it prevents is an agent quietly filling the
+database.
+
+---
+
 ## 9. Revoke agent credentials
 
 **Integrasi Agen** → **Cabut** on the affected client. Effective immediately; the next MCP call

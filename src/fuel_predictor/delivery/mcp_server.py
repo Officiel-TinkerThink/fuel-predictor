@@ -12,6 +12,7 @@ operation has proven itself, per the plan.
 import json
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fuel_predictor.application.agent_credentials import ResolveAgentCredential
@@ -19,6 +20,9 @@ from fuel_predictor.application.identity import RecordAuditEvent
 from fuel_predictor.domain.identity import AgentClient, AgentScope, AuditOutcome
 
 _BEARER = "bearer "
+# Deliberately not prefixed with `mcp_tool:` — see the rate-limit check.
+_RATE_LIMITED_ACTION = "mcp_rate_limited"
+_TOOL_ACTION_PREFIX = "mcp_tool:"
 
 
 class McpAuthenticationError(Exception):
@@ -32,6 +36,18 @@ class McpUnknownToolError(Exception):
     "method not found", and a tool raising ``KeyError`` internally must not be
     mistaken for the tool itself being absent.
     """
+
+
+class McpRateLimitError(Exception):
+    """This client has made too many calls in the current window."""
+
+    def __init__(self, limit: int, window_seconds: int) -> None:
+        super().__init__(
+            f"Terlalu banyak panggilan: batas {limit} per {window_seconds} detik untuk "
+            "satu klien agen. Tunggu sebentar lalu coba lagi."
+        )
+        self.limit = limit
+        self.window_seconds = window_seconds
 
 
 class McpAuthorizationError(Exception):
@@ -81,6 +97,11 @@ class McpRequestHandler:
     registry: McpToolRegistry
     resolve_credential: ResolveAgentCredential
     record_audit: RecordAuditEvent
+    # Per client, so one runaway agent cannot deny service to the others — the
+    # same reason each holds its own revocable credential. 0 disables it.
+    max_calls_per_window: int = 0
+    window_seconds: int = 60
+    now: Callable[[], datetime] = lambda: datetime.now(UTC)
 
     def authenticate(self, authorization_header: str | None) -> AgentClient:
         token = _bearer_token(authorization_header)
@@ -103,6 +124,23 @@ class McpRequestHandler:
             self._audit(client, tool_name, AuditOutcome.DENIED, f"butuh {tool.scope}")
             raise McpAuthorizationError(tool.scope)
 
+        if self._is_rate_limited(client):
+            # Recorded under a *different* action, deliberately. The counter
+            # matches `mcp_tool:`, so auditing a rejection under that prefix
+            # would let each rejection extend the block: an agent that keeps
+            # polling would never leave the window, and only one that went
+            # completely silent could recover. A polling agent is exactly the
+            # case this exists to handle.
+            self.record_audit.execute(
+                actor=client.name,
+                action=_RATE_LIMITED_ACTION,
+                outcome=AuditOutcome.DENIED,
+                actor_kind="agent",
+                subject=tool_name,
+                details={"client_id": client.client_id, "note": "melebihi batas laju"},
+            )
+            raise McpRateLimitError(self.max_calls_per_window, self.window_seconds)
+
         try:
             result = tool.handler(arguments)
         except Exception as error:  # noqa: BLE001 - audited, then re-raised
@@ -117,6 +155,21 @@ class McpRequestHandler:
         # exactly the wrong thing to be ambiguous about.
         self._audit(client, tool_name, AuditOutcome.SUCCEEDED, _outcome_note(result))
         return result
+
+    def _is_rate_limited(self, client: AgentClient) -> bool:
+        """Count this client's recent tool calls from the audit trail.
+
+        The trail is already written on every call, so it is the natural
+        counter and survives a restart — an in-memory tally would reset
+        exactly when a crash-looping agent restarted it.
+        """
+        if self.max_calls_per_window <= 0:
+            return False
+        since = self.now() - timedelta(seconds=self.window_seconds)
+        recent = self.record_audit.audit_repository.count_recent_by_actor(
+            client.name, _TOOL_ACTION_PREFIX, since
+        )
+        return recent >= self.max_calls_per_window
 
     def _audit(
         self,

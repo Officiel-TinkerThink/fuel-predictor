@@ -161,6 +161,20 @@ class SqlAlchemyAuditRepository:
             for row in rows
         )
 
+    def count_recent_by_actor(self, actor: str, action_prefix: str, since: datetime) -> int:
+        with self._session_factory() as session:
+            return int(
+                session.execute(
+                    select(func.count())
+                    .select_from(AuditRecordRow)
+                    .where(
+                        AuditRecordRow.actor == actor,
+                        AuditRecordRow.action.startswith(action_prefix),
+                        AuditRecordRow.occurred_at >= since,
+                    )
+                ).scalar_one()
+            )
+
     def count_recent(self, action: str, subject: str, since: datetime) -> int:
         with self._session_factory() as session:
             return int(

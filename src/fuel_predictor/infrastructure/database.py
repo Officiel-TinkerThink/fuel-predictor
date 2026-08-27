@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
     JSON,
@@ -10,6 +11,7 @@ from sqlalchemy import (
     Integer,
     String,
     create_engine,
+    event,
     text,
 )
 from sqlalchemy.engine import Engine
@@ -209,6 +211,11 @@ class AuditRecordRow(Base):
     __tablename__ = "audit_records"
     __table_args__ = (
         Index("ix_audit_records_action_subject", "action", "subject", "occurred_at"),
+        # The MCP rate limiter counts one actor's recent records on every tool
+        # call, and audit_records grows without bound. Without this the query
+        # scans the whole window, and does so most often when an agent is
+        # looping — exactly when it must stay cheap.
+        Index("ix_audit_records_actor_occurred_at", "actor", "occurred_at"),
     )
 
     audit_id: Mapped[str] = mapped_column(String(40), primary_key=True)
@@ -327,11 +334,17 @@ def build_engine(database_url: str) -> Engine:
     connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
     engine = create_engine(database_url, pool_pre_ping=True, connect_args=connect_args)
 
-    # NOT YET: enabling SQLite foreign-key enforcement here (PRAGMA
-    # foreign_keys=ON) makes tests fail where production fails, and it found two
-    # real bugs — see docs/production/implementation-progress.md. Turning it on
-    # today fails six tests that need individual fixes, so it is recorded as the
-    # next task rather than shipped red.
+    if database_url.startswith("sqlite"):
+        # SQLite ignores foreign keys unless each connection opts in, while
+        # PostgreSQL always enforces them. Leaving the default meant the suite
+        # accepted dangling references that made real requests fail with a 500
+        # in production. Tests should fail where production fails.
+        @event.listens_for(engine, "connect")
+        def _enforce_foreign_keys(connection: Any, _record: Any) -> None:
+            cursor = connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+
     return engine
 
 

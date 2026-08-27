@@ -52,8 +52,17 @@ class SqlAlchemyHistoricalDatasetRepository(HistoricalDatasetWriter, HistoricalD
                 ignored_blank_row_count=ignored_blank_row_count,
             )
             session.add(dataset)
+            # First flush assigns the autoincrement `version`, which the real
+            # identifier is derived from.
             session.flush()
             dataset.dataset_version_id = f"DSV-{dataset.version:06d}"
+            # Second flush lands that rename before any child rows reference it.
+            # Without it the parent still holds its placeholder id while the
+            # children are inserted against the final one, and whether that
+            # works depends on the order SQLAlchemy happens to emit statements
+            # in. PostgreSQL rejects it outright; SQLite accepted it silently
+            # only because foreign keys were not being enforced.
+            session.flush()
             for source_order, operation in enumerate(valid_operations):
                 session.add(
                     _valid_operation_row(dataset.dataset_version_id, operation, source_order)

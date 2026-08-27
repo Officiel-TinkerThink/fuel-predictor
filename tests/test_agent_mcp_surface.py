@@ -366,3 +366,100 @@ def test_a_client_on_a_newer_protocol_revision_is_answered_with_ours(tmp_path: P
 
     assert handshake.json()["result"]["protocolVersion"] == "2024-11-05"
     assert listed, "the session stopped working after a version downgrade"
+
+
+def test_a_runaway_agent_is_throttled_with_a_retry_after(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    """End to end, because the unit tests only cover the handler seam.
+
+    A stuck agent looping on a tool is more likely than an attacker, and the
+    effect is the same: every call writes rows. The refusal has to be legible
+    to a plain HTTP client too, not only to something that speaks MCP.
+    """
+    monkeypatch.setenv("FUEL_PREDICTOR_MCP_MAX_CALLS_PER_WINDOW", "3")
+    with _signed_in(tmp_path) as client:
+        token = _issue(client, "Agen Berisik", ["models:read"])
+        allowed = [
+            _rpc(client, token, "tools/call", {"name": "get_current_model", "arguments": {}})
+            for _ in range(3)
+        ]
+        refused = _rpc(
+            client, token, "tools/call", {"name": "get_current_model", "arguments": {}}
+        )
+        audit = client.get("/api/v1/audit-records").json()
+
+    assert all(response.status_code == 200 for response in allowed)
+    assert refused.status_code == 429
+    assert refused.headers["Retry-After"] == "60"
+    assert refused.json()["error"]["code"] == -32004
+    assert "terlalu banyak" in refused.json()["error"]["message"].lower()
+    # The trail must show the agent was told to slow down, not just go quiet.
+    assert any(
+        record["outcome"] == "denied" and record["details"].get("note") == "melebihi batas laju"
+        for record in audit["records"]
+    )
+
+
+def test_the_limit_is_per_client_so_one_agent_cannot_starve_another(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    monkeypatch.setenv("FUEL_PREDICTOR_MCP_MAX_CALLS_PER_WINDOW", "2")
+    with _signed_in(tmp_path) as client:
+        noisy = _issue(client, "Agen Berisik", ["models:read"])
+        quiet = _issue(client, "Agen Tenang", ["models:read"])
+        for _ in range(2):
+            _rpc(client, noisy, "tools/call", {"name": "get_current_model", "arguments": {}})
+        throttled = _rpc(
+            client, noisy, "tools/call", {"name": "get_current_model", "arguments": {}}
+        )
+        unaffected = _rpc(
+            client, quiet, "tools/call", {"name": "get_current_model", "arguments": {}}
+        )
+
+    assert throttled.status_code == 429
+    assert unaffected.status_code == 200
+
+
+def test_two_active_clients_cannot_share_a_name(tmp_path: Path) -> None:
+    """A name identifies an agent in the audit trail and buckets its rate limit.
+
+    Two clients sharing one would share a limit — so a loop in either throttles
+    the other — and after an incident you could not tell which of them acted.
+    """
+    with _signed_in(tmp_path) as client:
+        _issue(client, "Agen Produksi", ["models:read"])
+        page = client.get("/integrasi-agen")
+        duplicate = client.post(
+            "/integrasi-agen",
+            data={
+                "name": "agen produksi",  # differing case is still the same name
+                "csrf_token": _csrf_token(page.text),
+                "scopes": ["models:read"],
+            },
+        )
+
+    assert duplicate.status_code == 422
+    assert "sudah dipakai" in duplicate.text
+
+
+def test_a_revoked_name_can_be_issued_again(tmp_path: Path) -> None:
+    """Uniqueness is among *active* clients; a name is not burned forever."""
+    with _signed_in(tmp_path) as client:
+        _issue(client, "Agen Produksi", ["models:read"])
+        page = client.get("/integrasi-agen")
+        client_id = page.text.split('action="/integrasi-agen/')[1].split("/cabut")[0]
+        client.post(
+            f"/integrasi-agen/{client_id}/cabut",
+            data={"csrf_token": _csrf_token(page.text)},
+        )
+        reissued = client.post(
+            "/integrasi-agen",
+            data={
+                "name": "Agen Produksi",
+                "csrf_token": _csrf_token(client.get("/integrasi-agen").text),
+                "scopes": ["models:read"],
+            },
+        )
+
+    assert reissued.status_code == 201

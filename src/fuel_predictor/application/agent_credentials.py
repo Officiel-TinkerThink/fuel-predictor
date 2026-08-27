@@ -53,6 +53,16 @@ class IssueAgentCredential:
             raise IdentityValidationError("name", "Nama klien agen wajib diisi.")
         if len(cleaned) > 128:
             raise IdentityValidationError("name", "Nama klien agen maksimal 128 karakter.")
+        # Unique among active clients. The audit trail records the *name* as
+        # the actor and the rate limiter buckets by it, so two clients sharing
+        # one would share a limit and be indistinguishable after an incident.
+        if any(
+            existing.is_active and existing.name.casefold() == cleaned.casefold()
+            for existing in self.repository.list_clients()
+        ):
+            raise IdentityValidationError(
+                "name", f"Nama klien agen {cleaned} sudah dipakai klien yang aktif."
+            )
         if not scopes:
             raise IdentityValidationError(
                 "scopes", "Pilih sedikitnya satu cakupan; klien tanpa cakupan tidak berguna."

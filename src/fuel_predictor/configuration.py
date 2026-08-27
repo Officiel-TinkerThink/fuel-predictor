@@ -65,6 +65,11 @@ class ApplicationSettings(BaseSettings):
     # rather than silently open up. Being unable to sign in is loud and
     # recoverable; an unauthenticated administrator session is neither.
     allow_unprovisioned_access: bool = False
+    # Per agent client, counted from the audit trail. Generous enough that
+    # ordinary use never notices, low enough that a retry loop is stopped before
+    # it fills the database. 0 disables the limit.
+    mcp_max_calls_per_window: int = Field(default=120, ge=0)
+    mcp_rate_limit_window_seconds: int = Field(default=60, ge=1)
     mcp_privileged_tools_enabled: bool = False
     alert_webhook_url: str = ""
     alert_smtp_host: str = ""

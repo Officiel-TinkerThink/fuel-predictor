@@ -17,14 +17,11 @@ All six phases are implemented. 274 tests pass; `ruff` and `mypy --strict` are c
 | 5 — Privileged MCP operations | Implemented, **shipped disabled** behind an explicit config gate |
 | 6 — Deployment hardening and handoff | Code and docs done; two people-based exercises open |
 
-**Known issue, found 2026-08-27 and not yet fixed:** SQLite does not enforce foreign keys unless
-each connection opts in; PostgreSQL always does. Turning enforcement on locally
-(`PRAGMA foreign_keys=ON` in `build_engine`) makes six tests fail on dangling references the suite
-had been silently accepting — and two of those were real production 500s:
-model-package upload, and `data_quality_issues` rows written for a dataset whose import was
-rejected. The upload one is fixed (Alembic `20260827_13`); the rest need individual fixes, so
-enforcement is recorded here rather than shipped red. It belongs at the top of the next batch:
-every one of these is a request that works on SQLite and fails in production.
+**Resolved 2026-08-27:** SQLite now enforces foreign keys (`PRAGMA foreign_keys=ON`), so the suite
+fails where production fails. Getting there fixed two real production 500s — model-package upload
+(Alembic `20260827_13`) and historical dataset import, which inserted child rows against a parent
+whose primary key had not yet been renamed from its placeholder. Pinned by
+`tests/test_foreign_key_enforcement.py`.
 
 **Four things remain, and three of them cannot be done by writing code:**
 
@@ -696,7 +693,7 @@ the bottom of this section.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (320 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (334 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref

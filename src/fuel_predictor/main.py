@@ -374,6 +374,8 @@ def create_app(
         registry=mcp_registry,
         resolve_credential=ResolveAgentCredential(agent_client_repository),
         record_audit=record_audit,
+        max_calls_per_window=settings.mcp_max_calls_per_window,
+        window_seconds=settings.mcp_rate_limit_window_seconds,
     )
     guard = SecurityGuard()
 
