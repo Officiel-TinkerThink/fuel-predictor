@@ -340,3 +340,29 @@ def _rpc_tool(client: TestClient, token: str, name: str, arguments: Any = None) 
     result = response.json()["result"]
     assert not result.get("isError"), result
     return json.loads(result["content"][0]["text"])
+
+
+def test_a_client_on_a_newer_protocol_revision_is_answered_with_ours(tmp_path: Path) -> None:
+    """Negotiation, not echoing.
+
+    The official SDK requests a 2025 revision. Echoing that back would claim
+    support for behaviour this server does not implement; the spec instead has
+    the server name a version it does support and lets the client decide. The
+    session must still work afterwards, which is the part that matters.
+    """
+    with _signed_in(tmp_path) as client:
+        token = _issue(client, "Agen Baru", ["models:read"])
+        handshake = _rpc(
+            client,
+            token,
+            "initialize",
+            {
+                "protocolVersion": "2099-01-01",
+                "capabilities": {},
+                "clientInfo": {"name": "masa-depan", "version": "9"},
+            },
+        )
+        listed = _tool_names(_rpc(client, token, "tools/list"))
+
+    assert handshake.json()["result"]["protocolVersion"] == "2024-11-05"
+    assert listed, "the session stopped working after a version downgrade"

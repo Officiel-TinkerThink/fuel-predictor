@@ -1,0 +1,19 @@
+# Build constraints for the container image.
+#
+# The Dockerfile installs with `pip install .`, which resolves the newest
+# compatible version of every transitive dependency at build time. That makes
+# the image non-reproducible: an upstream release can break a build that
+# succeeded an hour earlier, with no change to this repository.
+#
+# That is not hypothetical. On 2026-08-27 statsmodels 0.15.0 was published
+# without a cp312 manylinux wheel, so pip fell back to building it from source,
+# which needs a C compiler that python:3.12-slim does not ship. The image had
+# built cleanly several times the same day.
+#
+# Each pin here needs a reason. Revisit them; they are a floor, not a policy.
+# The real fix is a full lockfile covering every transitive dependency — see
+# docs/production/implementation-progress.md.
+
+# evidently requires >=0.14.0. 0.15.0 has no cp312 manylinux wheel yet, and
+# building it from source would mean shipping a compiler in the runtime image.
+statsmodels>=0.14.0,<0.15

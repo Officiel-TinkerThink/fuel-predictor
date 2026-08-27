@@ -21,6 +21,12 @@ from fuel_predictor.delivery.mcp_server import (
     tool_result_to_text,
 )
 
+# The revision whose behaviour this server actually implements. Clients on a
+# newer revision are answered with this one rather than echoed back: the spec
+# has the server reply with a version it supports and lets the client decide
+# whether to proceed, and claiming a newer revision we have not implemented
+# would invite clients to expect features that are not here. Verified against
+# the official SDK, which requests 2025-11-25 and downgrades cleanly.
 _PROTOCOL_VERSION = "2024-11-05"
 
 

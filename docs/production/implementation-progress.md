@@ -17,6 +17,15 @@ All six phases are implemented. 274 tests pass; `ruff` and `mypy --strict` are c
 | 5 — Privileged MCP operations | Implemented, **shipped disabled** behind an explicit config gate |
 | 6 — Deployment hardening and handoff | Code and docs done; two people-based exercises open |
 
+**Known issue, found 2026-08-27 and not yet fixed:** SQLite does not enforce foreign keys unless
+each connection opts in; PostgreSQL always does. Turning enforcement on locally
+(`PRAGMA foreign_keys=ON` in `build_engine`) makes six tests fail on dangling references the suite
+had been silently accepting — and two of those were real production 500s:
+model-package upload, and `data_quality_issues` rows written for a dataset whose import was
+rejected. The upload one is fixed (Alembic `20260827_13`); the rest need individual fixes, so
+enforcement is recorded here rather than shipped red. It belongs at the top of the next batch:
+every one of these is a request that works on SQLite and fails in production.
+
 **Four things remain, and three of them cannot be done by writing code:**
 
 1. **Usability test** with a non-technical participant ([protocol](handoff-drill.md)).
@@ -682,7 +691,7 @@ the bottom of this section.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (318 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (319 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref

@@ -124,9 +124,11 @@ class ModelVersionRow(Base):
 
     version: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     model_version_id: Mapped[str] = mapped_column(String(40), unique=True, nullable=False)
-    dataset_version_id: Mapped[str] = mapped_column(
-        ForeignKey("dataset_versions.dataset_version_id"), nullable=False, index=True
-    )
+    # Provenance, not a local reference. A model trained here names a dataset
+    # this application imported; an ingested package names one from the
+    # builder's environment that need not exist here. A foreign key asserted
+    # the second case was the first and made package upload fail on PostgreSQL.
+    dataset_version_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     feature_version: Mapped[str] = mapped_column(String(64), nullable=False)
     algorithm: Mapped[str] = mapped_column(String(64), nullable=False)
     artifact_uri: Mapped[str] = mapped_column(String(1024), nullable=False)
@@ -323,7 +325,14 @@ type SessionFactory = sessionmaker[Session]
 
 def build_engine(database_url: str) -> Engine:
     connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
-    return create_engine(database_url, pool_pre_ping=True, connect_args=connect_args)
+    engine = create_engine(database_url, pool_pre_ping=True, connect_args=connect_args)
+
+    # NOT YET: enabling SQLite foreign-key enforcement here (PRAGMA
+    # foreign_keys=ON) makes tests fail where production fails, and it found two
+    # real bugs — see docs/production/implementation-progress.md. Turning it on
+    # today fails six tests that need individual fixes, so it is recorded as the
+    # next task rather than shipped red.
+    return engine
 
 
 def build_session_factory(engine: Engine) -> sessionmaker[Session]:

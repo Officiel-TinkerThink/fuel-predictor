@@ -73,6 +73,7 @@ services:
       # Pinned rather than left to the default, so this stays true even if the
       # default is ever loosened: no accounts means locked, not wide open.
       FUEL_PREDICTOR_ALLOW_UNPROVISIONED_ACCESS: "false"
+      FUEL_PREDICTOR_MCP_PRIVILEGED_TOOLS_ENABLED: ${FUEL_PREDICTOR_MCP_PRIVILEGED_TOOLS_ENABLED:-false}
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://localhost:8000/sehat')\""]
       interval: 30s

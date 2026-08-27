@@ -11,7 +11,10 @@ COPY pyproject.toml README.md ./
 # and be found by walking up from __file__, which worked from a checkout and
 # failed the moment the package was pip-installed here.
 COPY src ./src
-RUN pip install --no-cache-dir .
+# Constraints keep an upstream release from breaking a build that worked
+# yesterday; see constraints.txt for why each pin exists.
+COPY constraints.txt ./
+RUN pip install --no-cache-dir -c constraints.txt .
 
 COPY alembic.ini ./
 COPY alembic ./alembic
