@@ -573,6 +573,13 @@ did not exist rather than why the call failed. Replaced with an explicit `McpUnk
 `BaselineModelNotFoundError` now carries a plain-language default message so generic
 stringification still says something an operator can act on. Both are covered by regression tests.
 
+- [x] **Verified against the official MCP SDK client**, not just hand-rolled JSON-RPC — the
+      acceptance criterion asks for a *standards-compliant remote client*, and our own client
+      agreeing with our own server proves nothing. `scripts/verify-mcp-client.py` drives the real
+      `mcp` package: initialize, tools/list, every read tool, a privileged preview that must change
+      nothing, and an unknown tool that must raise. Run it against a deployment after any change to
+      the MCP surface, and during the handoff drill.
+
 Deliberately **not** in this phase: anything that writes. No upload, activation, or rollback tool
 exists. Those are Phase 5 and stay unavailable until read-only operation has proven itself.
 
@@ -675,7 +682,7 @@ the bottom of this section.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (317 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
+- Full test suite (318 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
   Keep it that way — run all three before committing.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref

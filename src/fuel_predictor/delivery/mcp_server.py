@@ -153,6 +153,7 @@ def build_registry(
     prediction_performance: Any,
     model_reader: Any,
     monitoring_runs: Any,
+    has_retained_package: Callable[[str], bool] = lambda _version: False,
 ) -> McpToolRegistry:
     """Wire the plan's initial read/compute tools onto existing use cases."""
 
@@ -244,13 +245,29 @@ def build_registry(
         }
 
     def list_model_versions(_arguments: Mapping[str, Any]) -> list[dict[str, Any]]:
+        """Every version, not just the ones awaiting review.
+
+        This listed candidates only, which made retired versions invisible —
+        and `rollback_model_version` takes a version id, so an agent asked to
+        roll back had no way to discover a target. `retired_at` is carried so
+        the most recently retired version, the usual rollback target, can be
+        identified without guessing.
+        """
         return [
             {
                 "model_version_id": model.model_version_id,
                 "lifecycle_status": model.lifecycle_status.value,
                 "trained_at": model.trained_at.isoformat(),
+                "promoted_at": model.promoted_at.isoformat() if model.promoted_at else None,
+                "retired_at": model.retired_at.isoformat() if model.retired_at else None,
+                # Rollback needs the target's bytes to still exist (ADR 0010).
+                # Models trained in this process have no package, so listing
+                # them without this flag would advertise rollback targets that
+                # cannot be rolled back to — the same trap `visible_to` avoids
+                # for tools.
+                "rollback_available": has_retained_package(model.model_version_id),
             }
-            for model in model_reader.list_candidates()
+            for model in model_reader.list_all()
         ]
 
     def get_prediction_input_schema(_arguments: Mapping[str, Any]) -> dict[str, Any]:
@@ -301,7 +318,11 @@ def build_registry(
             ),
             McpTool(
                 name="list_model_versions",
-                description="Kandidat model yang menunggu tinjauan.",
+                description=(
+                    "Semua versi model beserta status siklus hidupnya (kandidat, aktif, "
+                    "pensiun). Hanya versi dengan rollback_available bernilai true yang "
+                    "dapat dijadikan sasaran rollback."
+                ),
                 scope=AgentScope.MODELS_READ,
                 input_schema=_EMPTY_SCHEMA,
                 handler=list_model_versions,

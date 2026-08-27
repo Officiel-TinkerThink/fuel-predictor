@@ -347,6 +347,7 @@ def create_app(
         prediction_performance=get_prediction_performance,
         model_reader=prediction_repository,
         monitoring_runs=monitoring_run_repository,
+        has_retained_package=activate_retained_package.can_activate,
     )
     if settings.mcp_privileged_tools_enabled:
         # Off by default. The plan gates validate/activate/rollback on the

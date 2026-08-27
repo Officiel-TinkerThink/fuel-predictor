@@ -5,6 +5,7 @@ as an operator would, then used as a bearer token against `/mcp`. Testing the
 seam any lower would not prove the two halves agree about the token.
 """
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -298,3 +299,44 @@ def test_a_credential_with_no_scopes_is_refused(tmp_path: Path) -> None:
 
     assert response.status_code == 422
     assert "cakupan" in response.text.lower()
+
+
+def test_a_rollback_target_is_discoverable_through_the_tools(tmp_path: Path) -> None:
+    """`rollback_model_version` takes a version id, so something must reveal one.
+
+    This listed candidates only, which made retired versions invisible: an agent
+    asked to roll back had no way to find a target and would have had to be told
+    one out of band. A privileged tool nothing can supply arguments for is not a
+    working tool.
+    """
+    with _signed_in(tmp_path) as client:
+        _activate_a_model(client)
+        first = _rpc_tool(client, _issue(client, "A", ["models:read"]), "get_current_model")
+        # Train and promote a second model, retiring the first.
+        _activate_a_model(client)
+        token = _issue(client, "B", ["models:read"])
+        current = _rpc_tool(client, token, "get_current_model")
+        versions = _rpc_tool(client, token, "list_model_versions")
+
+    listed = {entry["model_version_id"]: entry for entry in versions}
+    assert current["model_version_id"] != first["model_version_id"], (
+        "second model did not take over"
+    )
+    # The retired predecessor — the obvious rollback target — must be visible.
+    assert first["model_version_id"] in listed, "retired version is invisible to an agent"
+    retired = listed[first["model_version_id"]]
+    assert retired["lifecycle_status"] == "retired"
+    assert retired["retired_at"] is not None, "no way to tell which version was retired last"
+    assert listed[current["model_version_id"]]["lifecycle_status"] == "active"
+    # Rollback needs the target's bytes (ADR 0010). These models were trained in
+    # process and have no package, so the listing must say they are not usable
+    # targets rather than letting an agent plan a rollback that cannot happen.
+    assert retired["rollback_available"] is False
+    assert all("rollback_available" in entry for entry in listed.values())
+
+
+def _rpc_tool(client: TestClient, token: str, name: str, arguments: Any = None) -> Any:
+    response = _rpc(client, token, "tools/call", {"name": name, "arguments": arguments or {}})
+    result = response.json()["result"]
+    assert not result.get("isError"), result
+    return json.loads(result["content"][0]["text"])
