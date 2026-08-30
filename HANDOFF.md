@@ -31,6 +31,8 @@ Model promotion is **always manual** — there is no auto-promotion path anywher
 | [docs/production/self-service-production-plan.md](docs/production/self-service-production-plan.md) | The six-phase plan this work was executed against. |
 | [AGENTS.md](AGENTS.md) | Agent working rules; points at `.agents/` and `docs/agents/`. |
 | [README.md](README.md) | Local run instructions and the demo walkthrough (Indonesian). |
+| [docs/production/server-deployment.md](docs/production/server-deployment.md) | Standing the system up on a server, first time through. |
+| [docs/production/recovery-runbook.md](docs/production/recovery-runbook.md) | When a deployment that exists has gone wrong. Symptom-first. |
 
 ## 3. What is built
 
@@ -243,10 +245,12 @@ Then set `FUEL_PREDICTOR_DATABASE_URL` in `.env`, run `alembic upgrade head`, an
 `uvicorn fuel_predictor.main:app --reload`. On Windows use `.venv\Scripts\` in place of
 `.venv/bin/`; README.md has the PowerShell form.
 
-**On a server** — see [ADR 0012](docs/adr/0012-https-gateway-and-encrypted-backup.md) and the
-[recovery runbook](docs/production/recovery-runbook.md). In short: point a DNS A record at the VM,
-then set `DOMAIN`, `ACME_EMAIL`, `POSTGRES_PASSWORD`, the bootstrap admin credentials,
-`FUEL_PREDICTOR_FORWARDED_ALLOW_IPS`, and the backup variables in `.env`, and run:
+**On a server** — follow
+[docs/production/server-deployment.md](docs/production/server-deployment.md) top to bottom; it is
+the step-by-step first deployment, including verification, backups, and the restore rehearsal.
+In short: point a DNS A record at the VM, set `DOMAIN`, `ACME_EMAIL`, `POSTGRES_PASSWORD`, the
+bootstrap admin credentials, `FUEL_PREDICTOR_FORWARDED_ALLOW_IPS`, and the backup variables in
+`.env`, and run:
 
 ```bash
 docker compose -f compose.prod.yaml up -d --build
