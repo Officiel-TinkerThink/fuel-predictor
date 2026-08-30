@@ -1,5 +1,8 @@
 # Fuel Predictor
 
+> Picking this project up for the first time, or handing it to someone (or something) else?
+> Start with [HANDOFF.md](HANDOFF.md).
+
 Fondasi MVP lokal untuk mencatat satu **Daily Operation** ANGBER melalui form berbahasa
 Indonesia atau API FastAPI. Kedua jalur menggunakan aturan pembuatan yang sama dan menyimpan
 operasi serta dataset historis di PostgreSQL.

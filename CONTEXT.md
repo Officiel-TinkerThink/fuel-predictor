@@ -13,4 +13,9 @@
 
 ## Product boundary
 
-The MVP is a locally run, Indonesian-language fuel-prediction application. It has no user accounts, roles, approvals, or route optimization. It predicts the prepared fuel requirement for a daily operation, records feedback, and monitors data/model health.
+An Indonesian-language fuel-prediction application, deployable behind HTTPS on a single VM.
+It predicts the prepared fuel requirement for a daily operation, records actual-fuel feedback,
+and monitors data and model health. It has authenticated users and roles
+(`operator`/`manager`/`administrator`), an audit log, and an agent-facing MCP surface. It has
+**no route optimization** and **no automatic model promotion** — a candidate becomes active only
+when a person promotes it. See [HANDOFF.md](HANDOFF.md) for what is built and what is open.

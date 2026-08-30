@@ -1,3 +1,9 @@
+## Start here
+
+Read [HANDOFF.md](HANDOFF.md) before anything else. It is the single entry point: what this
+project is, what has been built, where each piece lives, what is still open, and the traps
+that have already cost debugging time.
+
 ## Agent skills
 
 ### Issue tracker
