@@ -46,6 +46,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     backup.add_argument("--size-bytes", type=int, default=None)
     backup.add_argument("--failure-reason", default=None)
 
+    locations = subcommands.add_parser(
+        "import-locations",
+        help="Muat ulang katalog lokasi dari ekspor sheet 'Data Lokasi'.",
+    )
+    locations.add_argument(
+        "--source",
+        default=None,
+        help="Berkas CSV lokasi. Bawaan: ekspor yang ikut dipaketkan bersama aplikasi.",
+    )
+
     prune = subcommands.add_parser(
         "prune-packages",
         help="Hapus paket model lama yang bukan sasaran rollback. Bawaan: hanya menampilkan.",
@@ -60,6 +70,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     arguments = parser.parse_args(argv)
     if arguments.command == "monitor":
         return _run_monitoring(arguments.trigger)
+    if arguments.command == "import-locations":
+        return _import_locations(arguments.source)
     if arguments.command == "prune-packages":
         return _prune_packages(apply=arguments.apply, keep_retired=arguments.keep_retired)
     if arguments.command == "record-backup":
@@ -70,6 +82,26 @@ def main(argv: Sequence[str] | None = None) -> int:
             failure_reason=arguments.failure_reason,
         )
     return 2
+
+
+def _import_locations(source: str | None) -> int:
+    """Replace the location catalog with what the sheet export holds."""
+    from pathlib import Path
+
+    from fuel_predictor.infrastructure.packaged_location_catalog import PackagedLocationCatalog
+    from fuel_predictor.infrastructure.sqlalchemy_locations import SqlAlchemyLocationRepository
+
+    settings = ApplicationSettings()
+    try:
+        catalog = PackagedLocationCatalog(Path(source) if source else None)
+        factory = build_session_factory(build_engine(settings.database_url))
+        imported = SqlAlchemyLocationRepository(factory).replace_all(catalog.options())
+    except Exception as error:  # noqa: BLE001 - the operator needs a readable message
+        print(f"Impor lokasi gagal: {error}", file=sys.stderr)
+        return 1
+
+    print(f"{imported} lokasi tersimpan di basis data.")
+    return 0
 
 
 def _prune_packages(apply: bool, keep_retired: int) -> int:

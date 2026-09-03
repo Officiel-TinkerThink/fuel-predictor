@@ -104,26 +104,76 @@
 </div>
 {%- endmacro %}
 
-{% macro stop_sequence_field(values) -%}
+{% macro stop_sequence_field(values, location_options, activities=none, activity_options=none, route_preview_available=false) -%}
+{% set known_names = location_options | map(attribute='name') | list %}
+{% set stop_values = values or ['', ''] %}
+{% set stop_activities = activities or [] %}
+{% set choices = activity_options or ['Angkut', 'Muat', 'Bongkar', 'Transit', 'Istirahat'] %}
 <fieldset class="stops-field" aria-describedby="stops-help">
-  <legend>Urutan pemberhentian</legend>
-  <p id="stops-help" class="hint">Masukkan lokasi sesuai urutan pelaksanaan. Sistem tidak akan
-    mengoptimalkan atau mengubah urutannya.</p>
-  <div id="stop-sequence">
-    {% for value in (values or ['', '']) %}
-    <div class="stop-row">
-      <div class="field">
-        <label>Pemberhentian <input name="stop_sequence" type="text" value="{{ value }}" autocomplete="off"></label>
+  <legend>Rute &amp; pemberhentian</legend>
+  <p id="stops-help" class="hint">Masukkan titik keberangkatan dan pemberhentian setelahnya. Setiap
+    pemberhentian punya aktivitasnya sendiri; urutan terakhir adalah tujuan akhir.</p>
+  <div class="stops-layout">
+    <div class="stops-column">
+      <div id="stop-sequence">
+        {% for value in stop_values %}
+        <div class="stop-row{% if loop.first %} stop-row--start{% endif %}">
+          <span class="stop-drag"{% if not loop.first %} data-action="drag" title="Seret untuk mengubah urutan"{% endif %} aria-hidden="true">{% if not loop.first %}⠿⠿{% endif %}</span>
+          <span class="stop-marker{% if loop.first %} stop-marker--start{% endif %}" aria-hidden="true">{% if loop.first %}A{% else %}{{ loop.index0 }}{% endif %}</span>
+          <div class="stop-fields{% if loop.first %} stop-fields--single{% endif %}">
+            <div class="field">
+              <label>{% if loop.first %}Titik keberangkatan{% else %}Pemberhentian{% endif %}
+                <select name="stop_sequence" autocomplete="off">
+                  <option value="">{% if loop.first %}Lokasi keberangkatan{% else %}Lokasi pemberhentian{% endif %}</option>
+                  {% for option in location_options %}
+                  <option value="{{ option.name }}" data-lat="{{ option.latitude }}" data-lon="{{ option.longitude }}"{% if option.name == value %} selected{% endif %}>{{ option.name }}</option>
+                  {% endfor %}
+                  {% if value and value not in known_names %}
+                  <option value="{{ value }}" selected>{{ value }}</option>
+                  {% endif %}
+                </select>
+              </label>
+            </div>
+            {% if not loop.first %}
+            {% set chosen = stop_activities[loop.index0] if stop_activities | length > loop.index0 else '' %}
+            <div class="field">
+              <label>Aktivitas
+                <select name="stop_activity" autocomplete="off">
+                  {% for choice in choices %}
+                  <option value="{{ choice }}"{% if choice == chosen %} selected{% endif %}>{{ choice }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+            </div>
+            {% endif %}
+          </div>
+          <div class="stop-controls">
+            {% if not loop.first %}
+            <button type="button" data-action="remove" aria-label="Hapus pemberhentian {{ loop.index0 }}">Hapus</button>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
       </div>
-      <div class="stop-controls">
-        <button type="button" data-action="up" aria-label="Naikkan urutan pemberhentian {{ loop.index }}">↑</button>
-        <button type="button" data-action="down" aria-label="Turunkan urutan pemberhentian {{ loop.index }}">↓</button>
-        <button type="button" data-action="remove" aria-label="Hapus pemberhentian {{ loop.index }}">Hapus</button>
-      </div>
+      <button type="button" class="button" id="add-stop">+ Tambah pemberhentian</button>
     </div>
-    {% endfor %}
+
+    <aside class="route-preview" aria-label="Pratinjau rute"
+           {% if route_preview_available %}data-route-preview="on"{% endif %}>
+      <p class="route-preview__title">PETA RUTE — PRATINJAU</p>
+      <div class="route-preview__canvas">
+        <iframe id="route-map" title="Rute Google Maps melalui pemberhentian yang dipilih"
+                loading="lazy" referrerpolicy="no-referrer-when-downgrade" hidden></iframe>
+      </div>
+      <p class="route-preview__api" id="route-status">
+        {% if route_preview_available %}Pilih minimal dua lokasi untuk menggambar rute.{% else %}Penyedia rute belum dikonfigurasi.{% endif %}
+      </p>
+      <div class="route-preview__distance">
+        <p class="route-preview__distance-label">Jarak dihitung dari rute</p>
+        <p class="route-preview__distance-value" id="route-distance">—</p>
+      </div>
+    </aside>
   </div>
-  <button type="button" class="button button--secondary" id="add-stop">Tambah pemberhentian</button>
 </fieldset>
 {%- endmacro %}
 

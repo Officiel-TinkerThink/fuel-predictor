@@ -11,6 +11,7 @@ from fuel_predictor.application.routing import (
 from fuel_predictor.domain.daily_operation import (
     ActivityMode,
     DailyOperation,
+    DailyOperationValidationError,
     DistanceSource,
     VehicleCategory,
     validate_stop_sequence,
@@ -34,9 +35,12 @@ class CreateDailyOperationCommand:
     vehicle_category: VehicleCategory
     activity_mode: ActivityMode
     lifting_hours: float | None
-    total_distance_km: float
+    # Optional because a route-sourced plan takes its distance from the
+    # provider; it is only needed as the fallback when routing cannot answer.
+    total_distance_km: float | None
     distance_source: DistanceSource
     stop_sequence: tuple[str, ...] = ()
+    stop_activities: tuple[str, ...] = ()
 
 
 class CreateDailyOperation:
@@ -59,10 +63,19 @@ class CreateDailyOperation:
             try:
                 route_distance = self._routing_provider.calculate_distance(command.stop_sequence)
             except RoutingProviderUnavailable:
+                # The route is what the plan asked for, so falling back is a
+                # manual distance by definition — and without one there is
+                # nothing left to fall back to.
                 route_distance_manual_fallback = True
+                distance_source = DistanceSource.MANUAL
             else:
                 total_distance_km = route_distance.total_distance_km
                 distance_source = DistanceSource.ROUTING_PROVIDER
+        if total_distance_km is None:
+            raise DailyOperationValidationError(
+                "total_distance_km",
+                "Rute tidak dapat dihitung. Isi jarak total cadangan untuk melanjutkan.",
+            )
         operation = DailyOperation(
             operation_id=self._operation_id_factory(),
             vehicle_category=command.vehicle_category,
@@ -71,6 +84,7 @@ class CreateDailyOperation:
             total_distance_km=total_distance_km,
             distance_source=distance_source,
             stop_sequence=command.stop_sequence,
+            stop_activities=command.stop_activities,
             route_distance_manual_fallback=route_distance_manual_fallback,
         )
         self._repository.add(operation)

@@ -45,6 +45,9 @@ class DailyOperationStopRow(Base):
     )
     stop_position: Mapped[int] = mapped_column(Integer, primary_key=True)
     location_name: Mapped[str] = mapped_column(String(512), nullable=False)
+    # What the vehicle does at this stop. Null for the departure point, and for
+    # operations recorded before stops carried an activity of their own.
+    activity: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class DailyOperationSourceRow(Base):
@@ -325,6 +328,28 @@ class MonitoringAlertRow(Base):
     first_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     last_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class LocationRow(Base):
+    """The planner's stop points, imported from the "Data Lokasi" sheet.
+
+    The name is the key because that is what the sheet keys on: its per-vehicle
+    trip logs resolve coordinates by looking a typed stop name up against this
+    list, and `daily_operation_stops` records the same name.
+    """
+
+    __tablename__ = "locations"
+    __table_args__ = (
+        CheckConstraint("latitude BETWEEN -90 AND 90", name="location_latitude_in_range"),
+        CheckConstraint("longitude BETWEEN -180 AND 180", name="location_longitude_in_range"),
+    )
+
+    name: Mapped[str] = mapped_column(String(255), primary_key=True)
+    latitude: Mapped[float] = mapped_column(Float, nullable=False)
+    longitude: Mapped[float] = mapped_column(Float, nullable=False)
+    # The raw reading the coordinates were derived from, kept so a surveyed
+    # value stays traceable to what the sheet recorded.
+    satellite_point: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 type SessionFactory = sessionmaker[Session]

@@ -4,9 +4,22 @@ from urllib.parse import urlencode
 
 from fastapi.testclient import TestClient
 
+from fuel_predictor.application.locations import LocationOption
 from fuel_predictor.application.routing import RouteDistance, RoutingProviderUnavailable
 from fuel_predictor.infrastructure.google_maps_routing import GoogleMapsRoutesProvider
 from fuel_predictor.main import create_app
+
+
+class FakeLocationCatalog:
+    def __init__(self, options: tuple[LocationOption, ...]) -> None:
+        self._options = options
+        self._by_name = {option.name.casefold(): option for option in options}
+
+    def options(self) -> tuple[LocationOption, ...]:
+        return self._options
+
+    def find(self, name: str) -> LocationOption | None:
+        return self._by_name.get(name.strip().casefold())
 
 
 class RoutingProvider(Protocol):
@@ -168,8 +181,9 @@ def test_indonesian_form_exposes_ordered_stop_controls_and_submits_them(tmp_path
 
     assert form.status_code == 200
     assert "Tambah pemberhentian" in form.text
-    assert "Naikkan urutan pemberhentian" in form.text
-    assert "Turunkan urutan pemberhentian" in form.text
+    # Reordering is a drag handle on each stop after the departure point, so
+    # the departure point cannot be moved out of first place.
+    assert 'data-action="drag"' in form.text
     assert "Hapus pemberhentian" in form.text
     assert response.status_code == 201
     assert provider.submitted_sequences == [("Depo", "Site A", "Depo")]
@@ -210,3 +224,76 @@ def test_google_maps_adapter_disables_optimization_and_rejects_reordered_waypoin
         pass
     else:
         raise AssertionError("Adapter must reject a reordered route response.")
+
+
+def test_google_maps_adapter_translates_a_cataloged_stop_to_a_gmaps_point() -> None:
+    catalog = FakeLocationCatalog(
+        (LocationOption(name="Depo", latitude=-3.1, longitude=104.2),)
+    )
+    client = GoogleMapsRoutesClientStub()
+    provider = GoogleMapsRoutesProvider("unused-in-test", client=client, location_catalog=catalog)
+
+    provider.calculate_distance(("Depo", "Site A"))
+
+    assert client.calls[0]["json"] == {
+        "origin": {"location": {"latLng": {"latitude": -3.1, "longitude": 104.2}}},
+        "destination": {"address": "Site A"},
+        "intermediates": [],
+        "travelMode": "DRIVE",
+        "optimizeWaypointOrder": False,
+    }
+
+
+def test_indonesian_form_offers_known_locations_as_a_stop_dropdown(tmp_path: Path) -> None:
+    catalog = FakeLocationCatalog(
+        (
+            LocationOption(name="Depo", latitude=-3.1, longitude=104.2),
+            LocationOption(name="Tambang", latitude=-3.2, longitude=104.3),
+        )
+    )
+    with TestClient(
+        create_app(database_path=tmp_path / "operations.sqlite3", location_catalog=catalog)
+    ) as client:
+        form = client.get("/prediksi")
+
+    assert form.status_code == 200
+    assert "<select" in form.text
+    # The coordinates ride along on each option so the page can draw the route.
+    assert '<option value="Depo" data-lat="-3.1" data-lon="104.2"' in form.text
+    assert '<option value="Tambang" data-lat="-3.2" data-lon="104.3"' in form.text
+
+
+def test_submitting_a_dropdown_stop_reaches_the_routing_provider_unchanged(
+    tmp_path: Path,
+) -> None:
+    catalog = FakeLocationCatalog(
+        (
+            LocationOption(name="Depo", latitude=-3.1, longitude=104.2),
+            LocationOption(name="Tambang", latitude=-3.2, longitude=104.3),
+        )
+    )
+    provider = RecordingRoutingProvider(distance_km=15)
+    with TestClient(
+        create_app(
+            database_path=tmp_path / "operations.sqlite3",
+            routing_provider=provider,
+            location_catalog=catalog,
+        )
+    ) as client:
+        response = client.post(
+            "/operasi-harian",
+            content=urlencode(
+                [
+                    ("vehicle_category", "ANGBER"),
+                    ("activity_mode", "transport"),
+                    ("total_distance_km", "50"),
+                    ("distance_source", "manual"),
+                    ("stop_sequence", "Depo"),
+                    ("stop_sequence", "Tambang"),
+                ]
+            ),
+            headers={"content-type": "application/x-www-form-urlencoded"},
+        )
+
+    assert response.status_code == 201
+    assert provider.submitted_sequences == [("Depo", "Tambang")]

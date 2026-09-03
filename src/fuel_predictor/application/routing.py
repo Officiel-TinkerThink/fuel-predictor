@@ -17,10 +17,29 @@ class RouteDistance:
             raise ValueError("Jarak dari penyedia rute harus lebih besar dari 0.")
 
 
+@dataclass(frozen=True, slots=True)
+class RoutePreview:
+    """The drawn route behind the planner's stop order, for the preview panel."""
+
+    total_distance_km: float
+    encoded_polyline: str
+
+
 class RoutingProvider(Protocol):
     """Port for distance calculation in the planner's submitted stop order."""
 
     def calculate_distance(self, stop_sequence: tuple[str, ...]) -> RouteDistance: ...
+
+
+class RoutePreviewProvider(Protocol):
+    """Port for showing the route while it is still being planned.
+
+    Separate from `RoutingProvider` because previewing is optional: an
+    installation with no routing service still plans operations, it just does
+    not draw them.
+    """
+
+    def preview_route(self, stop_sequence: tuple[str, ...]) -> RoutePreview: ...
 
 
 class UnavailableRoutingProvider:

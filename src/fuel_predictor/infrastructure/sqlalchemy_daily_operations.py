@@ -32,11 +32,13 @@ class SqlAlchemyDailyOperationRepository:
                     route_distance_manual_fallback=operation.route_distance_manual_fallback,
                 )
             )
+            activities = operation.stop_activities or ()
             session.add_all(
                 DailyOperationStopRow(
                     operation_id=operation.operation_id,
                     stop_position=position,
                     location_name=location_name,
+                    activity=(activities[position] or None) if position < len(activities) else None,
                 )
                 for position, location_name in enumerate(operation.stop_sequence)
             )
@@ -46,14 +48,19 @@ class SqlAlchemyDailyOperationRepository:
             row = session.get(DailyOperationRow, operation_id)
             if row is None:
                 return None
-            stops = tuple(
-                session.scalars(
-                    select(DailyOperationStopRow.location_name)
+            stop_rows = tuple(
+                session.execute(
+                    select(
+                        DailyOperationStopRow.location_name,
+                        DailyOperationStopRow.activity,
+                    )
                     .where(DailyOperationStopRow.operation_id == operation_id)
                     .order_by(DailyOperationStopRow.stop_position)
                 )
             )
-            return _to_domain(row, stops)
+            stops = tuple(stop.location_name for stop in stop_rows)
+            activities = tuple(stop.activity or "" for stop in stop_rows)
+            return _to_domain(row, stops, activities if any(activities) else ())
 
     def add_source(self, operation_id: str, source: SourceProvenance) -> None:
         if source.source_filename is None:
@@ -71,7 +78,11 @@ class SqlAlchemyDailyOperationRepository:
             )
 
 
-def _to_domain(row: DailyOperationRow, stop_sequence: tuple[str, ...]) -> DailyOperation:
+def _to_domain(
+    row: DailyOperationRow,
+    stop_sequence: tuple[str, ...],
+    stop_activities: tuple[str, ...] = (),
+) -> DailyOperation:
     return DailyOperation(
         operation_id=row.operation_id,
         vehicle_category=VehicleCategory(row.vehicle_category),
@@ -80,5 +91,6 @@ def _to_domain(row: DailyOperationRow, stop_sequence: tuple[str, ...]) -> DailyO
         total_distance_km=row.total_distance_km,
         distance_source=DistanceSource(row.distance_source),
         stop_sequence=stop_sequence,
+        stop_activities=stop_activities,
         route_distance_manual_fallback=row.route_distance_manual_fallback,
     )

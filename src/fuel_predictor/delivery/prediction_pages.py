@@ -4,10 +4,10 @@ First page migrated off the f-string builders in ``form.py``; see
 docs/production/implementation-progress.md for the migration order and status.
 """
 
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Request, status
-from fastapi.responses import HTMLResponse, Response
+from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from pydantic import ValidationError
 
 from fuel_predictor.application.baseline_predictions import (
@@ -16,6 +16,8 @@ from fuel_predictor.application.baseline_predictions import (
 )
 from fuel_predictor.application.daily_operations import CreateDailyOperation
 from fuel_predictor.application.identity import ActiveCaller
+from fuel_predictor.application.locations import LocationCatalog, LocationOption
+from fuel_predictor.application.routing import RoutePreviewProvider, RoutingProviderUnavailable
 from fuel_predictor.delivery.http import (
     CreateDailyOperationRequest,
     execute_create,
@@ -32,18 +34,69 @@ _MODE_LABELS = {
 }
 _SOURCE_LABELS = {"manual": "Input manual", "routing_provider": "Penyedia rute"}
 
+# The form records an activity per stop; the model still learns from one mode
+# for the whole operation, so it is derived from what the stops actually do.
+_LIFTING_ACTIVITIES = frozenset({"Muat", "Bongkar"})
+_TRANSPORT_ACTIVITIES = frozenset({"Angkut"})
+
+
+def _at(values: list[str], index: int) -> str:
+    return values[index] if 0 <= index < len(values) else ""
+
+
+def _activity_mode_for(activities: list[str]) -> str:
+    lifts = any(activity in _LIFTING_ACTIVITIES for activity in activities)
+    transports = any(activity in _TRANSPORT_ACTIVITIES for activity in activities)
+    if lifts and transports:
+        return "transport_and_lifting"
+    if lifts:
+        return "lifting"
+    return "transport"
+
 
 def build_prediction_pages_router(
     create_daily_operation: CreateDailyOperation,
     generate_fuel_prediction: GenerateFuelPrediction,
     guard: SecurityGuard,
+    location_catalog: LocationCatalog,
+    route_preview: RoutePreviewProvider | None = None,
 ) -> APIRouter:
     router = APIRouter()
+
+    def _resolved_stops(names: list[str]) -> tuple[str, ...]:
+        """Only catalogued stops reach the provider, so the page cannot ask it for
+        anything the planner could not have picked."""
+        resolved = [location_catalog.find(name) for name in names]
+        if len(resolved) < 2 or any(match is None for match in resolved):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Pemberhentian tidak dikenal."
+            )
+        return tuple(match.name for match in resolved if match is not None)
 
     @router.get("/prediksi", response_class=HTMLResponse)
     def show_form(request: Request) -> HTMLResponse:
         caller = guard.require_caller(request)
-        return HTMLResponse(_render_form(caller, {}, []))
+        return HTMLResponse(
+            _render_form(
+                caller, {}, [], location_catalog.options(), route_preview is not None
+            )
+        )
+
+    @router.get("/prediksi/rute")
+    def route_distance(request: Request, lokasi: Annotated[list[str], Query()]) -> JSONResponse:
+        guard.require_caller(request)
+        if route_preview is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Penyedia rute tidak tersedia.",
+            )
+        try:
+            preview = route_preview.preview_route(_resolved_stops(lokasi))
+        except RoutingProviderUnavailable as error:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(error)
+            ) from error
+        return JSONResponse({"jarak_km": round(preview.total_distance_km, 1)})
 
     @router.post("/operasi-harian", response_class=HTMLResponse)
     async def submit_form(request: Request) -> HTMLResponse:
@@ -52,24 +105,61 @@ def build_prediction_pages_router(
         submitted: dict[str, Any] = {
             key: str(value) for key, value in form_data.items() if key != "csrf_token"
         }
-        submitted["stop_sequence"] = [
-            str(value).strip() for value in form_data.getlist("stop_sequence") if str(value).strip()
+        # The form emits a location for every row but an activity only for the
+        # rows after the departure point, so they are paired up by position
+        # before blank rows are dropped — otherwise a half-filled row would
+        # slide every activity onto the wrong stop.
+        raw_stops = [str(value).strip() for value in form_data.getlist("stop_sequence")]
+        raw_activities = [str(value).strip() for value in form_data.getlist("stop_activity")]
+        paired = [
+            (stop, "" if index == 0 else _at(raw_activities, index - 1))
+            for index, stop in enumerate(raw_stops)
+            if stop
         ]
+        submitted["stop_sequence"] = [stop for stop, _ in paired]
+        submitted["stop_activity"] = [activity for _, activity in paired[1:]]
         payload: dict[str, Any] = dict(submitted)
         if payload.get("lifting_hours") == "":
             payload["lifting_hours"] = None
+        if payload.get("total_distance_km") == "":
+            payload["total_distance_km"] = None
+        # The raw form key is dropped: the request model forbids fields it does
+        # not declare. Activities are only sent when the form actually collected
+        # them, so an API-shaped post without them stays valid.
+        payload.pop("stop_activity", None)
+        activities = [activity for _, activity in paired]
+        if any(activities):
+            payload["stop_activities"] = activities
+            payload["activity_mode"] = _activity_mode_for(activities)
+        elif not payload.get("activity_mode"):
+            # Nothing to derive from and nothing supplied: a plan with no stops
+            # yet is transport, rather than a "mode wajib diisi" the form has
+            # no field to fix.
+            payload["activity_mode"] = _activity_mode_for([])
 
         try:
             validated = CreateDailyOperationRequest.model_validate(payload)
             operation = execute_create(validated, create_daily_operation)
         except ValidationError as error:
             return HTMLResponse(
-                _render_form(caller, submitted, translate_validation_errors(error.errors())),
+                _render_form(
+                    caller,
+                    submitted,
+                    translate_validation_errors(error.errors()),
+                    location_catalog.options(),
+                    route_preview is not None,
+                ),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         except DailyOperationValidationError as error:
             return HTMLResponse(
-                _render_form(caller, submitted, [{"field": error.field, "message": error.message}]),
+                _render_form(
+                    caller,
+                    submitted,
+                    [{"field": error.field, "message": error.message}],
+                    location_catalog.options(),
+                    route_preview is not None,
+                ),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
 
@@ -122,7 +212,11 @@ def build_prediction_pages_router(
 
 
 def _render_form(
-    caller: ActiveCaller, values: dict[str, Any], errors: list[dict[str, str]]
+    caller: ActiveCaller,
+    values: dict[str, Any],
+    errors: list[dict[str, str]],
+    location_options: tuple[LocationOption, ...],
+    route_preview_available: bool = False,
 ) -> str:
     return render(
         "prediksi.html",
@@ -133,4 +227,6 @@ def _render_form(
         page_lead="Catat satu rencana operasi ANGBER secara lengkap dan konsisten.",
         values=values,
         errors=errors,
+        location_options=location_options,
+        route_preview_available=route_preview_available,
     )

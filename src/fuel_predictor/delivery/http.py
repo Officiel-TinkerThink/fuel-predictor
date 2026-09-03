@@ -83,11 +83,17 @@ class CreateDailyOperationRequest(BaseModel):
     vehicle_category: VehicleCategory
     activity_mode: ActivityMode
     lifting_hours: float | None = None
-    total_distance_km: float = Field(gt=0, allow_inf_nan=False)
+    # Optional: a route-sourced plan takes its distance from the provider, so
+    # this is only the fallback for when routing cannot answer.
+    total_distance_km: float | None = Field(default=None, gt=0, allow_inf_nan=False)
     distance_source: DistanceSource
     stop_sequence: list[str] = Field(
         default_factory=list,
         validation_alias=AliasChoices("stop_sequence", "stops"),
+    )
+    stop_activities: list[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("stop_activities", "stop_activity"),
     )
 
     @field_validator("stop_sequence")
@@ -860,6 +866,7 @@ def execute_create(
             total_distance_km=request.total_distance_km,
             distance_source=request.distance_source,
             stop_sequence=tuple(request.stop_sequence),
+            stop_activities=tuple(request.stop_activities),
         )
     )
 

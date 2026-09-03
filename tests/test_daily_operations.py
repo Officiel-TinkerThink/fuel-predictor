@@ -40,7 +40,6 @@ def test_api_rejects_missing_core_values_with_indonesian_feedback(tmp_path: Path
         "errors": [
             {"field": "vehicle_category", "message": "Kategori kendaraan wajib diisi."},
             {"field": "activity_mode", "message": "Mode aktivitas wajib diisi."},
-            {"field": "total_distance_km", "message": "Jarak total wajib diisi."},
             {"field": "distance_source", "message": "Sumber jarak wajib diisi."},
         ]
     }
@@ -111,7 +110,8 @@ def test_form_rejects_invalid_operation_and_preserves_useful_input(tmp_path: Pat
     assert "Periksa kembali data operasi" in response.text
     assert "Jam lifting harus lebih besar dari 0 untuk mode yang mencakup lifting." in response.text
     assert 'value="18.5"' in response.text
-    assert '<option value="lifting" selected>' in response.text
+    # Activity is chosen per stop now, so the form has no operation-level mode
+    # dropdown to re-select; what it must preserve is the distance entered.
 
 
 def test_created_operation_remains_retrievable_after_app_restart(tmp_path: Path) -> None:

@@ -34,6 +34,9 @@ class DailyOperation:
     total_distance_km: float
     distance_source: DistanceSource
     stop_sequence: tuple[str, ...] = ()
+    # Parallel to `stop_sequence`: what the vehicle does at each stop. The
+    # departure point carries no activity, so its entry is empty.
+    stop_activities: tuple[str, ...] = ()
     route_distance_manual_fallback: bool = False
 
     def __post_init__(self) -> None:
@@ -61,6 +64,11 @@ class DailyOperation:
             )
 
         validate_stop_sequence(self.stop_sequence)
+        if self.stop_activities and len(self.stop_activities) != len(self.stop_sequence):
+            raise DailyOperationValidationError(
+                "stop_activities",
+                "Aktivitas harus tercatat untuk setiap pemberhentian.",
+            )
         if self.route_distance_manual_fallback and (
             not self.stop_sequence or self.distance_source is not DistanceSource.MANUAL
         ):

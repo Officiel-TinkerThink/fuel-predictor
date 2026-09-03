@@ -35,6 +35,7 @@ from fuel_predictor.application.identity import (
     SignIn,
     SignOut,
 )
+from fuel_predictor.application.locations import LocationCatalog
 from fuel_predictor.application.model_activation import (
     ActiveModelHolder,
     answers_a_representative_case,
@@ -127,6 +128,7 @@ from fuel_predictor.infrastructure.sqlalchemy_identity import (
     SqlAlchemySessionRepository,
     SqlAlchemyUserRepository,
 )
+from fuel_predictor.infrastructure.sqlalchemy_locations import SqlAlchemyLocationRepository
 from fuel_predictor.infrastructure.sqlalchemy_model_package_records import (
     SqlAlchemyModelPackageValidationRepository,
 )
@@ -177,6 +179,7 @@ def create_app(
     database_path: Path | None = None,
     database_url: str | None = None,
     routing_provider: RoutingProvider | None = None,
+    location_catalog: LocationCatalog | None = None,
     bootstrap_administrator: tuple[str, str] | None = None,
     allow_unprovisioned_access: bool | None = None,
 ) -> FastAPI:
@@ -198,7 +201,21 @@ def create_app(
     session_repository = SqlAlchemySessionRepository(session_factory)
     audit_repository = SqlAlchemyAuditRepository(session_factory)
     settings = ApplicationSettings()
-    resolved_routing_provider = routing_provider or _routing_provider_from_settings(settings)
+    resolved_location_catalog = location_catalog or SqlAlchemyLocationRepository(session_factory)
+    # One adapter serves both roles when a key is configured: it computes the
+    # saved distance and draws the route the planner previews. An empty key is
+    # treated as no key, so a blanked-out setting disables it cleanly.
+    maps_api_key = (
+        settings.google_maps_api_key.get_secret_value() if settings.google_maps_api_key else None
+    )
+    maps_provider = (
+        GoogleMapsRoutesProvider(maps_api_key, location_catalog=resolved_location_catalog)
+        if maps_api_key
+        else None
+    )
+    resolved_routing_provider = (
+        routing_provider or maps_provider or UnavailableRoutingProvider()
+    )
     create_daily_operation = CreateDailyOperation(repository, resolved_routing_provider)
     get_daily_operation = GetDailyOperation(repository)
     import_historical_dataset = ImportHistoricalDataset(
@@ -427,6 +444,8 @@ def create_app(
             create_daily_operation,
             generate_fuel_prediction,
             guard,
+            resolved_location_catalog,
+            maps_provider,
         )
     )
     app.include_router(
@@ -526,12 +545,6 @@ def _database_url_for_path(database_path: Path | None) -> str:
     if database_path is None:
         return ApplicationSettings().database_url
     return f"sqlite+pysqlite:///{database_path.resolve().as_posix()}"
-
-
-def _routing_provider_from_settings(settings: ApplicationSettings) -> RoutingProvider:
-    if settings.google_maps_api_key is None:
-        return UnavailableRoutingProvider()
-    return GoogleMapsRoutesProvider(settings.google_maps_api_key.get_secret_value())
 
 
 app = create_app()
