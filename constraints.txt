@@ -17,3 +17,12 @@
 # evidently requires >=0.14.0. 0.15.0 has no cp312 manylinux wheel yet, and
 # building it from source would mean shipping a compiler in the runtime image.
 statsmodels>=0.14.0,<0.15
+
+# anyio 4.15.0 stopped importing its `from_thread` submodule eagerly, so plain
+# `anyio.from_thread` is now an AttributeError unless something imported it
+# first. Starlette's WSGI middleware does exactly that, and MLflow serves its
+# Flask app through it, so every request to the tracking server 500'd and the
+# container failed its healthcheck on startup — which took the app down with
+# it, since app waits on mlflow being healthy. Lift once MLflow ships a
+# Starlette that imports the submodule.
+anyio<4.15

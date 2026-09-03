@@ -12,6 +12,10 @@ services:
       retries: 10
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # Published on the loopback only, so the application can be run from the
+    # host against this database without exposing it to the network.
+    ports:
+      - "127.0.0.1:5432:5432"
 
   mlflow:
     build: .
@@ -38,6 +42,11 @@ services:
     environment:
       FUEL_PREDICTOR_DATABASE_URL: postgresql+psycopg://fuel_predictor:${POSTGRES_PASSWORD}@db:5432/fuel_predictor
       FUEL_PREDICTOR_MLFLOW_TRACKING_URI: http://mlflow:5000
+      # Without these the stack comes up with an empty users table, which means
+      # locked out rather than open (allow_unprovisioned_access is false).
+      # compose.prod.yaml passes them the same way.
+      FUEL_PREDICTOR_BOOTSTRAP_ADMIN_USERNAME: ${FUEL_PREDICTOR_BOOTSTRAP_ADMIN_USERNAME:-}
+      FUEL_PREDICTOR_BOOTSTRAP_ADMIN_PASSWORD: ${FUEL_PREDICTOR_BOOTSTRAP_ADMIN_PASSWORD:-}
     depends_on:
       db:
         condition: service_healthy
