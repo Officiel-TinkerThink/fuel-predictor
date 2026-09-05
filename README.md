@@ -116,7 +116,8 @@ docker compose run --rm seed python -m fuel_predictor seed-demo --force
 ```
 
 Untuk meninjau tanpa memasang apa pun, buka repositori ini di GitHub Codespaces dan ikuti
-[panduan demo Codespaces](docs/codespaces-demo.md).
+[panduan demo Codespaces](docs/codespaces-demo.id.md)
+([English](docs/codespaces-demo.md)).
 
 ## Kontrak pembuatan API
 

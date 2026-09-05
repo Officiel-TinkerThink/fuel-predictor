@@ -1,5 +1,7 @@
 # Running the demo in GitHub Codespaces
 
+*[Versi bahasa Indonesia](codespaces-demo.id.md)*
+
 A guided walkthrough for reviewing the fuel planner without installing
 anything. A Codespace is a disposable development machine that GitHub runs in
 the browser; everything below happens inside it and disappears when you delete
@@ -28,12 +30,11 @@ prediction as soon as the page loads.
 
 ## Step 1 — Open the Codespace
 
-On the repository page: **Code ▾ → Codespaces → New with options…**
+On the repository page: **Code ▾ → Codespaces → Create codespace on main**.
 
-Set **Branch** to `develop`, leave the rest as offered, and click **Create
-codespace**.
-
-The branch matters. `main` does not yet have the demo setup.
+The default branch has everything you need, so there is nothing to choose. (If
+you were asked to review work in progress instead, use **New with options…**
+and set the branch you were given.)
 
 ## Step 2 — Wait for the setup to finish
 
