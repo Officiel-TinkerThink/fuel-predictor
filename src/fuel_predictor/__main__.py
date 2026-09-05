@@ -66,6 +66,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="Berkas CSV kendaraan. Bawaan: ekspor yang ikut dipaketkan bersama aplikasi.",
     )
 
+    seed = subcommands.add_parser(
+        "seed-demo",
+        help="Isi basis data kosong dengan katalog, riwayat contoh, dan satu model aktif.",
+    )
+    seed.add_argument(
+        "--force",
+        action="store_true",
+        help="Ulangi meski sudah ada model aktif. Tanpa ini perintah berhenti agar aman.",
+    )
+
     prune = subcommands.add_parser(
         "prune-packages",
         help="Hapus paket model lama yang bukan sasaran rollback. Bawaan: hanya menampilkan.",
@@ -84,6 +94,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _import_locations(arguments.source)
     if arguments.command == "import-vehicles":
         return _import_vehicles(arguments.source)
+    if arguments.command == "seed-demo":
+        return _seed_demo(force=arguments.force)
     if arguments.command == "prune-packages":
         return _prune_packages(apply=arguments.apply, keep_retired=arguments.keep_retired)
     if arguments.command == "record-backup":
@@ -133,6 +145,88 @@ def _import_vehicles(source: str | None) -> int:
         return 1
 
     print(f"{imported} kendaraan tersimpan di basis data.")
+    return 0
+
+
+def _seed_demo(force: bool) -> int:
+    """Bring an empty database to the point where a prediction can be made.
+
+    A fresh deployment has a schema and nothing else: no locations to pick, no
+    fleet, no history, and so no model — the first thing a visitor meets is a
+    form whose dropdowns are empty and a prediction that cannot be produced.
+    This walks the same path an operator would take through the UI, in the same
+    order, so what it leaves behind is ordinary data rather than a special
+    "demo mode" the application would have to know about.
+    """
+    from importlib import resources
+
+    from fuel_predictor.application.baseline_predictions import TrainBaselineCandidate
+    from fuel_predictor.application.historical_datasets import ImportHistoricalDataset
+    from fuel_predictor.application.model_lifecycle import PromoteCandidateModel
+    from fuel_predictor.infrastructure.historical_source_reader import (
+        SpreadsheetHistoricalDatasetSourceReader,
+    )
+    from fuel_predictor.infrastructure.mlflow_baseline_models import MlflowBaselineModelStore
+    from fuel_predictor.infrastructure.packaged_location_catalog import PackagedLocationCatalog
+    from fuel_predictor.infrastructure.packaged_vehicle_catalog import PackagedVehicleCatalog
+    from fuel_predictor.infrastructure.sqlalchemy_historical_datasets import (
+        SqlAlchemyHistoricalDatasetRepository,
+    )
+    from fuel_predictor.infrastructure.sqlalchemy_locations import SqlAlchemyLocationRepository
+    from fuel_predictor.infrastructure.sqlalchemy_vehicles import SqlAlchemyVehicleRepository
+
+    settings = ApplicationSettings()
+    try:
+        factory = build_session_factory(build_engine(settings.database_url))
+        predictions = SqlAlchemyPredictionRepository(factory)
+
+        # Seeding twice would leave a second dataset version and a second model
+        # behind, so the safe default is to stop once the work is already done.
+        if predictions.get_active() is not None and not force:
+            print("Basis data sudah berisi model aktif. Tidak ada yang perlu diisi.")
+            print("Jalankan ulang dengan --force bila memang ingin mengulang.")
+            return 0
+
+        vehicles = SqlAlchemyVehicleRepository(factory)
+        location_count = SqlAlchemyLocationRepository(factory).replace_all(
+            PackagedLocationCatalog().options()
+        )
+        vehicle_count = vehicles.replace_all(PackagedVehicleCatalog().options())
+        print(f"  {location_count} lokasi dan {vehicle_count} kendaraan dimuat.")
+
+        historical = SqlAlchemyHistoricalDatasetRepository(factory)
+        demo_history = resources.files("fuel_predictor") / "examples" / "riwayat-angber-demo.csv"
+        imported = ImportHistoricalDataset(
+            SpreadsheetHistoricalDatasetSourceReader(),
+            historical,
+            vehicle_catalog=vehicles,
+        ).execute("riwayat-angber-demo.csv", demo_history.read_bytes())
+        dataset = imported.dataset_version
+        print(
+            f"  Riwayat {dataset.dataset_version_id} diimpor: "
+            f"{len(imported.valid_operations)} baris valid."
+        )
+
+        # The tracking URI wins when set, exactly as the application resolves
+        # it, so the seeded model lands in the store the app will read from.
+        if settings.mlflow_tracking_uri is not None:
+            model_store = MlflowBaselineModelStore(settings.mlflow_tracking_uri)
+        else:
+            model_store = MlflowBaselineModelStore.local(settings.mlflow_tracking_directory)
+        candidate = TrainBaselineCandidate(historical, model_store, predictions).execute(
+            dataset.dataset_version_id
+        )
+        print(f"  Kandidat {candidate.model_version_id} dilatih.")
+
+        promoted = PromoteCandidateModel(predictions, predictions).execute(
+            candidate.model_version_id
+        )
+    except Exception as error:  # noqa: BLE001 - the operator needs a readable message
+        print(f"Pengisian data awal gagal: {error}", file=sys.stderr)
+        return 1
+
+    print(f"  Model {promoted.model_version_id} dipromosikan menjadi aktif.")
+    print("Basis data siap dipakai: buka /prediksi dan buat satu operasi harian.")
     return 0
 
 

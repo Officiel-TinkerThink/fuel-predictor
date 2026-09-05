@@ -1,0 +1,20 @@
+{
+  "name": "Perencana Operasi Harian — demo",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "forwardPorts": [8000, 5000],
+  "portsAttributes": {
+    "8000": {
+      "label": "Perencana Operasi Harian",
+      "onAutoForward": "openBrowserOnce"
+    },
+    "5000": {
+      "label": "MLflow",
+      "onAutoForward": "silent"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "waitFor": "postCreateCommand"
+}

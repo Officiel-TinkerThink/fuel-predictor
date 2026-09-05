@@ -47,6 +47,15 @@ services:
       # compose.prod.yaml passes them the same way.
       FUEL_PREDICTOR_BOOTSTRAP_ADMIN_USERNAME: ${FUEL_PREDICTOR_BOOTSTRAP_ADMIN_USERNAME:-}
       FUEL_PREDICTOR_BOOTSTRAP_ADMIN_PASSWORD: ${FUEL_PREDICTOR_BOOTSTRAP_ADMIN_PASSWORD:-}
+      FUEL_PREDICTOR_GOOGLE_MAPS_API_KEY: ${FUEL_PREDICTOR_GOOGLE_MAPS_API_KEY:-}
+    healthcheck:
+      # The seed job waits on this, so it has to mean "migrations have run and
+      # the app is serving", not merely "the container started".
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/sehat')\""]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
     depends_on:
       db:
         condition: service_healthy
@@ -54,6 +63,21 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
+
+  # Runs once and exits. A schema with nothing in it gives a visitor empty
+  # dropdowns and no model to predict with, so a first `up` fills in the
+  # catalogs, the sample history and one active model. It is a no-op on every
+  # later start, because it stops as soon as it finds an active model.
+  seed:
+    build: .
+    command: python -m fuel_predictor seed-demo
+    environment:
+      FUEL_PREDICTOR_DATABASE_URL: postgresql+psycopg://fuel_predictor:${POSTGRES_PASSWORD}@db:5432/fuel_predictor
+      FUEL_PREDICTOR_MLFLOW_TRACKING_URI: http://mlflow:5000
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: "no"
 
 volumes:
   postgres_data:

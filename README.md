@@ -99,6 +99,25 @@ Compose menjalankan PostgreSQL, menunggu health check, menerapkan migrasi Alembi
 menjalankan aplikasi di `http://127.0.0.1:8000/`. Volume `postgres_data` menjaga data tetap ada
 ketika container aplikasi dimulai ulang.
 
+Layanan `seed` berjalan satu kali setelah aplikasi sehat, lalu berhenti. Ia mengisi basis data
+kosong dengan katalog lokasi, katalog kendaraan, riwayat contoh, dan satu model yang sudah
+dipromosikan — sehingga halaman prediksi langsung dapat dipakai. Pada start berikutnya ia
+berhenti sendiri karena sudah ada model aktif. Untuk mengulang dari awal:
+
+```powershell
+docker compose down -v
+docker compose up
+```
+
+Perintah yang sama dapat dijalankan sendiri:
+
+```powershell
+docker compose run --rm seed python -m fuel_predictor seed-demo --force
+```
+
+Untuk meninjau tanpa memasang apa pun, buka repositori ini di GitHub Codespaces dan ikuti
+[panduan demo Codespaces](docs/codespaces-demo.md).
+
 ## Kontrak pembuatan API
 
 `POST /api/v1/daily-operations`
