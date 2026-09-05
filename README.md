@@ -42,7 +42,7 @@ Buka [http://127.0.0.1:8000/](http://127.0.0.1:8000/) lalu:
    drift fitur, serta tren/degradasi kesalahan. Alert hanya disimpan secara lokal dan tidak pernah
    mempromosikan model secara otomatis.
 
-CSV contoh yang sama tersedia di [examples/riwayat-angber-demo.csv](examples/riwayat-angber-demo.csv).
+CSV contoh yang sama tersedia di [src/fuel_predictor/examples/riwayat-angber-demo.csv](src/fuel_predictor/examples/riwayat-angber-demo.csv).
 
 ## Struktur dan pilihan teknologi
 
