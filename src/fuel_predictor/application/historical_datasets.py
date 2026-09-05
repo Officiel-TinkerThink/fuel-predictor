@@ -10,6 +10,7 @@ from fuel_predictor.domain.daily_operation import (
     DailyOperation,
     DailyOperationValidationError,
     DistanceSource,
+    Vehicle,
     VehicleCategory,
 )
 from fuel_predictor.domain.historical_dataset import (
@@ -133,6 +134,7 @@ class GetDatasetValidOperations:
 
 _HEADER_ALIASES = {
     "vehicle_category": {"kategori angber", "kategori kendaraan", "jenis kendaraan", "angber"},
+    "vehicle": {"kendaraan", "unit", "unit kendaraan", "nama kendaraan", "armada", "vehicle"},
     "activity_mode": {"mode aktivitas", "aktivitas", "jenis aktivitas"},
     "lifting_hours": {"jam lifting", "jam operasi lifting", "lifting hours", "lifting hour"},
     "total_distance_km": {"jarak total km", "jarak total", "total distance km"},
@@ -153,6 +155,7 @@ _REQUIRED_FIELDS = {
 }
 _FIELD_LABELS = {
     "vehicle_category": "Kategori kendaraan",
+    "vehicle": "Kendaraan",
     "activity_mode": "Mode aktivitas",
     "lifting_hours": "Jam lifting",
     "total_distance_km": "Jarak total",
@@ -199,7 +202,7 @@ def _validate_row(
 ) -> tuple[HistoricalDailyOperation | None, list[CorrectionReason]]:
     issues: list[CorrectionReason] = []
     raw_by_field: dict[str, RawValue] = {}
-    for field in _REQUIRED_FIELDS | {"lifting_hours"}:
+    for field in _REQUIRED_FIELDS | {"lifting_hours", "vehicle"}:
         header = mapped_headers.get(field)
         if header is None:
             if field in _REQUIRED_FIELDS:
@@ -214,6 +217,7 @@ def _validate_row(
         if "vehicle_category" in raw_by_field
         else None
     )
+    vehicle = parse_vehicle(raw_by_field.get("vehicle"), issues)
     activity_mode = (
         parse_activity_mode(raw_by_field["activity_mode"], issues)
         if "activity_mode" in raw_by_field
@@ -260,6 +264,7 @@ def _validate_row(
         operation = DailyOperation(
             operation_id=operation_id_factory(),
             vehicle_category=vehicle_category,
+            vehicle=vehicle,
             activity_mode=activity_mode,
             lifting_hours=lifting_hours,
             total_distance_km=total_distance_km,
@@ -268,6 +273,31 @@ def _validate_row(
     except DailyOperationValidationError as error:
         return None, [CorrectionReason(error.field, error.message)]
     return HistoricalDailyOperation(operation, prepared_fuel_liters, provenance), []
+
+
+# Matched loosely because the sheets have never been consistent about case or
+# spacing: "TRUCK CRANE 01", "Truck Crane 1" and "truckcrane01" all name the
+# same unit, and rejecting a row over that would lose real history.
+_VEHICLE_ALIASES: dict[str, Vehicle] = {}
+for _member in Vehicle:
+    _key = _member.value.lower().replace(" ", "")
+    _VEHICLE_ALIASES[_key] = _member
+    _VEHICLE_ALIASES[_key.replace("0", "")] = _member
+
+
+def parse_vehicle(raw_value: RawValue | None, issues: list[CorrectionReason]) -> Vehicle | None:
+    """Optional: a sheet that never named the unit still imports, and those rows
+    simply teach the model nothing about individual vehicles."""
+    if is_blank(raw_value):
+        return None
+    key = normalized_value(raw_value).replace(" ", "")
+    match = _VEHICLE_ALIASES.get(key)
+    if match is None:
+        known = ", ".join(member.value for member in Vehicle)
+        issues.append(
+            CorrectionReason("vehicle", f"Kendaraan tidak dikenali. Gunakan salah satu: {known}.")
+        )
+    return match
 
 
 def parse_vehicle_category(

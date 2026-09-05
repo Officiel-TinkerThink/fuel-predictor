@@ -4,6 +4,7 @@ from fuel_predictor.domain.daily_operation import (
     ActivityMode,
     DailyOperation,
     DistanceSource,
+    Vehicle,
     VehicleCategory,
 )
 from fuel_predictor.domain.historical_dataset import SourceProvenance
@@ -25,6 +26,7 @@ class SqlAlchemyDailyOperationRepository:
                 DailyOperationRow(
                     operation_id=operation.operation_id,
                     vehicle_category=operation.vehicle_category.value,
+                    vehicle=operation.vehicle.value if operation.vehicle else None,
                     activity_mode=operation.activity_mode.value,
                     lifting_hours=operation.lifting_hours,
                     total_distance_km=operation.total_distance_km,
@@ -86,6 +88,7 @@ def _to_domain(
     return DailyOperation(
         operation_id=row.operation_id,
         vehicle_category=VehicleCategory(row.vehicle_category),
+        vehicle=Vehicle(row.vehicle) if row.vehicle else None,
         activity_mode=ActivityMode(row.activity_mode),
         lifting_hours=row.lifting_hours,
         total_distance_km=row.total_distance_km,

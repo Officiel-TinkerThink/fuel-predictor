@@ -15,6 +15,7 @@ from fuel_predictor.application.historical_datasets import (
     parse_activity_mode,
     parse_distance_source,
     parse_number,
+    parse_vehicle,
     parse_vehicle_category,
 )
 from fuel_predictor.domain.daily_operation import DailyOperation, DailyOperationValidationError
@@ -119,6 +120,7 @@ _HEADER_ALIASES = {
         "jarak total km wajib",
         "jarak total",
     },
+    "vehicle": {"kendaraan", "unit", "unit kendaraan", "nama kendaraan", "armada", "vehicle"},
     "distance_source": {"sumber jarak", "sumber jarak wajib"},
     "stop_sequence": {"urutan pemberhentian", "urutan pemberhentian opsional"},
 }
@@ -130,6 +132,7 @@ _REQUIRED_FIELDS = {
 }
 _FIELD_LABELS = {
     "vehicle_category": "Kategori kendaraan",
+    "vehicle": "Kendaraan",
     "activity_mode": "Mode aktivitas",
     "lifting_hours": "Jam lifting",
     "total_distance_km": "Jarak total",
@@ -160,7 +163,7 @@ def _command_for_row(
 ) -> tuple[CreateDailyOperationCommand | None, list[CorrectionReason]]:
     issues: list[CorrectionReason] = []
     raw_by_field: dict[str, RawValue] = {}
-    for field in _REQUIRED_FIELDS | {"lifting_hours", "stop_sequence"}:
+    for field in _REQUIRED_FIELDS | {"lifting_hours", "stop_sequence", "vehicle"}:
         header = mapped_headers.get(field)
         if header is None:
             if field in _REQUIRED_FIELDS:
@@ -175,6 +178,7 @@ def _command_for_row(
         if "vehicle_category" in raw_by_field
         else None
     )
+    vehicle = parse_vehicle(raw_by_field.get("vehicle"), issues)
     activity_mode = (
         parse_activity_mode(raw_by_field["activity_mode"], issues)
         if "activity_mode" in raw_by_field
@@ -208,6 +212,7 @@ def _command_for_row(
         DailyOperation(
             operation_id="BULK-ROW-VALIDATION",
             vehicle_category=vehicle_category,
+            vehicle=vehicle,
             activity_mode=activity_mode,
             lifting_hours=lifting_hours,
             total_distance_km=total_distance_km,
@@ -219,6 +224,7 @@ def _command_for_row(
     return (
         CreateDailyOperationCommand(
             vehicle_category=vehicle_category,
+            vehicle=vehicle,
             activity_mode=activity_mode,
             lifting_hours=lifting_hours,
             total_distance_km=total_distance_km,

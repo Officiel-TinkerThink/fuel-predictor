@@ -7,6 +7,23 @@ class VehicleCategory(StrEnum):
     ANGBER = "ANGBER"
 
 
+class Vehicle(StrEnum):
+    """The individual unit that did the work.
+
+    `VehicleCategory` says what kind of haulage this was and currently has one
+    value, so on its own it tells a model nothing. Which truck actually ran is
+    already named throughout the operational sheets, and two units of the same
+    model do not consume alike once one is older.
+    """
+
+    PRIME_MOVER = "Prime Mover"
+    TRUCK_CRANE_01 = "Truck Crane 01"
+    TRUCK_CRANE_02 = "Truck Crane 02"
+    WHEELCRANE = "Whellcrane"
+    OFT_TRONTON = "OFT Tronton"
+    OFT_WINCH_TRUCK = "OFT Winch Truck"
+
+
 class ActivityMode(StrEnum):
     TRANSPORT = "transport"
     LIFTING = "lifting"
@@ -33,6 +50,9 @@ class DailyOperation:
     lifting_hours: float | None
     total_distance_km: float
     distance_source: DistanceSource
+    # Optional so that operations recorded before the fleet was identified
+    # still construct; a model trained on them simply learns nothing here.
+    vehicle: Vehicle | None = None
     stop_sequence: tuple[str, ...] = ()
     # Parallel to `stop_sequence`: what the vehicle does at each stop. The
     # departure point carries no activity, so its entry is empty.

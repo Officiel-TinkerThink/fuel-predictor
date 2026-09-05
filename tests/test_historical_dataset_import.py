@@ -51,6 +51,8 @@ def test_api_imports_valid_csv_rows_and_quarantines_invalid_rows_with_provenance
     assert result["valid_operations"] == [
         {
             "vehicle_category": "ANGBER",
+            # The sheet in this test never named a unit, so it imports as unset.
+            "vehicle": None,
             "activity_mode": "transport_and_lifting",
             "lifting_hours": 2.5,
             "total_distance_km": 86.4,

@@ -53,6 +53,7 @@ from fuel_predictor.domain.daily_operation import (
     DailyOperation,
     DailyOperationValidationError,
     DistanceSource,
+    Vehicle,
     VehicleCategory,
 )
 from fuel_predictor.domain.historical_dataset import HistoricalDailyOperation, SourceProvenance
@@ -81,6 +82,7 @@ class CreateDailyOperationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     vehicle_category: VehicleCategory
+    vehicle: Vehicle | None = None
     activity_mode: ActivityMode
     lifting_hours: float | None = None
     # Optional: a route-sourced plan takes its distance from the provider, so
@@ -105,6 +107,7 @@ class CreateDailyOperationRequest(BaseModel):
 class DailyOperationResponse(BaseModel):
     operation_id: str
     vehicle_category: VehicleCategory
+    vehicle: Vehicle | None = None
     activity_mode: ActivityMode
     lifting_hours: float | None
     total_distance_km: float
@@ -131,6 +134,7 @@ class SourceProvenanceResponse(BaseModel):
 
 class HistoricalDailyOperationResponse(BaseModel):
     vehicle_category: VehicleCategory
+    vehicle: Vehicle | None = None
     activity_mode: ActivityMode
     lifting_hours: float | None
     total_distance_km: float
@@ -616,6 +620,7 @@ def _operation_response(operation: DailyOperation) -> DailyOperationResponse:
     return DailyOperationResponse(
         operation_id=operation.operation_id,
         vehicle_category=operation.vehicle_category,
+        vehicle=operation.vehicle,
         activity_mode=operation.activity_mode,
         lifting_hours=operation.lifting_hours,
         total_distance_km=operation.total_distance_km,
@@ -861,6 +866,7 @@ def execute_create(
     return create_daily_operation.execute(
         CreateDailyOperationCommand(
             vehicle_category=request.vehicle_category,
+            vehicle=request.vehicle,
             activity_mode=request.activity_mode,
             lifting_hours=request.lifting_hours,
             total_distance_km=request.total_distance_km,
@@ -908,6 +914,7 @@ def _historical_operation_response(
     source = historical_operation.source
     return HistoricalDailyOperationResponse(
         vehicle_category=operation.vehicle_category,
+        vehicle=operation.vehicle,
         activity_mode=operation.activity_mode,
         lifting_hours=operation.lifting_hours,
         total_distance_km=operation.total_distance_km,

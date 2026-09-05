@@ -47,7 +47,7 @@ class ApplicationSettings(BaseSettings):
     # correctness concern, not just disk hygiene (ADR 0010): rollback can only
     # return to a version whose bytes still exist.
     model_artifact_directory: Path = Path(".fuel_predictor/model-packages")
-    supported_feature_contract_versions: str = "baseline-v1"
+    supported_feature_contract_versions: str = "baseline-v1,baseline-v2"
     supported_runtime_compatibility_versions: str = "onnxruntime-1.20,skops-0.11"
     # A daily schedule with room for one missed run before the dashboard calls
     # the picture stale, so a single transient failure is not alarming.

@@ -8,6 +8,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 BULK_PREDICTION_TEMPLATE_HEADERS = (
     "Kategori ANGBER (wajib)",
+    "Kendaraan (opsional)",
     "Mode Aktivitas (wajib)",
     "Jam Lifting (opsional)",
     "Jarak Total (km) (wajib)",
@@ -29,7 +30,7 @@ def xlsx_template() -> bytes:
     worksheet.title = "Operasi Harian"
     worksheet.append(BULK_PREDICTION_TEMPLATE_HEADERS)
     _style_header(worksheet)
-    for column, width in zip("ABCDEF", (26, 30, 25, 28, 24, 48), strict=True):
+    for column, width in zip("ABCDEFG", (26, 24, 30, 25, 28, 24, 48), strict=True):
         worksheet.column_dimensions[column].width = width
     worksheet.freeze_panes = "A2"
 
@@ -41,6 +42,15 @@ def xlsx_template() -> bytes:
     for cell in instructions[2]:
         cell.font = Font(bold=True)
     instructions.append(("Kategori ANGBER", "Wajib", "Gunakan ANGBER atau Angkutan Berat."))
+    instructions.append(
+        (
+            "Kendaraan",
+            "Opsional",
+            "Unit yang menjalankan operasi: Prime Mover, Truck Crane 01, Truck Crane 02, "
+            "Whellcrane, OFT Tronton, atau OFT Winch Truck. Diisi agar model dapat "
+            "membedakan konsumsi tiap kendaraan; baris tanpa kolom ini tetap terbaca.",
+        )
+    )
     instructions.append(
         ("Mode Aktivitas", "Wajib", "Gunakan transport, lifting, atau transport_and_lifting.")
     )

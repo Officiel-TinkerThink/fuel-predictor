@@ -51,7 +51,8 @@ def test_planner_can_train_a_traceable_baseline_and_predict_a_saved_operation(
     assert candidate.status_code == 201
     assert candidate_body["model_version_id"].startswith("MDL-")
     assert candidate_body["dataset_version_id"] == dataset["dataset_version_id"]
-    assert candidate_body["feature_version"] == "baseline-v1"
+    # Moved when the individual vehicle joined the feature contract.
+    assert candidate_body["feature_version"] == "baseline-v2"
     assert candidate_body["algorithm"] == "linear_regression"
     assert candidate_body["lifecycle_status"] == "candidate"
     assert promoted.status_code == 200
@@ -68,7 +69,7 @@ def test_planner_can_train_a_traceable_baseline_and_predict_a_saved_operation(
     assert body["model"]["model_version_id"] == candidate_body["model_version_id"]
     assert body["lineage"] == {
         "input_operation_id": operation["operation_id"],
-        "feature_version": "baseline-v1",
+        "feature_version": "baseline-v2",
         "dataset_version_id": dataset["dataset_version_id"],
         "model_version_id": candidate_body["model_version_id"],
     }

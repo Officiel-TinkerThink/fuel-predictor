@@ -25,7 +25,7 @@ from fuel_predictor.delivery.http import (
 )
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
-from fuel_predictor.domain.daily_operation import DailyOperationValidationError
+from fuel_predictor.domain.daily_operation import DailyOperationValidationError, Vehicle
 
 _MODE_LABELS = {
     "transport": "Angkut",
@@ -121,6 +121,8 @@ def build_prediction_pages_router(
         payload: dict[str, Any] = dict(submitted)
         if payload.get("lifting_hours") == "":
             payload["lifting_hours"] = None
+        if payload.get("vehicle") == "":
+            payload["vehicle"] = None
         if payload.get("total_distance_km") == "":
             payload["total_distance_km"] = None
         # The raw form key is dropped: the request model forbids fields it does
@@ -227,6 +229,7 @@ def _render_form(
         page_lead="Catat satu rencana operasi ANGBER secara lengkap dan konsisten.",
         values=values,
         errors=errors,
+        vehicle_options=[(member.value, member.value) for member in Vehicle],
         location_options=location_options,
         route_preview_available=route_preview_available,
     )

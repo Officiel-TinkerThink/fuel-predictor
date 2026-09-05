@@ -30,6 +30,9 @@ class DailyOperationRow(Base):
 
     operation_id: Mapped[str] = mapped_column(String(40), primary_key=True)
     vehicle_category: Mapped[str] = mapped_column(String(64), nullable=False)
+    # The individual unit. Null for operations recorded before the fleet was
+    # identified, which is why the column is nullable rather than defaulted.
+    vehicle: Mapped[str | None] = mapped_column(String(64), nullable=True)
     activity_mode: Mapped[str] = mapped_column(String(64), nullable=False)
     lifting_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
     total_distance_km: Mapped[float] = mapped_column(Float, nullable=False)
@@ -87,6 +90,7 @@ class HistoricalDailyOperationRow(Base):
     )
     operation_id: Mapped[str] = mapped_column(String(40), nullable=False)
     vehicle_category: Mapped[str] = mapped_column(String(64), nullable=False)
+    vehicle: Mapped[str | None] = mapped_column(String(64), nullable=True)
     activity_mode: Mapped[str] = mapped_column(String(64), nullable=False)
     lifting_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
     total_distance_km: Mapped[float] = mapped_column(Float, nullable=False)
