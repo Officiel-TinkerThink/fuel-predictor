@@ -14,7 +14,7 @@
     <dt>ID operasi</dt><dd><strong>{{ operation.operation_id }}</strong></dd>
     <dt>Kategori kendaraan</dt><dd>{{ operation.vehicle_category.value }}</dd>
     {% if operation.vehicle %}
-    <dt>Kendaraan</dt><dd>{{ operation.vehicle.value }}</dd>
+    <dt>Kendaraan</dt><dd>{{ operation.vehicle }}</dd>
     {% endif %}
     <dt>Mode aktivitas</dt><dd>{{ mode_label }}</dd>
     {% if operation.lifting_hours is not none %}

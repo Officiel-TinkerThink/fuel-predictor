@@ -19,9 +19,9 @@ from fuel_predictor.domain.daily_operation import (
     ActivityMode,
     DailyOperation,
     DistanceSource,
-    Vehicle,
     VehicleCategory,
 )
+from fuel_predictor.infrastructure.packaged_vehicle_catalog import PackagedVehicleCatalog
 from fuel_predictor.main import create_app
 
 _WITH_VEHICLE = (
@@ -72,7 +72,7 @@ def test_the_feature_contract_carries_the_vehicle_and_names_a_new_version() -> N
     operation = DailyOperation(
         operation_id="OPR-FEATURES",
         vehicle_category=VehicleCategory.ANGBER,
-        vehicle=Vehicle.TRUCK_CRANE_01,
+        vehicle="Truck Crane 01",
         activity_mode=ActivityMode.TRANSPORT,
         lifting_hours=None,
         total_distance_km=30.0,
@@ -173,7 +173,12 @@ def test_an_unrecognised_vehicle_name_is_quarantined_with_the_valid_ones(tmp_pat
         b"Bahan Bakar Disiapkan (L),Sumber Jarak\n"
         b"ANGBER,Helikopter,transport,,20,18,manual\n"
     )
-    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+    with TestClient(
+        create_app(
+            database_path=tmp_path / "operations.sqlite3",
+            vehicle_catalog=PackagedVehicleCatalog(),
+        )
+    ) as client:
         response = client.post(
             "/api/v1/historical-datasets",
             files={"file": ("riwayat.csv", historical, "text/csv")},
@@ -197,14 +202,19 @@ def test_sheets_that_never_named_the_unit_still_import(tmp_path: Path) -> None:
 
 
 def test_the_form_offers_the_fleet_and_records_the_choice(tmp_path: Path) -> None:
-    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+    with TestClient(
+        create_app(
+            database_path=tmp_path / "operations.sqlite3",
+            vehicle_catalog=PackagedVehicleCatalog(),
+        )
+    ) as client:
         form = client.get("/prediksi")
         saved = client.post(
             "/operasi-harian",
             content=urlencode(
                 [
                     ("vehicle_category", "ANGBER"),
-                    ("vehicle", "Whellcrane"),
+                    ("vehicle", "Wheel Crane"),
                     ("activity_mode", "transport"),
                     ("total_distance_km", "30"),
                     ("distance_source", "manual"),
@@ -215,9 +225,85 @@ def test_the_form_offers_the_fleet_and_records_the_choice(tmp_path: Path) -> Non
 
     assert form.status_code == 200
     assert 'value="Truck Crane 01"' in form.text
-    assert 'value="OFT Winch Truck"' in form.text
+    assert 'value="Winch Truck"' in form.text
     # The stop sequence and its route map are untouched by this change.
     assert 'name="stop_sequence"' in form.text
     assert 'id="route-map"' in form.text
     assert saved.status_code == 201, saved.text
-    assert "Whellcrane" in saved.text
+    assert "Wheel Crane" in saved.text
+
+
+def test_the_fleet_comes_from_the_sheet_export_not_from_code() -> None:
+    """The fleet is reference data the planner maintains, not a code constant."""
+    catalog = PackagedVehicleCatalog()
+
+    options = catalog.options()
+    names = {option.name for option in options}
+
+    assert len(options) > 15
+    assert {"Prime Mover", "Truck Crane 01", "Wheel Crane", "VT 01"} <= names
+    assert {option.group for option in options} == {
+        "Crane",
+        "Forklift",
+        "Truck",
+        "Vacuum Truck",
+    }
+
+
+def test_the_names_the_sheets_actually_use_resolve_to_one_vehicle() -> None:
+    """History is written inconsistently; the workbook's own alias map fixes it."""
+    catalog = PackagedVehicleCatalog()
+
+    assert catalog.find("PM 01") is not None
+    assert catalog.find("PM 01").name == "Prime Mover"
+    assert catalog.find("T CRANE 01").name == "Truck Crane 01"
+    assert catalog.find("WHELL CRANE").name == "Wheel Crane"
+    assert catalog.find("OFT").name == "Oil Field Truck"
+    # Case and spacing vary just as much as the names themselves.
+    assert catalog.find("  vt01 ").name == "VT 01"
+    assert catalog.find("Helikopter") is None
+
+
+def test_imported_history_lands_on_the_canonical_vehicle_name(tmp_path: Path) -> None:
+    """Otherwise "PM 01" and "Prime Mover" become two vehicles, and the feature
+    fragments across the ways people write the same truck."""
+    catalog = PackagedVehicleCatalog()
+    historical = (
+        b"Kategori ANGBER,Kendaraan,Mode Aktivitas,Jam Lifting,Jarak Total (km),"
+        b"Bahan Bakar Disiapkan (L),Sumber Jarak\n"
+        b"ANGBER,PM 01,transport,,20,26,manual\n"
+        b"ANGBER,Prime Mover,transport,,40,44,manual\n"
+    )
+    with TestClient(
+        create_app(database_path=tmp_path / "operations.sqlite3", vehicle_catalog=catalog)
+    ) as client:
+        response = client.post(
+            "/api/v1/historical-datasets",
+            files={"file": ("riwayat.csv", historical, "text/csv")},
+        )
+
+    assert response.status_code == 201, response.text
+    written = {row["vehicle"] for row in response.json()["valid_operations"]}
+    assert written == {"Prime Mover"}
+
+
+def test_history_still_imports_before_the_fleet_has_been_loaded(tmp_path: Path) -> None:
+    """A fresh database has an empty vehicles table until `import-vehicles` runs.
+
+    Quarantining every row that names a truck would make the importer unusable
+    on a new installation, so an unloaded catalog takes names as written.
+    """
+    historical = (
+        b"Kategori ANGBER,Kendaraan,Mode Aktivitas,Jam Lifting,Jarak Total (km),"
+        b"Bahan Bakar Disiapkan (L),Sumber Jarak\n"
+        b"ANGBER,Prime Mover,transport,,20,26,manual\n"
+        b"ANGBER,Prime Mover,transport,,40,44,manual\n"
+    )
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        response = client.post(
+            "/api/v1/historical-datasets",
+            files={"file": ("riwayat.csv", historical, "text/csv")},
+        )
+
+    assert response.status_code == 201, response.text
+    assert response.json()["dataset_version"]["valid_operation_count"] == 2

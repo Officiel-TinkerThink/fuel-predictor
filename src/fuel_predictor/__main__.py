@@ -56,6 +56,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="Berkas CSV lokasi. Bawaan: ekspor yang ikut dipaketkan bersama aplikasi.",
     )
 
+    vehicles = subcommands.add_parser(
+        "import-vehicles",
+        help="Muat ulang katalog kendaraan dari ekspor sheet 'Dim_Kendaraan'.",
+    )
+    vehicles.add_argument(
+        "--source",
+        default=None,
+        help="Berkas CSV kendaraan. Bawaan: ekspor yang ikut dipaketkan bersama aplikasi.",
+    )
+
     prune = subcommands.add_parser(
         "prune-packages",
         help="Hapus paket model lama yang bukan sasaran rollback. Bawaan: hanya menampilkan.",
@@ -72,6 +82,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_monitoring(arguments.trigger)
     if arguments.command == "import-locations":
         return _import_locations(arguments.source)
+    if arguments.command == "import-vehicles":
+        return _import_vehicles(arguments.source)
     if arguments.command == "prune-packages":
         return _prune_packages(apply=arguments.apply, keep_retired=arguments.keep_retired)
     if arguments.command == "record-backup":
@@ -101,6 +113,26 @@ def _import_locations(source: str | None) -> int:
         return 1
 
     print(f"{imported} lokasi tersimpan di basis data.")
+    return 0
+
+
+def _import_vehicles(source: str | None) -> int:
+    """Replace the fleet catalog with what the sheet export holds."""
+    from pathlib import Path
+
+    from fuel_predictor.infrastructure.packaged_vehicle_catalog import PackagedVehicleCatalog
+    from fuel_predictor.infrastructure.sqlalchemy_vehicles import SqlAlchemyVehicleRepository
+
+    settings = ApplicationSettings()
+    try:
+        catalog = PackagedVehicleCatalog(Path(source) if source else None)
+        factory = build_session_factory(build_engine(settings.database_url))
+        imported = SqlAlchemyVehicleRepository(factory).replace_all(catalog.options())
+    except Exception as error:  # noqa: BLE001 - the operator needs a readable message
+        print(f"Impor kendaraan gagal: {error}", file=sys.stderr)
+        return 1
+
+    print(f"{imported} kendaraan tersimpan di basis data.")
     return 0
 
 

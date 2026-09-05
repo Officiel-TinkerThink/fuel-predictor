@@ -18,6 +18,7 @@ from fuel_predictor.application.daily_operations import CreateDailyOperation
 from fuel_predictor.application.identity import ActiveCaller
 from fuel_predictor.application.locations import LocationCatalog, LocationOption
 from fuel_predictor.application.routing import RoutePreviewProvider, RoutingProviderUnavailable
+from fuel_predictor.application.vehicles import VehicleCatalog
 from fuel_predictor.delivery.http import (
     CreateDailyOperationRequest,
     execute_create,
@@ -25,7 +26,7 @@ from fuel_predictor.delivery.http import (
 )
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
-from fuel_predictor.domain.daily_operation import DailyOperationValidationError, Vehicle
+from fuel_predictor.domain.daily_operation import DailyOperationValidationError
 
 _MODE_LABELS = {
     "transport": "Angkut",
@@ -59,9 +60,18 @@ def build_prediction_pages_router(
     generate_fuel_prediction: GenerateFuelPrediction,
     guard: SecurityGuard,
     location_catalog: LocationCatalog,
+    vehicle_catalog: VehicleCatalog,
     route_preview: RoutePreviewProvider | None = None,
 ) -> APIRouter:
     router = APIRouter()
+
+    def _vehicle_options() -> list[tuple[str, str]]:
+        """Grouped in the label so a planner picking from twenty-odd units can
+        see at a glance which kind of machine each one is."""
+        return [
+            (option.name, f"{option.name} — {option.group}" if option.group else option.name)
+            for option in vehicle_catalog.options()
+        ]
 
     def _resolved_stops(names: list[str]) -> tuple[str, ...]:
         """Only catalogued stops reach the provider, so the page cannot ask it for
@@ -78,7 +88,12 @@ def build_prediction_pages_router(
         caller = guard.require_caller(request)
         return HTMLResponse(
             _render_form(
-                caller, {}, [], location_catalog.options(), route_preview is not None
+                caller,
+                {},
+                [],
+                location_catalog.options(),
+                _vehicle_options(),
+                route_preview is not None,
             )
         )
 
@@ -149,6 +164,7 @@ def build_prediction_pages_router(
                     submitted,
                     translate_validation_errors(error.errors()),
                     location_catalog.options(),
+                    _vehicle_options(),
                     route_preview is not None,
                 ),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -160,6 +176,7 @@ def build_prediction_pages_router(
                     submitted,
                     [{"field": error.field, "message": error.message}],
                     location_catalog.options(),
+                    _vehicle_options(),
                     route_preview is not None,
                 ),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -218,6 +235,7 @@ def _render_form(
     values: dict[str, Any],
     errors: list[dict[str, str]],
     location_options: tuple[LocationOption, ...],
+    vehicle_options: list[tuple[str, str]],
     route_preview_available: bool = False,
 ) -> str:
     return render(
@@ -229,7 +247,7 @@ def _render_form(
         page_lead="Catat satu rencana operasi ANGBER secara lengkap dan konsisten.",
         values=values,
         errors=errors,
-        vehicle_options=[(member.value, member.value) for member in Vehicle],
+        vehicle_options=vehicle_options,
         location_options=location_options,
         route_preview_available=route_preview_available,
     )

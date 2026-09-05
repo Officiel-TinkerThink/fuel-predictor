@@ -53,7 +53,6 @@ from fuel_predictor.domain.daily_operation import (
     DailyOperation,
     DailyOperationValidationError,
     DistanceSource,
-    Vehicle,
     VehicleCategory,
 )
 from fuel_predictor.domain.historical_dataset import HistoricalDailyOperation, SourceProvenance
@@ -82,7 +81,7 @@ class CreateDailyOperationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     vehicle_category: VehicleCategory
-    vehicle: Vehicle | None = None
+    vehicle: str | None = None
     activity_mode: ActivityMode
     lifting_hours: float | None = None
     # Optional: a route-sourced plan takes its distance from the provider, so
@@ -107,7 +106,7 @@ class CreateDailyOperationRequest(BaseModel):
 class DailyOperationResponse(BaseModel):
     operation_id: str
     vehicle_category: VehicleCategory
-    vehicle: Vehicle | None = None
+    vehicle: str | None = None
     activity_mode: ActivityMode
     lifting_hours: float | None
     total_distance_km: float
@@ -134,7 +133,7 @@ class SourceProvenanceResponse(BaseModel):
 
 class HistoricalDailyOperationResponse(BaseModel):
     vehicle_category: VehicleCategory
-    vehicle: Vehicle | None = None
+    vehicle: str | None = None
     activity_mode: ActivityMode
     lifting_hours: float | None
     total_distance_km: float

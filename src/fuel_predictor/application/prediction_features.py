@@ -10,7 +10,7 @@ FEATURE_VERSION = "baseline-v2"
 def _vehicle_of(operation: DailyOperation) -> str:
     """Unrecorded is its own category, not a missing value: a model can learn
     that operations without a named vehicle behave differently."""
-    return operation.vehicle.value if operation.vehicle else "tidak diketahui"
+    return operation.vehicle or "tidak diketahui"
 
 
 def feature_values(operation: DailyOperation) -> dict[str, str | float]:

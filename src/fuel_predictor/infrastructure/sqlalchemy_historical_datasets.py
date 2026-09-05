@@ -13,7 +13,6 @@ from fuel_predictor.domain.daily_operation import (
     ActivityMode,
     DailyOperation,
     DistanceSource,
-    Vehicle,
     VehicleCategory,
 )
 from fuel_predictor.domain.historical_dataset import (
@@ -103,7 +102,7 @@ def _valid_operation_row(
         dataset_version_id=dataset_version_id,
         operation_id=operation.operation_id,
         vehicle_category=operation.vehicle_category.value,
-        vehicle=operation.vehicle.value if operation.vehicle else None,
+        vehicle=operation.vehicle,
         activity_mode=operation.activity_mode.value,
         lifting_hours=operation.lifting_hours,
         total_distance_km=operation.total_distance_km,
@@ -145,7 +144,7 @@ def _to_historical_operation(row: HistoricalDailyOperationRow) -> HistoricalDail
         operation=DailyOperation(
             operation_id=row.operation_id,
             vehicle_category=VehicleCategory(row.vehicle_category),
-            vehicle=Vehicle(row.vehicle) if row.vehicle else None,
+            vehicle=row.vehicle,
             activity_mode=ActivityMode(row.activity_mode),
             lifting_hours=row.lifting_hours,
             total_distance_km=row.total_distance_km,

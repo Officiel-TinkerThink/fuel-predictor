@@ -13,7 +13,6 @@ from fuel_predictor.domain.daily_operation import (
     DailyOperation,
     DailyOperationValidationError,
     DistanceSource,
-    Vehicle,
     VehicleCategory,
     validate_stop_sequence,
 )
@@ -40,7 +39,7 @@ class CreateDailyOperationCommand:
     # provider; it is only needed as the fallback when routing cannot answer.
     total_distance_km: float | None
     distance_source: DistanceSource
-    vehicle: Vehicle | None = None
+    vehicle: str | None = None
     stop_sequence: tuple[str, ...] = ()
     stop_activities: tuple[str, ...] = ()
 

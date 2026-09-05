@@ -18,6 +18,7 @@ from fuel_predictor.application.historical_datasets import (
     parse_vehicle,
     parse_vehicle_category,
 )
+from fuel_predictor.application.vehicles import VehicleCatalog
 from fuel_predictor.domain.daily_operation import DailyOperation, DailyOperationValidationError
 from fuel_predictor.domain.historical_dataset import (
     CorrectionReason,
@@ -159,7 +160,9 @@ def _is_blank_row(raw_values: dict[str, RawValue], mapped_headers: dict[str, str
 
 
 def _command_for_row(
-    mapped_headers: dict[str, str], raw_values: dict[str, RawValue]
+    mapped_headers: dict[str, str],
+    raw_values: dict[str, RawValue],
+    vehicle_catalog: VehicleCatalog | None = None,
 ) -> tuple[CreateDailyOperationCommand | None, list[CorrectionReason]]:
     issues: list[CorrectionReason] = []
     raw_by_field: dict[str, RawValue] = {}
@@ -178,7 +181,7 @@ def _command_for_row(
         if "vehicle_category" in raw_by_field
         else None
     )
-    vehicle = parse_vehicle(raw_by_field.get("vehicle"), issues)
+    vehicle = parse_vehicle(raw_by_field.get("vehicle"), issues, vehicle_catalog)
     activity_mode = (
         parse_activity_mode(raw_by_field["activity_mode"], issues)
         if "activity_mode" in raw_by_field

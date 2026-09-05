@@ -5,12 +5,12 @@ from math import isfinite
 from typing import Protocol
 from uuid import uuid4
 
+from fuel_predictor.application.vehicles import VehicleCatalog
 from fuel_predictor.domain.daily_operation import (
     ActivityMode,
     DailyOperation,
     DailyOperationValidationError,
     DistanceSource,
-    Vehicle,
     VehicleCategory,
 )
 from fuel_predictor.domain.historical_dataset import (
@@ -73,10 +73,15 @@ class ImportHistoricalDataset:
         source_reader: HistoricalDatasetSourceReader,
         repository: HistoricalDatasetWriter,
         operation_id_factory: Callable[[], str] | None = None,
+        vehicle_catalog: VehicleCatalog | None = None,
     ) -> None:
         self._source_reader = source_reader
         self._repository = repository
         self._operation_id_factory = operation_id_factory or _new_imported_operation_id
+        # Without a catalog the written name is taken as-is, which keeps the
+        # importer usable on its own; with one, "PM 01" resolves to Prime Mover
+        # rather than becoming a second vehicle.
+        self._vehicle_catalog = vehicle_catalog
 
     def execute(self, source_filename: str, content: bytes) -> HistoricalDatasetImportResult:
         if not content:
@@ -101,7 +106,11 @@ class ImportHistoricalDataset:
                     source_filename=source_filename,
                 )
                 operation, row_issues = _validate_row(
-                    mapped_headers, raw_values, provenance, self._operation_id_factory
+                    mapped_headers,
+                    raw_values,
+                    provenance,
+                    self._operation_id_factory,
+                    self._vehicle_catalog,
                 )
                 if row_issues:
                     issues.append(DataQualityIssue(source=provenance, reasons=tuple(row_issues)))
@@ -199,6 +208,7 @@ def _validate_row(
     raw_values: dict[str, RawValue],
     provenance: SourceProvenance,
     operation_id_factory: Callable[[], str],
+    vehicle_catalog: VehicleCatalog | None = None,
 ) -> tuple[HistoricalDailyOperation | None, list[CorrectionReason]]:
     issues: list[CorrectionReason] = []
     raw_by_field: dict[str, RawValue] = {}
@@ -217,7 +227,7 @@ def _validate_row(
         if "vehicle_category" in raw_by_field
         else None
     )
-    vehicle = parse_vehicle(raw_by_field.get("vehicle"), issues)
+    vehicle = parse_vehicle(raw_by_field.get("vehicle"), issues, vehicle_catalog)
     activity_mode = (
         parse_activity_mode(raw_by_field["activity_mode"], issues)
         if "activity_mode" in raw_by_field
@@ -275,29 +285,36 @@ def _validate_row(
     return HistoricalDailyOperation(operation, prepared_fuel_liters, provenance), []
 
 
-# Matched loosely because the sheets have never been consistent about case or
-# spacing: "TRUCK CRANE 01", "Truck Crane 1" and "truckcrane01" all name the
-# same unit, and rejecting a row over that would lose real history.
-_VEHICLE_ALIASES: dict[str, Vehicle] = {}
-for _member in Vehicle:
-    _key = _member.value.lower().replace(" ", "")
-    _VEHICLE_ALIASES[_key] = _member
-    _VEHICLE_ALIASES[_key.replace("0", "")] = _member
-
-
-def parse_vehicle(raw_value: RawValue | None, issues: list[CorrectionReason]) -> Vehicle | None:
+def parse_vehicle(
+    raw_value: RawValue | None,
+    issues: list[CorrectionReason],
+    catalog: VehicleCatalog | None = None,
+) -> str | None:
     """Optional: a sheet that never named the unit still imports, and those rows
-    simply teach the model nothing about individual vehicles."""
+    simply teach the model nothing about individual vehicles.
+
+    A catalogued name is returned in its canonical spelling, so history written
+    as "PM 01", "T CRANE 01" or "WHELL CRANE" lands on one vehicle rather than
+    fragmenting the feature across the ways people write it.
+    """
     if is_blank(raw_value):
         return None
-    key = normalized_value(raw_value).replace(" ", "")
-    match = _VEHICLE_ALIASES.get(key)
+    written = str(raw_value).strip()
+    known = catalog.options() if catalog is not None else ()
+    if not known:
+        # No catalog, or one not imported yet: take the name as written rather
+        # than quarantining every row on a database where the fleet has not
+        # been loaded.
+        return written
+    assert catalog is not None
+    match = catalog.find(written)
     if match is None:
-        known = ", ".join(member.value for member in Vehicle)
+        valid = ", ".join(option.name for option in known)
         issues.append(
-            CorrectionReason("vehicle", f"Kendaraan tidak dikenali. Gunakan salah satu: {known}.")
+            CorrectionReason("vehicle", f"Kendaraan tidak dikenali. Gunakan salah satu: {valid}.")
         )
-    return match
+        return None
+    return match.name
 
 
 def parse_vehicle_category(

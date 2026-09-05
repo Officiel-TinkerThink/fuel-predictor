@@ -62,6 +62,7 @@ from fuel_predictor.application.retained_package_activation import (
     RegisterIngestedPackage,
 )
 from fuel_predictor.application.routing import RoutingProvider, UnavailableRoutingProvider
+from fuel_predictor.application.vehicles import VehicleCatalog
 from fuel_predictor.configuration import ApplicationSettings
 from fuel_predictor.delivery.actual_fuel_pages import build_actual_fuel_pages_router
 from fuel_predictor.delivery.agent_pages import build_agent_pages_router
@@ -138,6 +139,7 @@ from fuel_predictor.infrastructure.sqlalchemy_monitoring_runs import (
     SqlAlchemyMonitoringRunRepository,
 )
 from fuel_predictor.infrastructure.sqlalchemy_predictions import SqlAlchemyPredictionRepository
+from fuel_predictor.infrastructure.sqlalchemy_vehicles import SqlAlchemyVehicleRepository
 from fuel_predictor.infrastructure.system_memory_probe import SystemMemoryProbe
 from fuel_predictor.infrastructure.zip_model_package_archive import ZipModelPackageArchiveReader
 
@@ -180,6 +182,7 @@ def create_app(
     database_url: str | None = None,
     routing_provider: RoutingProvider | None = None,
     location_catalog: LocationCatalog | None = None,
+    vehicle_catalog: VehicleCatalog | None = None,
     bootstrap_administrator: tuple[str, str] | None = None,
     allow_unprovisioned_access: bool | None = None,
 ) -> FastAPI:
@@ -202,6 +205,7 @@ def create_app(
     audit_repository = SqlAlchemyAuditRepository(session_factory)
     settings = ApplicationSettings()
     resolved_location_catalog = location_catalog or SqlAlchemyLocationRepository(session_factory)
+    resolved_vehicle_catalog = vehicle_catalog or SqlAlchemyVehicleRepository(session_factory)
     # One adapter serves both roles when a key is configured: it computes the
     # saved distance and draws the route the planner previews. An empty key is
     # treated as no key, so a blanked-out setting disables it cleanly.
@@ -219,7 +223,9 @@ def create_app(
     create_daily_operation = CreateDailyOperation(repository, resolved_routing_provider)
     get_daily_operation = GetDailyOperation(repository)
     import_historical_dataset = ImportHistoricalDataset(
-        SpreadsheetHistoricalDatasetSourceReader(), historical_dataset_repository
+        SpreadsheetHistoricalDatasetSourceReader(),
+        historical_dataset_repository,
+        vehicle_catalog=resolved_vehicle_catalog,
     )
     get_dataset_valid_operations = GetDatasetValidOperations(historical_dataset_repository)
     if settings.mlflow_tracking_uri is not None:
@@ -445,6 +451,7 @@ def create_app(
             generate_fuel_prediction,
             guard,
             resolved_location_catalog,
+            resolved_vehicle_catalog,
             maps_provider,
         )
     )

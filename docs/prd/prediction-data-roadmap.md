@@ -27,7 +27,8 @@ not mean starting without a model.
 
 **Fields:** specific vehicle · vehicle type · total distance · total lifting hours
 
-**Status:** implemented. See `20260905_17_vehicle_identity`.
+**Status:** implemented. See `20260905_17_vehicle_identity` and
+`20260905_18_vehicle_catalog`.
 
 The day arrives as a single lump: how far the vehicle went, how long it spent
 lifting, and which truck did it.
@@ -41,6 +42,16 @@ one. The operational sheets have always named the individual unit.
 Recording *which truck*, not merely that it was heavy haulage, was the cheapest
 improvement available: two cranes of the same model do not consume alike once
 one is older.
+
+The fleet is reference data the planner already maintains, so it lives in a
+`vehicles` table imported from the workbook's `Dim_Kendaraan` sheet — 23
+vehicles across four groups (Crane, Truck, Forklift, Vacuum Truck) — rather than
+a list in code that needs a deploy when a truck arrives or leaves. Load it with
+`python -m fuel_predictor import-vehicles`.
+
+The table also carries the aliases from the workbook's own `Peta_Nama_Sumber`
+map, so history written as `PM 01`, `T CRANE 01` or `WHELL CRANE` resolves to
+one vehicle instead of fragmenting the feature across spellings.
 
 - **The model sees:** the scale of the day, and the habits of each unit.
 - **Blind to:** the shape of the day. Two operations covering the same distance
@@ -234,12 +245,8 @@ level, and so does what the model is able to explain.
 
 These need answers from the operation, not from engineering:
 
-1. **Is "Prime Mover" one truck or several?** "Truck Crane 01" and "02" are
-   clearly individual units. If "Prime Mover" covers several trucks sharing a
-   sheet, there are fewer distinct units than it appears and the per-unit effect
-   is weaker.
-2. **Do the fuel figures attach to a truck or to a day?** If two vehicles ever
+1. **Do the fuel figures attach to a truck or to a day?** If two vehicles ever
    work one operation and the litres are recorded jointly, per-vehicle
    attribution is muddier than the sheet layout suggests.
-3. **Is Level 2 confirmed?** It is built and waiting. Because its history cannot
+2. **Is Level 2 confirmed?** It is built and waiting. Because its history cannot
    be backfilled, the cost of deciding late is measured in months.

@@ -356,6 +356,22 @@ class LocationRow(Base):
     satellite_point: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
+class VehicleRow(Base):
+    """The fleet, imported from the planner's "Dim_Kendaraan" sheet.
+
+    Keyed by name because that is the key the source sheet uses and the name is
+    what a daily operation records. `aliases` holds the other spellings the same
+    vehicle appears under, so importing history resolves them to one vehicle
+    instead of scattering it across several.
+    """
+
+    __tablename__ = "vehicles"
+
+    name: Mapped[str] = mapped_column(String(128), primary_key=True)
+    vehicle_group: Mapped[str] = mapped_column(String(64), nullable=False)
+    aliases: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+
+
 type SessionFactory = sessionmaker[Session]
 
 
