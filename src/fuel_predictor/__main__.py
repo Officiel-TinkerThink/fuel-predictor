@@ -163,6 +163,7 @@ def _seed_demo(force: bool) -> int:
     from fuel_predictor.application.baseline_predictions import TrainBaselineCandidate
     from fuel_predictor.application.historical_datasets import ImportHistoricalDataset
     from fuel_predictor.application.model_lifecycle import PromoteCandidateModel
+    from fuel_predictor.application.prediction_features import feature_values
     from fuel_predictor.infrastructure.historical_source_reader import (
         SpreadsheetHistoricalDatasetSourceReader,
     )
@@ -221,11 +222,21 @@ def _seed_demo(force: bool) -> int:
         promoted = PromoteCandidateModel(predictions, predictions).execute(
             candidate.model_version_id
         )
+
+        # Read the model back before calling the database ready. Training only
+        # proves it could be written; serving needs it fetched again, possibly
+        # from a different machine than the one that trained it. When those two
+        # are wired up wrongly the training step still reports success and the
+        # first prediction is what fails -- in front of whoever we handed the
+        # demo to.
+        sample = feature_values(imported.valid_operations[0].operation)
+        litres = model_store.predict(promoted.artifact_uri, sample)
     except Exception as error:  # noqa: BLE001 - the operator needs a readable message
         print(f"Pengisian data awal gagal: {error}", file=sys.stderr)
         return 1
 
     print(f"  Model {promoted.model_version_id} dipromosikan menjadi aktif.")
+    print(f"  Model dibaca ulang dan menghasilkan {litres:.1f} L untuk satu baris contoh.")
     print("Basis data siap dipakai: buka /prediksi dan buat satu operasi harian.")
     return 0
 

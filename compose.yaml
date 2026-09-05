@@ -17,12 +17,18 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
 
+  # `--artifacts-destination`, not `--default-artifact-root`: the second names
+  # a path and hands that path to clients, so the app container was told to
+  # read /mlflow/artifacts on its own filesystem, where nothing exists. The
+  # first keeps the path private to this server and gives clients
+  # `mlflow-artifacts:/...` to fetch over HTTP, which is the only thing that
+  # works when the writer and the reader are different containers.
   mlflow:
     build: .
     command: >
       mlflow server
       --backend-store-uri sqlite:////mlflow/mlflow.db
-      --default-artifact-root /mlflow/artifacts
+      --artifacts-destination /mlflow/artifacts
       --host 0.0.0.0
       --port 5000
     environment:

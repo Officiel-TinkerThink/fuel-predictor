@@ -58,14 +58,22 @@ docker compose up
 ```
 
 Leave this running — it is the application's log. The first start migrates the
-database and seeds it, so give it a minute. You are looking for two lines:
+database and seeds it, so give it a minute. You are looking for these lines:
 
 ```
 seed-1  |   1110 lokasi dan 23 kendaraan dimuat.
+seed-1  |   Riwayat DSV-000001 diimpor: 9 baris valid.
+seed-1  |   Kandidat MDL-… dilatih.
 seed-1  |   Model MDL-… dipromosikan menjadi aktif.
+seed-1  |   Model dibaca ulang dan menghasilkan 16.6 L untuk satu baris contoh.
+seed-1  | Basis data siap dipakai: buka /prediksi dan buat satu operasi harian.
 ```
 
-After those, the seed container exits. That is expected: it has one job.
+The last line before the summary matters most: the seed loads the model it just
+trained and scores one row with it, so "seeded" means a prediction has actually
+been produced, not merely that a file was written.
+
+After that, the seed container exits. That is expected: it has one job.
 
 ## Step 4 — Open the application
 
