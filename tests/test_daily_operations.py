@@ -1,5 +1,6 @@
 import re
 from pathlib import Path
+from urllib.parse import urlencode
 
 from fastapi.testclient import TestClient
 
@@ -110,8 +111,52 @@ def test_form_rejects_invalid_operation_and_preserves_useful_input(tmp_path: Pat
     assert "Periksa kembali data operasi" in response.text
     assert "Jam lifting harus lebih besar dari 0 untuk mode yang mencakup lifting." in response.text
     assert 'value="18.5"' in response.text
-    # Activity is chosen per stop now, so the form has no operation-level mode
-    # dropdown to re-select; what it must preserve is the distance entered.
+    assert '<option value="lifting" selected>' in response.text
+    # The rejected submission is exactly the case where the planner still has
+    # to enter lifting hours, so the field comes back visible rather than
+    # hidden behind a mode change it has already made.
+    assert '<div class="field" id="lifting-field">' in response.text
+
+
+def test_form_asks_for_one_activity_and_lifting_total_for_the_whole_operation(
+    tmp_path: Path,
+) -> None:
+    """Level 1 records the day as a whole: one activity, one lifting total.
+
+    Per-stop activity belongs to a later level; asking for it here would put a
+    field on the form that nothing in the trained model can read.
+    """
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        form = client.get("/prediksi")
+        response = client.post(
+            "/operasi-harian",
+            content=urlencode(
+                [
+                    ("vehicle_category", "ANGBER"),
+                    ("vehicle", "Prime Mover"),
+                    ("activity_mode", "transport_and_lifting"),
+                    ("lifting_hours", "3.5"),
+                    ("total_distance_km", "64"),
+                    ("distance_source", "manual"),
+                    ("stop_sequence", "Depo"),
+                    ("stop_sequence", ""),
+                    ("stop_sequence", "Site A"),
+                ]
+            ),
+            headers={"content-type": "application/x-www-form-urlencoded"},
+        )
+
+    assert form.status_code == 200
+    assert 'name="activity_mode"' in form.text
+    assert 'name="lifting_hours"' in form.text
+    assert 'name="stop_activity"' not in form.text
+    # The route itself is unchanged: stops are still ordered locations, and a
+    # row left blank is simply not a stop.
+    assert form.text.count('name="stop_sequence"') == 2
+    assert response.status_code == 201
+    assert "Angkut dan lifting" in response.text
+    assert "Depo" in response.text
+    assert "Site A" in response.text
 
 
 def test_created_operation_remains_retrievable_after_app_restart(tmp_path: Path) -> None:

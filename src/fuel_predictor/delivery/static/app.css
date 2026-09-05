@@ -822,10 +822,13 @@ dialog::backdrop {
   margin: 0 0 var(--space-5);
 }
 
+/* The map sits above the stops and takes the full width of the card: a route
+   is read at a glance, a stop list is read line by line, and the map was the
+   one that suffered in a 300px column. */
 .stops-layout {
   display: flex;
+  flex-direction: column;
   gap: 20px;
-  align-items: flex-start;
 }
 
 .stops-column {
@@ -887,13 +890,9 @@ dialog::backdrop {
 .stop-fields {
   flex: 1;
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: 1fr;
   gap: 12px;
   min-width: 0;
-}
-
-.stop-fields--single {
-  grid-template-columns: 1fr;
 }
 
 .stop-fields .field {
@@ -937,9 +936,7 @@ dialog::backdrop {
 /* ---------- Route preview ---------- */
 
 .route-preview {
-  flex: 0 0 300px;
-  position: sticky;
-  top: 20px;
+  order: -1;
 }
 
 .route-preview__title {
@@ -954,6 +951,7 @@ dialog::backdrop {
   border: 1px solid #dde3e6;
   border-radius: 8px;
   overflow: hidden;
+  min-height: 340px;
   background: repeating-linear-gradient(
     45deg,
     #eef2f3,
@@ -963,14 +961,10 @@ dialog::backdrop {
   );
 }
 
-.route-preview__canvas {
-  min-height: 120px;
-}
-
 .route-preview__canvas iframe {
   display: block;
   width: 100%;
-  height: 120px;
+  height: 340px;
   border: 0;
 }
 
@@ -978,6 +972,16 @@ dialog::backdrop {
    so without this the map would keep painting once hidden. */
 .route-preview__canvas iframe[hidden] {
   display: none;
+}
+
+/* Under a full-width map the status line and the distance sit side by side
+   rather than stacking into dead space. */
+.route-preview__readouts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .route-preview__api {
@@ -988,14 +992,17 @@ dialog::backdrop {
 }
 
 .route-preview__distance {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
   margin-top: 8px;
-  padding: 10px;
+  padding: 8px 12px;
   background: #f4f6f7;
   border-radius: 8px;
 }
 
 .route-preview__distance-label {
-  margin: 0 0 2px;
+  margin: 0;
   font-size: 12px;
   color: #5c6b71;
 }
@@ -1008,13 +1015,10 @@ dialog::backdrop {
 }
 
 @media (max-width: 60rem) {
-  .stops-layout {
-    display: block;
-  }
-
-  .route-preview {
-    position: static;
-    margin-top: var(--space-4);
+  .route-preview__canvas,
+  .route-preview__canvas iframe {
+    min-height: 240px;
+    height: 240px;
   }
 }
 

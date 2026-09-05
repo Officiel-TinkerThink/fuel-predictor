@@ -12,10 +12,13 @@
       <legend>Detail operasi</legend>
       {{ ui.select_field('vehicle_category', 'Kategori angkutan', [('ANGBER', 'ANGBER — Angkutan Berat')], values.get('vehicle_category', 'ANGBER'), errors=errors, required=true) }}
       {{ ui.select_field('vehicle', 'Kendaraan', [('', 'Pilih kendaraan…')] + vehicle_options, values.get('vehicle', ''), hint='Unit yang menjalankan operasi ini. Dipakai model untuk membedakan konsumsi tiap kendaraan.', errors=errors, required=true) }}
-      {{ ui.stop_sequence_field(values.get('stop_sequence'), location_options, values.get('stop_activity'), route_preview_available=route_preview_available) }}
-      <div class="field" id="lifting-field" hidden>
-        {{ ui.number_field('lifting_hours', 'Jam lifting', 'jam', values.get('lifting_hours', ''), hint='Wajib bila ada pemberhentian dengan aktivitas Muat atau Bongkar.', errors=errors, min=0.01) }}
+      {{ ui.select_field('activity_mode', 'Aktivitas', [('transport', 'Angkut'), ('lifting', 'Lifting'), ('transport_and_lifting', 'Angkut dan lifting')], values.get('activity_mode', 'transport'), hint='Pekerjaan yang dilakukan sepanjang operasi ini.', errors=errors, required=true) }}
+      {# Hidden only when the chosen mode has no lifting in it, so a rejected
+         submission comes back with the field the planner still has to fill. #}
+      <div class="field" id="lifting-field"{% if values.get('activity_mode', 'transport') == 'transport' %} hidden{% endif %}>
+        {{ ui.number_field('lifting_hours', 'Jam lifting', 'jam', values.get('lifting_hours', ''), hint='Total jam lifting sepanjang operasi. Wajib bila aktivitas mencakup lifting.', errors=errors, min=0.01) }}
       </div>
+      {{ ui.stop_sequence_field(values.get('stop_sequence'), location_options, route_preview_available=route_preview_available) }}
       {{ ui.select_field('distance_source', 'Sumber jarak', [('routing_provider', 'Rute otomatis (dihitung dari peta)'), ('manual', 'Input manual')], values.get('distance_source', 'routing_provider'), hint='Jika rute berhasil dihitung, sistem memakai hasil hitung rute. Input manual dipakai bila penyedia rute tidak tersedia.', errors=errors, required=true) }}
       <div id="manual-distance">
         {{ ui.number_field('total_distance_km', 'Jarak total cadangan', 'km', values.get('total_distance_km', ''), errors=errors, min=0.01) }}

@@ -35,25 +35,6 @@ _MODE_LABELS = {
 }
 _SOURCE_LABELS = {"manual": "Input manual", "routing_provider": "Penyedia rute"}
 
-# The form records an activity per stop; the model still learns from one mode
-# for the whole operation, so it is derived from what the stops actually do.
-_LIFTING_ACTIVITIES = frozenset({"Muat", "Bongkar"})
-_TRANSPORT_ACTIVITIES = frozenset({"Angkut"})
-
-
-def _at(values: list[str], index: int) -> str:
-    return values[index] if 0 <= index < len(values) else ""
-
-
-def _activity_mode_for(activities: list[str]) -> str:
-    lifts = any(activity in _LIFTING_ACTIVITIES for activity in activities)
-    transports = any(activity in _TRANSPORT_ACTIVITIES for activity in activities)
-    if lifts and transports:
-        return "transport_and_lifting"
-    if lifts:
-        return "lifting"
-    return "transport"
-
 
 def build_prediction_pages_router(
     create_daily_operation: CreateDailyOperation,
@@ -120,19 +101,13 @@ def build_prediction_pages_router(
         submitted: dict[str, Any] = {
             key: str(value) for key, value in form_data.items() if key != "csrf_token"
         }
-        # The form emits a location for every row but an activity only for the
-        # rows after the departure point, so they are paired up by position
-        # before blank rows are dropped — otherwise a half-filled row would
-        # slide every activity onto the wrong stop.
-        raw_stops = [str(value).strip() for value in form_data.getlist("stop_sequence")]
-        raw_activities = [str(value).strip() for value in form_data.getlist("stop_activity")]
-        paired = [
-            (stop, "" if index == 0 else _at(raw_activities, index - 1))
-            for index, stop in enumerate(raw_stops)
+        # A row the planner left empty is not a stop, so it never reaches the
+        # route: the sequence is the locations actually chosen, in order.
+        submitted["stop_sequence"] = [
+            stop
+            for stop in (str(value).strip() for value in form_data.getlist("stop_sequence"))
             if stop
         ]
-        submitted["stop_sequence"] = [stop for stop, _ in paired]
-        submitted["stop_activity"] = [activity for _, activity in paired[1:]]
         payload: dict[str, Any] = dict(submitted)
         if payload.get("lifting_hours") == "":
             payload["lifting_hours"] = None
@@ -140,19 +115,6 @@ def build_prediction_pages_router(
             payload["vehicle"] = None
         if payload.get("total_distance_km") == "":
             payload["total_distance_km"] = None
-        # The raw form key is dropped: the request model forbids fields it does
-        # not declare. Activities are only sent when the form actually collected
-        # them, so an API-shaped post without them stays valid.
-        payload.pop("stop_activity", None)
-        activities = [activity for _, activity in paired]
-        if any(activities):
-            payload["stop_activities"] = activities
-            payload["activity_mode"] = _activity_mode_for(activities)
-        elif not payload.get("activity_mode"):
-            # Nothing to derive from and nothing supplied: a plan with no stops
-            # yet is transport, rather than a "mode wajib diisi" the form has
-            # no field to fix.
-            payload["activity_mode"] = _activity_mode_for([])
 
         try:
             validated = CreateDailyOperationRequest.model_validate(payload)

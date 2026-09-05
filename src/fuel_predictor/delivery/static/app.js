@@ -71,40 +71,27 @@
     });
   });
 
-  // The ids are `field-<name>`: that is what the form-field macro emits. This
-  // block queried `#activity_mode` and `#lifting_hours`, so the guard below was
-  // always false and the toggle never ran — the field stayed visible for
-  // transport-only trips and never became required. Nothing caught it because
-  // the Python suite asserts against server-rendered HTML and never executes
-  // this file.
-  // Lifting-hours only applies to some activity modes. Without JS the field
-  // just stays visible and optional; the server is the real source of truth
-  // for whether it's required (DailyOperationValidationError), so hiding it
+  // Lifting-hours only applies to some activity modes. The ids are
+  // `field-<name>`: that is what the form-field macro emits, and querying
+  // `#activity_mode` instead once left the guard permanently false so the
+  // toggle never ran. Without JS the server still renders the field whenever
+  // the chosen mode includes lifting, and it is the real source of truth for
+  // whether the value is required (DailyOperationValidationError) — hiding it
   // here is convenience only, never validation.
   var lifting = document.querySelector("#field-lifting_hours");
   var liftingField = document.querySelector("#lifting-field");
-  var stopsContainer = document.querySelector("#stop-sequence");
-  if (lifting && liftingField && stopsContainer) {
-    var LIFTING_ACTIVITIES = ["Muat", "Bongkar"];
+  var activityMode = document.querySelector("#field-activity_mode");
+  if (lifting && liftingField && activityMode) {
+    var LIFTING_MODES = ["lifting", "transport_and_lifting"];
     var syncLifting = function () {
-      var applies = Array.prototype.slice
-        .call(stopsContainer.querySelectorAll('select[name="stop_activity"]'))
-        .some(function (select) {
-          return LIFTING_ACTIVITIES.indexOf(select.value) !== -1;
-        });
+      var applies = LIFTING_MODES.indexOf(activityMode.value) !== -1;
       lifting.required = applies;
       liftingField.hidden = !applies;
       if (!applies) {
         lifting.value = "";
       }
     };
-    // Delegated, so rows added after load are covered too.
-    stopsContainer.addEventListener("change", function (event) {
-      if (event.target.name === "stop_activity") {
-        syncLifting();
-      }
-    });
-    document.addEventListener("claude:stops-changed", syncLifting);
+    activityMode.addEventListener("change", syncLifting);
     syncLifting();
   }
 
@@ -132,9 +119,6 @@
         }
       });
       updateRouteDistance();
-      // Rows added or removed can change whether any stop lifts, which is what
-      // decides if the lifting-hours field applies.
-      document.dispatchEvent(new CustomEvent("claude:stops-changed"));
     };
 
     // The panel shows the real Google Maps route when a routing key is
@@ -302,7 +286,7 @@
     };
 
     // A new row is cloned from an existing stop so it inherits the location
-    // catalog and the activity list without restating either here.
+    // catalog without restating it here.
     var newStopRow = function () {
       var template = sequence.querySelector(".stop-row:not(.stop-row--start)");
       if (!template) {
