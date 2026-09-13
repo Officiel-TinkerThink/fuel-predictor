@@ -1,0 +1,88 @@
+name: Deploy
+
+# Only `local` is a deploy branch (ADR: production runs from `local`, not
+# `main`). Pushing anywhere else never touches the home server.
+on:
+  push:
+    branches: [local]
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]" -c constraints.txt
+      - run: python -m ruff check src tests
+      - run: python -m mypy src tests
+      - run: python -m pytest
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # ghcr.io requires a lowercase path; the GitHub org/repo name here has
+      # capitals (Officiel-TinkerThink), so this can't just be
+      # ghcr.io/${{ github.repository }}.
+      - id: image
+        run: |
+          echo "image=${REGISTRY}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.image.outputs.image }}:${{ github.sha }}
+            ${{ steps.image.outputs.image }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: self-hosted
+    steps:
+      - name: Pull the new image and restart the stack
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_ACTOR: ${{ github.actor }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DEPLOY_PATH:-}" ]; then
+            echo "::error::Set the DEPLOY_PATH repository variable (Settings > Secrets and variables > Actions > Variables) to the fuel-predictor checkout path on the home server." >&2
+            exit 1
+          fi
+          cd "$DEPLOY_PATH"
+
+          # This checkout is deploy-only: always made to match the branch
+          # exactly, never hand-edited. .env is gitignored, so it survives.
+          git fetch origin local
+          git reset --hard origin/local
+
+          echo "$GHCR_TOKEN" | docker login "$REGISTRY" -u "$GHCR_ACTOR" --password-stdin
+
+          docker compose -f compose.prod.yaml pull
+          docker compose -f compose.prod.yaml up -d --remove-orphans
+          docker image prune -f

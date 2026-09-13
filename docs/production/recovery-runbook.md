@@ -1,7 +1,9 @@
 # Recovery Runbook
 
 For whoever holds technical responsibility for the deployment. The operator-facing counterpart is
-[Panduan Operator](panduan-operator.md); nothing in this file is an operator's job.
+[Panduan Operator](panduan-operator.md); nothing in this file is an operator's job. How a push
+actually reaches this VM is [ci-cd.md](ci-cd.md) - if a deploy itself is the problem rather than
+the running application, start there instead.
 
 Written to be usable at 2am by someone who did not build this. Every section states **what you
 will see**, **what it means**, and **what to do**, in that order.
