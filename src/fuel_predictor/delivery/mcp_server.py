@@ -13,10 +13,8 @@ import json
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Protocol
 
-from fuel_predictor.application.agent_credentials import ResolveAgentCredential
-from fuel_predictor.application.identity import RecordAuditEvent
 from fuel_predictor.domain.identity import AgentClient, AgentScope, AuditOutcome
 
 _BEARER = "bearer "
@@ -90,13 +88,51 @@ class McpToolRegistry:
         return tuple(tool for tool in self.tools if client.has_scope(tool.scope))
 
 
+class _AuditCounter(Protocol):
+    """The one thing McpRequestHandler needs from the audit repository directly."""
+
+    def count_recent_by_actor(self, actor: str, action_prefix: str, since: datetime) -> int: ...
+
+
+class _CredentialResolver(Protocol):
+    """What McpRequestHandler needs to turn a bearer token into a caller.
+
+    A Protocol rather than `ResolveAgentCredential` itself, so a test double can
+    stand in without being that concrete class - the same reason `RoutingProvider`
+    and `LocationCatalog` are ports elsewhere in this codebase.
+    """
+
+    def execute(self, token: str | None) -> AgentClient | None: ...
+
+
+class _AuditRecorder(Protocol):
+    """What McpRequestHandler needs to record and rate-limit against the audit trail."""
+
+    # A read-only property, not a plain attribute: RecordAuditEvent is a frozen
+    # dataclass, so a plain annotation here (which Protocol treats as requiring
+    # a settable attribute) would reject it.
+    @property
+    def audit_repository(self) -> _AuditCounter: ...
+
+    def execute(
+        self,
+        actor: str,
+        action: str,
+        outcome: AuditOutcome,
+        *,
+        actor_kind: str = "user",
+        subject: str | None = None,
+        details: dict[str, str | int | float | bool | None] | None = None,
+    ) -> object: ...
+
+
 @dataclass(frozen=True, slots=True)
 class McpRequestHandler:
     """Authenticates, authorises, audits, and dispatches one tool call."""
 
     registry: McpToolRegistry
-    resolve_credential: ResolveAgentCredential
-    record_audit: RecordAuditEvent
+    resolve_credential: _CredentialResolver
+    record_audit: _AuditRecorder
     # Per client, so one runaway agent cannot deny service to the others — the
     # same reason each holds its own revocable credential. 0 disables it.
     max_calls_per_window: int = 0

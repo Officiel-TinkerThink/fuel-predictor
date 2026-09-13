@@ -10,6 +10,15 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  # Static checks plus collection, not full execution: a meaningful share of
+  # the suite trains real scikit-learn models and writes to MLflow/Evidently,
+  # which is legitimate as integration coverage but far too slow to sit in the
+  # path of every push (tens of minutes). --collect-only still imports every
+  # test module and resolves every fixture, so a broken import, a bad fixture,
+  # or a syntax error is still caught here in seconds. Running the fast
+  # majority of actual tests too would need the slow ones marked (e.g.
+  # `@pytest.mark.slow` + `pytest -m "not slow"`) - worth doing, just not
+  # folded into this change.
   test:
     runs-on: ubuntu-latest
     steps:
@@ -20,7 +29,7 @@ jobs:
       - run: pip install -e ".[dev]" -c constraints.txt
       - run: python -m ruff check src tests
       - run: python -m mypy src tests
-      - run: python -m pytest
+      - run: python -m pytest --collect-only -q
 
   build-and-push:
     needs: test

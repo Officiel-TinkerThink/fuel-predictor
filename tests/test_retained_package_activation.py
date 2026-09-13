@@ -138,7 +138,7 @@ def _model_version_id(test_client: TestClient) -> str:
     candidates = test_client.get("/api/v1/model-candidates")
     if candidates.status_code == 200:
         return str(candidates.json()["candidates"][0]["model_version_id"])
-    page = test_client.get("/pengelolaan-model").text
+    page: str = test_client.get("/pengelolaan-model").text
     marker = 'action="/kandidat-model/'
     start = page.index(marker) + len(marker)
     return page[start : page.index("/promosikan", start)]

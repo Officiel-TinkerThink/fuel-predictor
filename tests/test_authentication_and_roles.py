@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+from httpx import Response
 
 from fuel_predictor.main import create_app
 
@@ -16,14 +17,15 @@ def _app(tmp_path: Path) -> TestClient:
     )
 
 
-def _sign_in(client: TestClient, username: str, password: str) -> object:
+def _sign_in(client: TestClient, username: str, password: str) -> Response:
     page = client.get("/masuk")
     token = _csrf_token(page.text)
-    return client.post(
+    response: Response = client.post(
         "/masuk",
         data={"username": username, "password": password, "csrf_token": token},
         follow_redirects=False,
     )
+    return response
 
 
 def _csrf_token(html: str) -> str:

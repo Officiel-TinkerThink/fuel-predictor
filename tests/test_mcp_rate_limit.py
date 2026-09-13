@@ -21,7 +21,7 @@ from fuel_predictor.delivery.mcp_server import (
     McpTool,
     McpToolRegistry,
 )
-from fuel_predictor.domain.identity import AgentClient, AgentScope
+from fuel_predictor.domain.identity import AgentClient, AgentScope, AuditOutcome
 
 _NOW = datetime(2026, 8, 27, 12, 0, tzinfo=UTC)
 
@@ -55,10 +55,17 @@ class _RecordAudit:
         self.audit_repository = audit
         self._clock = clock or (lambda: _NOW)
 
-    def execute(self, **kwargs: object) -> None:
-        self.audit_repository.records.append(
-            (str(kwargs["actor"]), str(kwargs["action"]), self._clock())
-        )
+    def execute(
+        self,
+        actor: str,
+        action: str,
+        outcome: AuditOutcome,
+        *,
+        actor_kind: str = "user",
+        subject: str | None = None,
+        details: dict[str, str | int | float | bool | None] | None = None,
+    ) -> None:
+        self.audit_repository.records.append((actor, action, self._clock()))
 
 
 class _Resolver:

@@ -64,14 +64,17 @@ def _alert(
     )
 
 
+_Delivery = tuple[DeliverMonitoringAlerts, _RecordingNotifier, _MemoryStore]
+
+
 @pytest.fixture
-def delivery() -> tuple[DeliverMonitoringAlerts, _RecordingNotifier, _MemoryStore]:
+def delivery() -> _Delivery:
     notifier = _RecordingNotifier()
     store = _MemoryStore()
     return DeliverMonitoringAlerts(notifier=notifier, store=store), notifier, store
 
 
-def test_a_new_alert_is_sent_with_its_remediation(delivery: tuple) -> None:
+def test_a_new_alert_is_sent_with_its_remediation(delivery: _Delivery) -> None:
     deliver, notifier, _ = delivery
 
     result = deliver.execute([_alert()], _NOW)
@@ -84,7 +87,7 @@ def test_a_new_alert_is_sent_with_its_remediation(delivery: tuple) -> None:
     assert "Tindakan:" in body
 
 
-def test_the_same_alert_is_not_sent_again_on_the_next_run(delivery: tuple) -> None:
+def test_the_same_alert_is_not_sent_again_on_the_next_run(delivery: _Delivery) -> None:
     """A job that mails the same warning hourly trains its reader to ignore it."""
     deliver, notifier, _ = delivery
     deliver.execute([_alert()], _NOW)
@@ -96,7 +99,7 @@ def test_the_same_alert_is_not_sent_again_on_the_next_run(delivery: tuple) -> No
     assert len(notifier.sent) == 1
 
 
-def test_an_alert_that_escalates_is_sent_again(delivery: tuple) -> None:
+def test_an_alert_that_escalates_is_sent_again(delivery: _Delivery) -> None:
     deliver, notifier, _ = delivery
     deliver.execute([_alert()], _NOW)
 
@@ -107,7 +110,7 @@ def test_an_alert_that_escalates_is_sent_again(delivery: tuple) -> None:
     assert "KRITIS" in notifier.sent[1].subject
 
 
-def test_a_resolved_alert_closes_the_loop(delivery: tuple) -> None:
+def test_a_resolved_alert_closes_the_loop(delivery: _Delivery) -> None:
     """Without this, an operator never learns the problem they were told about ended."""
     deliver, notifier, store = delivery
     deliver.execute([_alert()], _NOW)
@@ -154,7 +157,7 @@ def test_an_unconfigured_channel_says_so_instead_of_looking_like_success() -> No
     assert store.state == {}
 
 
-def test_nothing_is_sent_when_there_is_nothing_to_say(delivery: tuple) -> None:
+def test_nothing_is_sent_when_there_is_nothing_to_say(delivery: _Delivery) -> None:
     deliver, notifier, _ = delivery
 
     result = deliver.execute([], _NOW)

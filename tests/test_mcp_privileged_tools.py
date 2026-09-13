@@ -63,8 +63,11 @@ class _FakeReader:
         return _Model("MDL-aktif")
 
 
+_Tools = tuple[dict[str, Any], _FakeActivation]
+
+
 @pytest.fixture
-def tools() -> tuple[dict[str, Any], _FakeActivation]:
+def tools() -> _Tools:
     activation = _FakeActivation()
     built = build_privileged_tools(
         activate_retained_package=activation,
@@ -100,7 +103,7 @@ def test_privileged_tools_are_absent_unless_configuration_enables_them(tmp_path:
     assert "validate_model_package" not in listed
 
 
-def test_activation_does_nothing_without_a_confirmation(tools: tuple) -> None:
+def test_activation_does_nothing_without_a_confirmation(tools: _Tools) -> None:
     registry, activation = tools
 
     response = registry["activate_model_version"].handler({"model_version_id": "MDL-baru"})
@@ -111,7 +114,7 @@ def test_activation_does_nothing_without_a_confirmation(tools: tuple) -> None:
     assert activation.activated == []
 
 
-def test_activation_proceeds_once_confirmed(tools: tuple) -> None:
+def test_activation_proceeds_once_confirmed(tools: _Tools) -> None:
     registry, activation = tools
     preview = registry["activate_model_version"].handler({"model_version_id": "MDL-baru"})
 
@@ -123,7 +126,7 @@ def test_activation_proceeds_once_confirmed(tools: tuple) -> None:
     assert activation.activated == ["MDL-baru"]
 
 
-def test_a_confirmation_cannot_be_replayed_against_a_different_version(tools: tuple) -> None:
+def test_a_confirmation_cannot_be_replayed_against_a_different_version(tools: _Tools) -> None:
     """A token approving one model must not approve another."""
     registry, activation = tools
     preview = registry["activate_model_version"].handler({"model_version_id": "MDL-baru"})
@@ -136,7 +139,7 @@ def test_a_confirmation_cannot_be_replayed_against_a_different_version(tools: tu
     assert activation.activated == []
 
 
-def test_a_confirmation_for_activation_does_not_authorise_a_rollback(tools: tuple) -> None:
+def test_a_confirmation_for_activation_does_not_authorise_a_rollback(tools: _Tools) -> None:
     registry, activation = tools
     preview = registry["activate_model_version"].handler({"model_version_id": "MDL-baru"})
 
@@ -152,7 +155,7 @@ def test_a_confirmation_for_activation_does_not_authorise_a_rollback(tools: tupl
     assert activation.rollbacks == []
 
 
-def test_rollback_requires_a_reason(tools: tuple) -> None:
+def test_rollback_requires_a_reason(tools: _Tools) -> None:
     registry, _ = tools
 
     with pytest.raises(ValueError, match="Alasan"):
@@ -161,7 +164,7 @@ def test_rollback_requires_a_reason(tools: tuple) -> None:
         )
 
 
-def test_rollback_records_its_reason_when_confirmed(tools: tuple) -> None:
+def test_rollback_records_its_reason_when_confirmed(tools: _Tools) -> None:
     registry, activation = tools
     preview = registry["rollback_model_version"].handler(
         {"model_version_id": "MDL-lama", "reason": "prediksi meleset jauh"}
@@ -179,7 +182,7 @@ def test_rollback_records_its_reason_when_confirmed(tools: tuple) -> None:
     assert activation.rollbacks == [("MDL-lama", "prediksi meleset jauh")]
 
 
-def test_no_privileged_tool_accepts_model_bytes(tools: tuple) -> None:
+def test_no_privileged_tool_accepts_model_bytes(tools: _Tools) -> None:
     """An acceptance criterion: model binaries never travel through MCP arguments.
 
     A model reaches the system only by a human uploading a package, so a
@@ -193,7 +196,7 @@ def test_no_privileged_tool_accepts_model_bytes(tools: tuple) -> None:
             assert forbidden not in schema, (tool.name, forbidden)
 
 
-def test_every_privileged_tool_requires_the_privileged_scope(tools: tuple) -> None:
+def test_every_privileged_tool_requires_the_privileged_scope(tools: _Tools) -> None:
     registry, _ = tools
     read_only = AgentClient(
         client_id="AGT-1",

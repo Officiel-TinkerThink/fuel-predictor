@@ -15,6 +15,7 @@ from urllib.parse import urlencode
 from fastapi.testclient import TestClient
 
 from fuel_predictor.application.prediction_features import FEATURE_VERSION, feature_values
+from fuel_predictor.application.vehicles import VehicleOption
 from fuel_predictor.domain.daily_operation import (
     ActivityMode,
     DailyOperation,
@@ -250,17 +251,21 @@ def test_the_fleet_comes_from_the_sheet_export_not_from_code() -> None:
     }
 
 
+def _name(option: VehicleOption | None) -> str:
+    assert option is not None
+    return option.name
+
+
 def test_the_names_the_sheets_actually_use_resolve_to_one_vehicle() -> None:
     """History is written inconsistently; the workbook's own alias map fixes it."""
     catalog = PackagedVehicleCatalog()
 
-    assert catalog.find("PM 01") is not None
-    assert catalog.find("PM 01").name == "Prime Mover"
-    assert catalog.find("T CRANE 01").name == "Truck Crane 01"
-    assert catalog.find("WHELL CRANE").name == "Wheel Crane"
-    assert catalog.find("OFT").name == "Oil Field Truck"
+    assert _name(catalog.find("PM 01")) == "Prime Mover"
+    assert _name(catalog.find("T CRANE 01")) == "Truck Crane 01"
+    assert _name(catalog.find("WHELL CRANE")) == "Wheel Crane"
+    assert _name(catalog.find("OFT")) == "Oil Field Truck"
     # Case and spacing vary just as much as the names themselves.
-    assert catalog.find("  vt01 ").name == "VT 01"
+    assert _name(catalog.find("  vt01 ")) == "VT 01"
     assert catalog.find("Helikopter") is None
 
 

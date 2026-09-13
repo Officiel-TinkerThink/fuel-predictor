@@ -5,9 +5,9 @@ import mlflow
 import mlflow.sklearn
 import numpy as np
 from mlflow import MlflowClient
-from sklearn.feature_extraction import DictVectorizer  # type: ignore[import-untyped]
-from sklearn.linear_model import LinearRegression  # type: ignore[import-untyped]
-from sklearn.pipeline import Pipeline  # type: ignore[import-untyped]
+from sklearn.feature_extraction import DictVectorizer
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import Pipeline
 
 from fuel_predictor.application.baseline_predictions import BaselineModelStore
 from fuel_predictor.application.prediction_features import FEATURE_VERSION, feature_values

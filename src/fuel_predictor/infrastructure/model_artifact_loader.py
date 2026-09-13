@@ -86,7 +86,7 @@ class ModelPackageArtifactLoader:
             )
             return OnnxPredictor(session=session, feature_order=order)
 
-        import skops.io as skops_io  # type: ignore[import-untyped]
+        import skops.io as skops_io
 
         unknown = skops_io.get_untrusted_types(data=self.artifact_bytes)
         disallowed = sorted(set(unknown) - set(self.trusted_skops_types))

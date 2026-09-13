@@ -62,7 +62,9 @@ class _Store:
         self.present.discard(model_version)
 
 
-def _pruner(versions: list[ModelVersion], keep_retired: int = 3) -> tuple:
+def _pruner(
+    versions: list[ModelVersion], keep_retired: int = 3
+) -> tuple[PruneRetainedPackages, _Store]:
     store = _Store({v.model_version_id for v in versions})
     return (
         PruneRetainedPackages(
