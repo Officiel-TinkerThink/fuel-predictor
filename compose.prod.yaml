@@ -77,6 +77,12 @@ services:
       FUEL_PREDICTOR_MLFLOW_TRACKING_URI: http://mlflow:5000
       FUEL_PREDICTOR_BOOTSTRAP_ADMIN_USERNAME: ${FUEL_PREDICTOR_BOOTSTRAP_ADMIN_USERNAME:-}
       FUEL_PREDICTOR_BOOTSTRAP_ADMIN_PASSWORD: ${FUEL_PREDICTOR_BOOTSTRAP_ADMIN_PASSWORD:-}
+      # Without this the deployment has no routing provider at all: every
+      # plan entered as a stop sequence is refused until a manual distance is
+      # typed, and the route preview never draws. compose.yaml already passed
+      # it through; this file did not, which is how the dev site ended up
+      # asking for "jarak total cadangan" on every operation.
+      FUEL_PREDICTOR_GOOGLE_MAPS_API_KEY: ${FUEL_PREDICTOR_GOOGLE_MAPS_API_KEY:-}
       FUEL_PREDICTOR_ALERT_WEBHOOK_URL: ${FUEL_PREDICTOR_ALERT_WEBHOOK_URL:-}
       FUEL_PREDICTOR_ALERT_SMTP_HOST: ${FUEL_PREDICTOR_ALERT_SMTP_HOST:-}
       FUEL_PREDICTOR_ALERT_SMTP_PORT: ${FUEL_PREDICTOR_ALERT_SMTP_PORT:-587}
