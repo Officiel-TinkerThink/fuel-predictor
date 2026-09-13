@@ -16,20 +16,25 @@ Production runs from [`compose.prod.yaml`](../../compose.prod.yaml) on a single 
 
 | Service | Purpose | Published? |
 |---|---|---|
-| `caddy` | TLS termination, automatic Let's Encrypt renewal | **Yes** — 80, 443 |
-| `app` | The application | No — internal network only |
+| `caddy` | ADR 0012's bundled TLS termination - **profiled off on this VM**, see below | No (profile inactive) |
+| `app` | The application | **Yes — 8000**, see below |
 | `db` | PostgreSQL | No |
 | `mlflow` | Baseline training/tracking (ADR 0011: removed once ingestion reaches parity) | No |
 | `monitor` | Daily monitoring recompute and alert delivery | No |
 
-Only Caddy is reachable from outside. Verify after any change:
+**This VM is not the ADR 0012 default.** It runs one Caddy shared across several projects
+(started outside this compose file entirely - see [ci-cd.md](ci-cd.md)), not the bundled
+`caddy` service, which is why that service carries `profiles: ["bundled-proxy"]` and never
+starts here. Because of that, `app` publishes port 8000 so the shared Caddy can reach it -
+the same way the deployment worked before this pipeline existed. Verify after any change:
 
 ```bash
 docker compose -f compose.prod.yaml config | grep -c published
 ```
 
-Three published entries are expected — 80, 443 tcp, 443 udp. Anything more means something is
-exposed that should not be.
+One published entry is expected here — 8000. A deployment that *does* use the bundled Caddy
+(the ADR 0012 default) would instead expect three - 80, 443 tcp, 443 udp - and none for `app`.
+Anything beyond whichever of those applies means something is exposed that should not be.
 
 ---
 

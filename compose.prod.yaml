@@ -56,6 +56,14 @@ services:
   app:
     <<: *app-image
     restart: unless-stopped
+    # ADR 0012 assumes Caddy is bundled into this same compose project and
+    # reaches app over the internal network, so app normally publishes
+    # nothing. This VM's Caddy is a separate, externally-managed container
+    # fronting several projects (see docs/production/ci-cd.md) - it can only
+    # reach app via a host port, exactly as the previous manually-run
+    # deployment published it.
+    ports:
+      - "8000:8000"
     # --proxy-headers makes uvicorn honour X-Forwarded-Proto/For, and
     # --forwarded-allow-ips restricts that trust to the gateway. Without the
     # second flag any client could claim any source address by setting a
