@@ -121,17 +121,16 @@
       updateRouteDistance();
     };
 
-    // The panel shows the real Google Maps route when a routing key is
-    // configured. The app fetches it server-side, so the API key never
-    // reaches this page. The map itself needs no key; only the road distance
-    // does, so without one the readout falls back to a straight-line estimate,
-    // marked so it cannot be mistaken for a road distance.
-    var previewPanel = document.querySelector(".route-preview");
-    var previewEnabled = !!previewPanel && previewPanel.dataset.routePreview === "on";
+    // The map draws via Google's keyless embed, which needs no API key and
+    // costs nothing to call - it already shows its own distance/time badge.
+    // The real road distance is billed per call, so it is fetched exactly
+    // once per operation, server-side, only when the planner saves
+    // (CreateDailyOperation calls the routing provider then), never here on
+    // every stop edit. There is deliberately no separate distance readout on
+    // this panel any more: a second, differently-sourced number next to the
+    // map's own badge read as a discrepancy, not extra information.
     var mapImage = document.querySelector("#route-map");
     var statusLine = document.querySelector("#route-status");
-    var readout = document.querySelector("#route-distance");
-    var routeTimer = null;
 
     var chosenStops = function () {
       return rows()
@@ -179,30 +178,6 @@
       );
     };
 
-    var straightLineKm = function () {
-      var points = [];
-      rows().forEach(function (row) {
-        var select = row.querySelector('select[name="stop_sequence"]');
-        var option = select && select.selectedOptions ? select.selectedOptions[0] : null;
-        if (!option || !option.dataset || option.dataset.lat === undefined) {
-          return;
-        }
-        var lat = parseFloat(option.dataset.lat);
-        var lon = parseFloat(option.dataset.lon);
-        if (isFinite(lat) && isFinite(lon)) {
-          points.push([lat, lon]);
-        }
-      });
-      if (points.length < 2) {
-        return null;
-      }
-      var total = 0;
-      for (var index = 1; index < points.length; index += 1) {
-        total += haversineKm(points[index - 1], points[index]);
-      }
-      return total;
-    };
-
     var showEmptyRoute = function (message) {
       if (mapImage) {
         mapImage.hidden = true;
@@ -210,11 +185,6 @@
       }
       if (statusLine) {
         statusLine.textContent = message;
-      }
-      var estimate = straightLineKm();
-      if (readout) {
-        readout.textContent =
-          estimate === null ? "—" : "±" + estimate.toFixed(1).replace(".", ",") + " km";
       }
     };
 
@@ -235,54 +205,6 @@
       if (statusLine) {
         statusLine.textContent = "Rute Google Maps, dalam urutan yang dimasukkan.";
       }
-
-      // The road distance does need the Routes API. Without it, fall back to
-      // a straight-line estimate, marked so it cannot be mistaken for one.
-      var estimate = straightLineKm();
-      var fallbackLabel =
-        estimate === null ? "—" : "±" + estimate.toFixed(1).replace(".", ",") + " km";
-      if (!previewEnabled) {
-        if (readout) {
-          readout.textContent = fallbackLabel;
-        }
-        return;
-      }
-      var query = stops
-        .map(function (stop) {
-          return "lokasi=" + encodeURIComponent(stop);
-        })
-        .join("&");
-      window.clearTimeout(routeTimer);
-      routeTimer = window.setTimeout(function () {
-        fetch("/prediksi/rute?" + query, { headers: { Accept: "application/json" } })
-          .then(function (response) {
-            return response.ok ? response.json() : Promise.reject(response);
-          })
-          .then(function (data) {
-            if (readout) {
-              readout.textContent = String(data.jarak_km).replace(".", ",") + " km";
-            }
-          })
-          .catch(function () {
-            if (readout) {
-              readout.textContent = fallbackLabel;
-            }
-          });
-      }, 400);
-    };
-
-    var haversineKm = function (from, to) {
-      var radians = Math.PI / 180;
-      var earthRadiusKm = 6371;
-      var dLat = (to[0] - from[0]) * radians;
-      var dLon = (to[1] - from[1]) * radians;
-      var a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(from[0] * radians) *
-          Math.cos(to[0] * radians) *
-          Math.sin(dLon / 2) *
-          Math.sin(dLon / 2);
-      return 2 * earthRadiusKm * Math.asin(Math.min(1, Math.sqrt(a)));
     };
 
     // A new row is cloned from an existing stop so it inherits the location

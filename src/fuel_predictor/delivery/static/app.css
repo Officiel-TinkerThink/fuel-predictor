@@ -991,29 +991,6 @@ dialog::backdrop {
   color: #8a969b;
 }
 
-.route-preview__distance {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-top: 8px;
-  padding: 8px 12px;
-  background: #f4f6f7;
-  border-radius: 8px;
-}
-
-.route-preview__distance-label {
-  margin: 0;
-  font-size: 12px;
-  color: #5c6b71;
-}
-
-.route-preview__distance-value {
-  margin: 0;
-  font-size: 19px;
-  font-weight: 700;
-  color: #12222a;
-}
-
 @media (max-width: 60rem) {
   .route-preview__canvas,
   .route-preview__canvas iframe {
