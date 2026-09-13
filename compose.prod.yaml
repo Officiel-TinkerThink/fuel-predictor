@@ -96,6 +96,10 @@ services:
       - model_packages:/data/model-packages
 
   caddy:
+    # Opt-in: a deployment with its own proxy (ADR 0012) never activates this
+    # profile, so `docker compose` skips this service entirely - including
+    # requiring DOMAIN/ACME_EMAIL - rather than just leaving it unstarted.
+    profiles: ["bundled-proxy"]
     image: caddy:2-alpine
     restart: unless-stopped
     environment:

@@ -77,6 +77,15 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_ACTOR: ${{ github.actor }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          # caddy is profile-gated off (compose.prod.yaml) and never named in
+          # the commands below, so these values are never actually used - but
+          # Compose interpolates every service's environment block up front,
+          # before it even looks at which services or profiles are active, so
+          # the file fails to parse at all without something here. Real
+          # DOMAIN/ACME_EMAIL live in this VM's .env for its actual (shared,
+          # externally-managed) Caddy instance - unrelated to this one.
+          DOMAIN: unused.invalid
+          ACME_EMAIL: unused@example.invalid
         run: |
           set -euo pipefail
           if [ -z "${DEPLOY_PATH:-}" ]; then
