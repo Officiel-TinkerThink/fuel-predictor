@@ -13,9 +13,29 @@ three jobs in sequence:
 
 | Job | Runs on | Does |
 |---|---|---|
-| `test` | GitHub-hosted | `ruff`, `mypy --strict`, `pytest` (SQLite - no database service needed) |
+| `test` | GitHub-hosted | `ruff`, `mypy --strict`, `pytest --collect-only` - see "Why collection, not the full suite" below |
 | `build-and-push` | GitHub-hosted | Builds the image from [`Dockerfile`](../../Dockerfile), pushes it to GHCR tagged `latest` and with the commit SHA |
-| `deploy` | **your home server** | Resets its checkout to `origin/local`, pulls the new image, `docker compose up -d` |
+| `deploy` | **your home server** | Resets its checkout to `origin/local`, pulls the new image, `docker compose up -d` for `app db mlflow monitor` only |
+
+### Why collection, not the full suite
+
+A real share of the test suite trains actual scikit-learn models and writes to MLflow/Evidently -
+legitimate integration coverage, but tens of minutes of it, which has no business gating every
+single push. `pytest --collect-only` still imports every test module and resolves every fixture,
+so it catches the same class of failure (a broken import, a bad fixture, a module that can't even
+be parsed) in seconds. It does not run any test body, so nothing trains, nothing writes to MLflow.
+Restoring full-suite coverage without paying that cost on every push would mean marking the slow
+tests (`@pytest.mark.slow`) and running `pytest -m "not slow"` here - worth doing, not done yet.
+
+### Why `caddy` is left out of `deploy`
+
+This home server runs **one shared Caddy instance in front of several projects**, not one per app.
+It was started outside this compose file and outside this pipeline, so `deploy` names services
+explicitly (`app db mlflow monitor`) rather than bringing up everything `compose.prod.yaml`
+defines - `caddy` stays completely untouched. The `caddy` service still exists in
+`compose.prod.yaml` as the ADR 0012 default for a deployment that doesn't already have a proxy;
+this VM just isn't that case. Don't add `caddy` back to the `deploy` job's service list without
+setting `DOMAIN`/`ACME_EMAIL` for it AND confirming this VM should actually run a second Caddy.
 
 A failing `test` job stops everything after it - a broken push never reaches the home server. Only
 `local` triggers this; pushes to any other branch build nothing and deploy nothing.
