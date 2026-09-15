@@ -21,7 +21,11 @@
       {{ ui.stop_sequence_field(values.get('stop_sequence'), location_options, route_preview_available=route_preview_available) }}
       {{ ui.select_field('distance_source', 'Sumber jarak', [('routing_provider', 'Rute otomatis (dihitung dari peta)'), ('manual', 'Input manual')], values.get('distance_source', 'routing_provider'), hint='Jika rute berhasil dihitung, sistem memakai hasil hitung rute. Input manual dipakai bila penyedia rute tidak tersedia.', errors=errors, required=true) }}
       <div id="manual-distance">
-        {{ ui.number_field('total_distance_km', 'Jarak total cadangan', 'km', values.get('total_distance_km', ''), errors=errors, min=0.01) }}
+        {% if route_preview_available %}
+        {{ ui.number_field('total_distance_km', 'Jarak total cadangan', 'km', values.get('total_distance_km', ''), hint='Hanya dipakai bila rute tidak dapat dihitung.', errors=errors, min=0.01) }}
+        {% else %}
+        {{ ui.number_field('total_distance_km', 'Jarak total', 'km', values.get('total_distance_km', ''), hint='Penyedia rute belum dikonfigurasi pada instalasi ini, jadi jarak total wajib diisi secara manual.', errors=errors, required=true, min=0.01) }}
+        {% endif %}
       </div>
     </fieldset>
     <button type="submit">Simpan operasi harian</button>
