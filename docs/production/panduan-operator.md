@@ -179,6 +179,14 @@ pemantauan.
 
 Berikan cakupan seperlunya saja. Satu klien yang dicabut tidak mengganggu klien lain.
 
+**Menyerahkan ke pihak lain:** begitu kredensial terbit, di bawahnya muncul bagian
+**Cara menghubungkan** berisi alamat MCP aplikasi ini dan potongan konfigurasi yang sudah
+terisi kredensial untuk agen pengkodean yang umum dipakai (Claude Code, Cursor, Codex, VS Code).
+Salin potongan yang sesuai dan kirimkan ke pengembang di pihak lain lewat jalur yang aman —
+potongan itu memuat kredensialnya. Mereka tidak memerlukan akun di aplikasi ini; cukup
+kredensial itu. Bila mereka butuh penjelasan alat-alatnya, berikan berkas
+`docs/production/mcp-integration.md`.
+
 ---
 
 ## 8. Kalau ada yang tidak beres

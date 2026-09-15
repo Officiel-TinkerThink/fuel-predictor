@@ -566,10 +566,12 @@ token against `/mcp`, revoke it, watch the next call 401).
 - [x] `/mcp` speaks JSON-RPC 2.0: `initialize`, `notifications/initialized`, `tools/list`,
       `tools/call`. It is public to the *session* middleware only because it does its own bearer
       authentication; it is not unauthenticated.
-- [x] Seven read/compute tools, each declaring the one scope it needs: `predict_fuel`,
+- [x] Read/compute tools, each declaring the one scope it needs: `predict_fuel`,
       `get_service_health`, `get_drift_summary`, `get_performance_summary`, `get_current_model`,
-      `list_model_versions`, `get_prediction_input_schema`. Every one calls the same application
-      use case the web pages call, so a rule cannot drift between the human and agent surfaces.
+      `list_model_versions`, `get_prediction_input_schema` (and, since ADR 0013,
+      `find_similar_operations`, `list_vehicles`, `search_locations`, `estimate_route_distance`).
+      Every one calls the same application use case the web pages call, so a rule cannot drift
+      between the human and agent surfaces.
 - [x] `tools/list` is filtered by the caller's scopes. Advertising a tool the credential cannot
       call invites an agent to plan around a capability it does not have, then fail partway.
 - [x] Every call is audited — caller, tool, outcome, short note. Arguments are summarised rather
@@ -577,6 +579,25 @@ token against `/mcp`, revoke it, watch the next call 401).
 - [x] An invalid token and a revoked one are refused identically, so probing cannot tell them apart.
 - [x] `predict_fuel` carries `safety_policy` in its result: an agent must be able to tell an
       estimate of *prepared* fuel from verified consumption.
+- [x] **Vehicle-specific recommendation with similar history (ADR 0013).** `predict_fuel` now
+      requires `vehicle`, resolved against the fleet catalog the way a planner says it ("truck
+      crane 01", "T CRANE 01"); stops resolve the same way ("SP II", "SP 2" → `SP-II`). The result
+      carries `details` (what the number was computed from, as resolved, plus the model) and
+      `similar_operations` — past operations ranked same vehicle → same kind of machine → same
+      category, then same activity, then nearest distance — merged from the imported dataset the
+      active model learned from (prepared fuel) and app-recorded operations (stops, estimate at the
+      time, actual fuel once entered). Four companion tools under the same scope:
+      `find_similar_operations`, `list_vehicles`, `search_locations`, `estimate_route_distance`.
+      Unknown names are tool errors that list the nearest candidates; the tool never guesses.
+      Verified end-to-end with `scripts/verify-mcp-client.py` (official MCP SDK client) against a
+      running server seeded by `seed-demo`: every tool, including the four new ones, passes.
+- [x] **Ready for someone else's coding agent.** `/mcp` answers the probes third-party
+      Streamable HTTP clients make (`GET` → 405 + `Allow`, `DELETE` → 405, `ping` → `{}`, every
+      `notifications/*` → 202, `Cache-Control: no-store`), pinned by
+      `tests/test_mcp_third_party_clients.py`. Issuing a credential on **Integrasi Agen** now
+      renders paste-ready configuration (Claude Code, Cursor/VS Code `mcp.json`, Codex
+      `config.toml`, curl) with the public URL and the token filled in. The contract for the
+      other side is `docs/production/mcp-integration.md`.
 
 Bug found and fixed while testing this phase: the transport caught `LookupError` to mean "unknown
 tool", but `KeyError` is a `LookupError`. A prediction attempted with no trained model therefore

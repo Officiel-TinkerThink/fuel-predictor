@@ -6,11 +6,18 @@ its session/OAuth machinery is more surface than a three-tool read-only
 launch requires, and the plan wants read-only operation proven before that
 surface is widened. The request/response shapes here follow JSON-RPC 2.0 so
 a standards-compliant client can talk to it.
+
+Streamable HTTP, stateless flavour: every call is one POST answered with one
+JSON body. Third-party clients (Claude Code, Cursor, Codex, VS Code) also
+probe the endpoint in ways a hand-rolled client never does - a GET to open a
+notification stream, a DELETE to end a session, a `ping` to check liveness -
+and each of those has to get the answer the specification prescribes rather
+than a framework default, or the client reports the server as broken.
 """
 
 from typing import Any
 
-from fastapi import APIRouter, Request, status
+from fastapi import APIRouter, Request, Response, status
 from fastapi.responses import JSONResponse
 
 from fuel_predictor.delivery.mcp_server import (
@@ -34,8 +41,23 @@ _PROTOCOL_VERSION = "2024-11-05"
 def build_mcp_router(handler: McpRequestHandler, server_version: str) -> APIRouter:
     router = APIRouter()
 
+    @router.get("/mcp")
+    async def no_stream() -> Response:
+        """No server-initiated messages, so no SSE stream to open.
+
+        The specification has a server that does not offer the stream answer
+        405; a client takes that as "stateless, POST only" and carries on. A
+        framework 404 or 401 here instead reads as a missing or broken server.
+        """
+        return Response(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, headers={"Allow": "POST"})
+
+    @router.delete("/mcp")
+    async def no_session() -> Response:
+        """No sessions are issued (no Mcp-Session-Id), so there is none to end."""
+        return Response(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, headers={"Allow": "POST"})
+
     @router.post("/mcp")
-    async def handle(request: Request) -> JSONResponse:
+    async def handle(request: Request) -> Response:
         try:
             payload = await request.json()
         except Exception:  # noqa: BLE001 - malformed body is a protocol error
@@ -68,8 +90,16 @@ def build_mcp_router(handler: McpRequestHandler, server_version: str) -> APIRout
                 },
             )
 
-        if method == "notifications/initialized":
-            return JSONResponse(status_code=status.HTTP_202_ACCEPTED, content={})
+        if isinstance(method, str) and method.startswith("notifications/"):
+            # Notifications carry no id and expect no body; 202 says "heard".
+            # Clients send more than `initialized` (cancelled, progress), and
+            # answering any of them with "method not found" is a protocol error.
+            return Response(status_code=status.HTTP_202_ACCEPTED)
+
+        if method == "ping":
+            # Liveness check some clients send on a timer; an empty result is
+            # the specified answer.
+            return _ok(request_id, {})
 
         if method == "tools/list":
             return _ok(
@@ -140,7 +170,12 @@ def _body(
 
 
 def _ok(request_id: Any, result: Any) -> JSONResponse:
-    return JSONResponse(content=_body(request_id, result=result))
+    # no-store: a credential-bearing response must never be served from a
+    # cache, and an intermediary must not be tempted to try.
+    return JSONResponse(content=_body(request_id, result=result), headers=_NO_STORE)
+
+
+_NO_STORE = {"Cache-Control": "no-store"}
 
 
 def _error(request_id: Any, code: int, message: str) -> JSONResponse:

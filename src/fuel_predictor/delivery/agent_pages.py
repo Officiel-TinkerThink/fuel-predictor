@@ -1,5 +1,6 @@
 """Managing MCP client credentials (Phase 4, ADR 0008)."""
 
+import json
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Request, status
@@ -27,6 +28,7 @@ def build_agent_pages_router(
     revoke_credential: RevokeAgentCredential,
     list_clients: ListAgentClients,
     guard: SecurityGuard,
+    rate_limit_per_minute: int = 0,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -53,7 +55,15 @@ def build_agent_pages_router(
         # Shown exactly once. Only the hash is stored, so this value cannot be
         # recovered later — a lost credential is reissued, not looked up.
         return HTMLResponse(
-            _render(caller, list_clients, issued.token, None),
+            _render(
+                caller,
+                list_clients,
+                issued.token,
+                None,
+                connection=_connection_guide(
+                    _mcp_url(request), issued.token, rate_limit_per_minute
+                ),
+            ),
             status_code=status.HTTP_201_CREATED,
         )
 
@@ -72,11 +82,64 @@ def build_agent_pages_router(
     return router
 
 
+def _mcp_url(request: Request) -> str:
+    """The address as the outside world reaches it.
+
+    Behind the gateway uvicorn rewrites the scheme and host from the forwarded
+    headers (--proxy-headers), so this is the public https URL in production
+    and the plain local one in development.
+    """
+    return str(request.url.replace(path="/mcp", query="", fragment=""))
+
+
+def _connection_guide(url: str, token: str, rate_limit: int) -> dict[str, object]:
+    """Ready-to-paste configuration for the agents people actually use.
+
+    Generated with the credential filled in, because the person receiving
+    it is typically not the person who issued it: a snippet they can paste
+    unchanged removes the one step where a token gets mistyped.
+    """
+    header = f"Authorization: Bearer {token}"
+    mcp_json = json.dumps(
+        {
+            "mcpServers": {
+                "fuel-predictor": {
+                    "type": "http",
+                    "url": url,
+                    "headers": {"Authorization": f"Bearer {token}"},
+                }
+            }
+        },
+        indent=2,
+    )
+    codex = (
+        "[mcp_servers.fuel-predictor]\n"
+        f'url = "{url}"\n'
+        f'http_headers = {{ "Authorization" = "Bearer {token}" }}'
+    )
+    claude_code = f'claude mcp add --transport http fuel-predictor {url} --header "{header}"'
+    curl = (
+        f"curl -sS {url} -H 'Content-Type: application/json' -H '{header}' "
+        '-d \'{"jsonrpc":"2.0","id":1,"method":"tools/list"}\''
+    )
+    return {
+        "mcp_url": url,
+        "rate_limit": rate_limit,
+        "snippets": {
+            "claude_code": claude_code,
+            "mcp_json": mcp_json,
+            "codex": codex,
+            "curl": curl,
+        },
+    }
+
+
 def _render(
     caller: "ActiveCaller",
     list_clients: ListAgentClients,
     issued_token: str | None,
     error: str | None,
+    connection: dict[str, object] | None = None,
 ) -> str:
     return render(
         "integrasi-agen.html",
@@ -96,4 +159,7 @@ def _render(
         # be a deliberate tick, not something a credential inherits from an
         # administrator accepting the form as presented.
         default_scopes=[str(scope) for scope in DEFAULT_AGENT_SCOPES],
+        mcp_url=connection["mcp_url"] if connection else None,
+        rate_limit=connection["rate_limit"] if connection else None,
+        snippets=connection["snippets"] if connection else None,
     )

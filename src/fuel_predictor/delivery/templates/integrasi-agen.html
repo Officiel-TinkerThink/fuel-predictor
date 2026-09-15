@@ -12,6 +12,29 @@
 <section class="card">
   <p><code>{{ issued_token }}</code></p>
 </section>
+
+<section class="card connection-guide">
+  <h2>Cara menghubungkan</h2>
+  <p class="hint">Alamat MCP: <code>{{ mcp_url }}</code>. Kirim kredensial di atas sebagai
+    <code>Authorization: Bearer …</code> pada setiap permintaan. Salin salah satu potongan di
+    bawah ke agen pengkodean yang dipakai; kredensial sudah terisi.</p>
+
+  <h3>Claude Code</h3>
+  <pre class="snippet">{{ snippets.claude_code }}</pre>
+
+  <h3>Cursor · Windsurf · VS Code (mcp.json)</h3>
+  <pre class="snippet">{{ snippets.mcp_json }}</pre>
+
+  <h3>Codex CLI (~/.codex/config.toml)</h3>
+  <pre class="snippet">{{ snippets.codex }}</pre>
+
+  <h3>Uji cepat (curl)</h3>
+  <pre class="snippet">{{ snippets.curl }}</pre>
+
+  <p class="hint">Alat yang tersedia mengikuti cakupan kredensial. Setelah tersambung, agen
+    dapat memanggil <code>tools/list</code> untuk melihatnya. Batas laju:
+    {{ rate_limit }} panggilan per menit per klien.</p>
+</section>
 {% endif %}
 
 <div class="grid grid--two">

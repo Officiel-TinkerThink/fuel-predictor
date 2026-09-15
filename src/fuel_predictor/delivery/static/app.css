@@ -796,6 +796,26 @@ code,
   font-size: 0.9em;
 }
 
+/* Copy-paste connection snippets on the agent integration page. */
+.connection-guide h3 {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: 0.95rem;
+}
+
+.snippet {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted, var(--color-surface));
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: all;
+}
+
 /* ---------- Confirmation dialog ---------- */
 
 dialog {
