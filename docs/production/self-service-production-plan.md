@@ -318,6 +318,9 @@ rules in MCP handlers.
 - `list_model_versions`
 - `get_prediction_input_schema`
 
+Added for the vehicle-specific recommendation flow (ADR 0013): `find_similar_operations`,
+`list_vehicles`, `search_locations`, `estimate_route_distance`.
+
 ### Deferred privileged tools
 
 - `validate_model_candidate(artifact_id)`

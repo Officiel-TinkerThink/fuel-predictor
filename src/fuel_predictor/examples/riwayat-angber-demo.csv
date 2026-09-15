@@ -1,10 +1,13 @@
-Kategori ANGBER,Mode Aktivitas,Jam Lifting,Jarak Total (km),Bahan Bakar Disiapkan (L),Sumber Jarak
-ANGBER,transport,,18,16,manual
-ANGBER,transport,,32,24,manual
-ANGBER,transport,,48,31,manual
-ANGBER,transport,,76,44,manual
-ANGBER,lifting,1.5,20,22,manual
-ANGBER,lifting,2.5,28,29,manual
-ANGBER,transport_and_lifting,1,36,31,manual
-ANGBER,transport_and_lifting,2,54,42,manual
-ANGBER,transport_and_lifting,3.5,72,55,manual
+Tanggal,Kategori ANGBER,Kendaraan,Mode Aktivitas,Jam Lifting,Jarak Total (km),Bahan Bakar Disiapkan (L),Sumber Jarak
+2026-08-03,ANGBER,Truck Crane 01,transport,,18,16,manual
+2026-08-04,ANGBER,Truck Crane 01,transport,,32,24,manual
+2026-08-05,ANGBER,Truck Crane 02,transport,,48,31,manual
+2026-08-06,ANGBER,Prime Mover,transport,,76,44,manual
+2026-08-07,ANGBER,Truck Crane 01,lifting,1.5,20,22,manual
+2026-08-10,ANGBER,Truck Crane 02,lifting,2.5,28,29,manual
+2026-08-11,ANGBER,Truck Crane 01,transport_and_lifting,1,36,31,manual
+2026-08-12,ANGBER,Truck Crane 02,transport_and_lifting,2,54,42,manual
+2026-08-13,ANGBER,Wheel Crane,transport_and_lifting,3.5,72,55,manual
+2026-08-14,ANGBER,Truck Crane 01,transport,,40,29,manual
+2026-08-17,ANGBER,Prime Mover,transport,,52,33,manual
+2026-08-18,ANGBER,VT 01,transport,,30,22,manual

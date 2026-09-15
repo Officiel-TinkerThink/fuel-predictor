@@ -11,6 +11,8 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
+from fuel_predictor.infrastructure.packaged_location_catalog import PackagedLocationCatalog
+from fuel_predictor.infrastructure.packaged_vehicle_catalog import PackagedVehicleCatalog
 from fuel_predictor.main import create_app
 
 _ADMIN = ("admin", "kata-sandi-admin-1")
@@ -27,11 +29,35 @@ _HISTORY = _HEADERS + "\n".join(
         "ANGBER,transport_and_lifting,3,45,42,routing_provider",
     ]
 )
+# History that names the unit, as the planner's sheets do, so similar-history
+# lookups have something to rank by. The date column is what a planner asks
+# for first when shown a past operation, so it is carried through.
+_FLEET_HEADERS = (
+    "Tanggal,Kategori ANGBER,Kendaraan,Mode Aktivitas,Jam Lifting,Jarak Total (km),"
+    "Bahan Bakar Disiapkan (L),Sumber Jarak\n"
+)
+_FLEET_HISTORY = _FLEET_HEADERS + "\n".join(
+    [
+        "2026-08-03,ANGBER,Truck Crane 01,transport,,20,18,manual",
+        "2026-08-04,ANGBER,Truck Crane 01,transport,,40,28,manual",
+        "2026-08-05,ANGBER,T CRANE 01,transport,,32,24,manual",
+        "2026-08-06,ANGBER,Truck Crane 02,transport,,30,26,manual",
+        "2026-08-07,ANGBER,Prime Mover,transport,,30,40,manual",
+        "2026-08-08,ANGBER,Truck Crane 01,lifting,2,20,25,manual",
+    ]
+)
 
 
 def _signed_in(tmp_path: Path) -> TestClient:
     client = TestClient(
-        create_app(database_path=tmp_path / "operations.sqlite3", bootstrap_administrator=_ADMIN)
+        create_app(
+            database_path=tmp_path / "operations.sqlite3",
+            bootstrap_administrator=_ADMIN,
+            # The bundled catalogs, so an agent can name a real crane and real
+            # stops the way the planner would.
+            vehicle_catalog=PackagedVehicleCatalog(),
+            location_catalog=PackagedLocationCatalog(),
+        )
     )
     client.__enter__()
     client.post(
@@ -81,11 +107,11 @@ def _tool_names(response: Any) -> set[str]:
     return {tool["name"] for tool in response.json()["result"]["tools"]}
 
 
-def _activate_a_model(client: TestClient) -> None:
+def _activate_a_model(client: TestClient, history: str = _HISTORY) -> None:
     # A signed-in operator's multipart upload carries CSRF like any other form.
     upload = client.post(
         "/api/v1/historical-datasets",
-        files={"file": ("riwayat.csv", _HISTORY.encode(), "text/csv")},
+        files={"file": ("riwayat.csv", history.encode(), "text/csv")},
         data={"csrf_token": _csrf_token(client.get("/integrasi-agen").text)},
     )
     assert upload.status_code == 201, upload.text
@@ -152,9 +178,7 @@ def test_tools_list_hides_tools_the_credential_could_not_call(tmp_path: Path) ->
 def test_calling_an_out_of_scope_tool_is_denied_and_recorded(tmp_path: Path) -> None:
     with _signed_in(tmp_path) as client:
         token = _issue(client, "Agen Model", ["models:read"])
-        response = _rpc(
-            client, token, "tools/call", {"name": "predict_fuel", "arguments": {}}
-        )
+        response = _rpc(client, token, "tools/call", {"name": "predict_fuel", "arguments": {}})
         audit = client.get("/api/v1/audit-records").json()
 
     assert response.json()["error"]["code"] == -32003
@@ -172,9 +196,7 @@ def test_calling_an_out_of_scope_tool_is_denied_and_recorded(tmp_path: Path) -> 
 def test_an_unknown_tool_name_is_a_method_not_found(tmp_path: Path) -> None:
     with _signed_in(tmp_path) as client:
         token = _issue(client, "Agen Uji", ["fuel:predict"])
-        response = _rpc(
-            client, token, "tools/call", {"name": "hapus_semua", "arguments": {}}
-        )
+        response = _rpc(client, token, "tools/call", {"name": "hapus_semua", "arguments": {}})
 
     assert response.json()["error"]["code"] == -32601
 
@@ -193,7 +215,7 @@ def test_a_failing_tool_reports_a_tool_error_rather_than_a_broken_transport(
             {
                 "name": "predict_fuel",
                 "arguments": {
-                    "vehicle_category": "ANGBER",
+                    "vehicle": "Truck Crane 01",
                     "activity_mode": "lifting",
                     "total_distance_km": 20,
                 },
@@ -227,7 +249,7 @@ def test_a_lookup_failure_inside_a_tool_is_not_reported_as_a_missing_tool(
             {
                 "name": "predict_fuel",
                 "arguments": {
-                    "vehicle_category": "ANGBER",
+                    "vehicle": "Truck Crane 01",
                     "activity_mode": "transport",
                     "total_distance_km": 20,
                 },
@@ -247,7 +269,7 @@ def test_predict_fuel_returns_a_real_prediction_with_its_safety_framing(
     import json
 
     with _signed_in(tmp_path) as client:
-        _activate_a_model(client)
+        _activate_a_model(client, _FLEET_HISTORY)
         token = _issue(client, "Agen Prediksi", ["fuel:predict"])
         response = _rpc(
             client,
@@ -256,9 +278,12 @@ def test_predict_fuel_returns_a_real_prediction_with_its_safety_framing(
             {
                 "name": "predict_fuel",
                 "arguments": {
-                    "vehicle_category": "ANGBER",
-                    "activity_mode": "transport_and_lifting",
-                    "lifting_hours": 2,
+                    # Spoken, not spelled: the catalog knows this unit as
+                    # "Truck Crane 01" and these stops as "POOL LIMAU"/"SP-II".
+                    "vehicle": "truck crane 01",
+                    "activity_mode": "transport",
+                    "stop_sequence": ["pool limau", "SP II", "pool limau"],
+                    # No routing provider in tests, so the plan's own distance.
                     "total_distance_km": 35,
                 },
             },
@@ -273,10 +298,216 @@ def test_predict_fuel_returns_a_real_prediction_with_its_safety_framing(
     assert payload["model_version_id"].startswith("MDL-")
     # An agent must be able to tell prepared fuel from verified consumption.
     assert payload["safety_policy"]
+
+    details = payload["details"]
+    assert details["vehicle"] == "Truck Crane 01"
+    assert details["vehicle_group"] == "Crane"
+    assert details["stop_sequence"] == ["POOL LIMAU", "SP-II", "POOL LIMAU"]
+    assert details["total_distance_km"] == 35
+    assert details["route_distance_manual_fallback"] is True
+    assert details["model"]["model_version_id"] == payload["model_version_id"]
+    assert details["model"]["training_row_count"] == 6
+
+    # The same crane's history, nearest distance first, with the sheet's date.
+    similar = payload["similar_operations"]
+    assert [row["vehicle"] for row in similar[:4]] == ["Truck Crane 01"] * 4
+    assert similar[0]["total_distance_km"] == 32
+    assert similar[0]["prepared_fuel_liters"] == 24
+    assert similar[0]["operation_date"] == "2026-08-05"
+    assert similar[0]["match"] == {
+        "vehicle": "same",
+        "activity_mode": True,
+        "distance_delta_km": -3,
+        "lifting_hours_delta": None,
+        "score": round(3 / 35, 4),
+    }
+    assert similar[0]["source_reference"].startswith("riwayat.csv / ")
+    # Another crane fills in only after this one's rows are exhausted.
+    assert similar[4]["vehicle"] == "Truck Crane 02"
+    assert similar[4]["match"]["vehicle"] == "same_group"
     assert any(
         record["action"] == "mcp_tool:predict_fuel" and record["outcome"] == "succeeded"
         for record in audit["records"]
     )
+
+
+def test_predict_fuel_without_a_vehicle_is_refused(tmp_path: Path) -> None:
+    """A recommendation for no unit in particular is a fleet average in disguise."""
+    with _signed_in(tmp_path) as client:
+        _activate_a_model(client, _FLEET_HISTORY)
+        token = _issue(client, "Agen Prediksi", ["fuel:predict"])
+        response = _rpc(
+            client,
+            token,
+            "tools/call",
+            {
+                "name": "predict_fuel",
+                "arguments": {"activity_mode": "transport", "total_distance_km": 35},
+            },
+        )
+
+    result = response.json()["result"]
+    assert result["isError"] is True
+    assert "vehicle" in result["content"][0]["text"]
+    assert "list_vehicles" in result["content"][0]["text"]
+
+
+def test_an_unknown_vehicle_or_stop_is_a_tool_error_that_names_candidates(
+    tmp_path: Path,
+) -> None:
+    with _signed_in(tmp_path) as client:
+        _activate_a_model(client, _FLEET_HISTORY)
+        token = _issue(client, "Agen Prediksi", ["fuel:predict"])
+        vehicle = _rpc(
+            client,
+            token,
+            "tools/call",
+            {
+                "name": "predict_fuel",
+                "arguments": {
+                    "vehicle": "truck crane",
+                    "activity_mode": "transport",
+                    "total_distance_km": 35,
+                },
+            },
+        )
+        stop = _rpc(
+            client,
+            token,
+            "tools/call",
+            {
+                "name": "predict_fuel",
+                "arguments": {
+                    "vehicle": "Truck Crane 01",
+                    "activity_mode": "transport",
+                    "stop_sequence": ["POOL LIMAU", "SP 20"],
+                    "total_distance_km": 35,
+                },
+            },
+        )
+
+    vehicle_text = vehicle.json()["result"]["content"][0]["text"]
+    assert vehicle.json()["result"]["isError"] is True
+    assert "Truck Crane 01" in vehicle_text and "Truck Crane 02" in vehicle_text
+    stop_text = stop.json()["result"]["content"][0]["text"]
+    assert stop.json()["result"]["isError"] is True
+    assert "'SP 20'" in stop_text
+    assert "SP-II" in stop_text and "SP-III" in stop_text
+
+
+def test_similar_history_includes_recorded_operations_with_their_actual_fuel(
+    tmp_path: Path,
+) -> None:
+    """What the crane actually burned last time is the strongest evidence a
+    planner can be shown, and it lives in a different table from the sheets."""
+    import json
+
+    with _signed_in(tmp_path) as client:
+        _activate_a_model(client, _FLEET_HISTORY)
+        token = _issue(client, "Agen Prediksi", ["fuel:predict"])
+        earlier = _rpc(
+            client,
+            token,
+            "tools/call",
+            {
+                "name": "predict_fuel",
+                "arguments": {
+                    "vehicle": "Truck Crane 01",
+                    "activity_mode": "transport",
+                    "stop_sequence": ["POOL LIMAU", "SP-II", "POOL LIMAU"],
+                    "total_distance_km": 34,
+                    "similar_limit": 0,
+                },
+            },
+        )
+        earlier_payload = json.loads(earlier.json()["result"]["content"][0]["text"])
+        assert earlier_payload["similar_operations"] == []
+        recorded = client.post(
+            f"/api/v1/daily-operations/{earlier_payload['operation_id']}/actual-fuel",
+            json={"actual_fuel_liters": 27.5, "measurement_source": "fuel_meter"},
+        )
+        assert recorded.status_code == 201, recorded.text
+        response = _rpc(
+            client,
+            token,
+            "tools/call",
+            {
+                "name": "find_similar_operations",
+                "arguments": {
+                    "vehicle": "T CRANE 01",
+                    "activity_mode": "transport",
+                    "total_distance_km": 35,
+                    "limit": 3,
+                },
+            },
+        )
+
+    payload = json.loads(response.json()["result"]["content"][0]["text"])
+    assert payload["vehicle"] == "Truck Crane 01"
+    first = payload["similar_operations"][0]
+    assert first["source"] == "recorded"
+    assert first["operation_id"] == earlier_payload["operation_id"]
+    assert first["stop_sequence"] == ["POOL LIMAU", "SP-II", "POOL LIMAU"]
+    assert (
+        first["estimated_fuel_requirement_liters"]
+        == (earlier_payload["estimated_fuel_requirement_liters"])
+    )
+    assert first["actual_fuel_liters"] == 27.5
+    assert first["prepared_fuel_liters"] is None
+    assert first["recorded_at"]
+    assert payload["similar_operations"][1]["source"] == "dataset"
+    assert len(payload["similar_operations"]) == 3
+
+
+def test_catalog_tools_let_an_agent_disambiguate_before_committing(tmp_path: Path) -> None:
+    import json
+
+    with _signed_in(tmp_path) as client:
+        token = _issue(client, "Agen Prediksi", ["fuel:predict"])
+        vehicles = _rpc(client, token, "tools/call", {"name": "list_vehicles", "arguments": {}})
+        stops = _rpc(
+            client,
+            token,
+            "tools/call",
+            {"name": "search_locations", "arguments": {"query": "sp"}},
+        )
+        route = _rpc(
+            client,
+            token,
+            "tools/call",
+            {
+                "name": "estimate_route_distance",
+                "arguments": {"stop_sequence": ["POOL LIMAU", "SP-II"]},
+            },
+        )
+
+    fleet = json.loads(vehicles.json()["result"]["content"][0]["text"])
+    crane = next(item for item in fleet if item["name"] == "Truck Crane 01")
+    assert crane == {"name": "Truck Crane 01", "group": "Crane", "aliases": ["T CRANE 01"]}
+    names = [item["name"] for item in json.loads(stops.json()["result"]["content"][0]["text"])]
+    assert names[:2] == ["SP-II", "SP-III"]
+    # No routing provider in tests: the agent is told to ask for a distance
+    # instead of being left to discover it after the operation exists.
+    route_result = route.json()["result"]
+    assert route_result["isError"] is True
+    assert "total_distance_km" in route_result["content"][0]["text"]
+
+
+def test_the_prediction_tools_travel_with_the_predict_scope(tmp_path: Path) -> None:
+    with _signed_in(tmp_path) as client:
+        predict = _issue(client, "Agen Prediksi", ["fuel:predict"])
+        monitor = _issue(client, "Agen Pantau", ["fuel:monitor"])
+        predict_tools = _tool_names(_rpc(client, predict, "tools/list"))
+        monitor_tools = _tool_names(_rpc(client, monitor, "tools/list"))
+
+    new_tools = {
+        "find_similar_operations",
+        "list_vehicles",
+        "search_locations",
+        "estimate_route_distance",
+    }
+    assert new_tools <= predict_tools
+    assert not (new_tools & monitor_tools)
 
 
 def test_the_issued_token_is_shown_once_and_never_again(tmp_path: Path) -> None:
@@ -368,9 +599,7 @@ def test_a_client_on_a_newer_protocol_revision_is_answered_with_ours(tmp_path: P
     assert listed, "the session stopped working after a version downgrade"
 
 
-def test_a_runaway_agent_is_throttled_with_a_retry_after(
-    tmp_path: Path, monkeypatch: Any
-) -> None:
+def test_a_runaway_agent_is_throttled_with_a_retry_after(tmp_path: Path, monkeypatch: Any) -> None:
     """End to end, because the unit tests only cover the handler seam.
 
     A stuck agent looping on a tool is more likely than an attacker, and the
@@ -384,9 +613,7 @@ def test_a_runaway_agent_is_throttled_with_a_retry_after(
             _rpc(client, token, "tools/call", {"name": "get_current_model", "arguments": {}})
             for _ in range(3)
         ]
-        refused = _rpc(
-            client, token, "tools/call", {"name": "get_current_model", "arguments": {}}
-        )
+        refused = _rpc(client, token, "tools/call", {"name": "get_current_model", "arguments": {}})
         audit = client.get("/api/v1/audit-records").json()
 
     assert all(response.status_code == 200 for response in allowed)

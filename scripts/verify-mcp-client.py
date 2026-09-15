@@ -31,13 +31,17 @@ _READ_ONLY = (
     "get_current_model",
     "list_model_versions",
     "get_prediction_input_schema",
+    "list_vehicles",
 )
+# The vehicle is required (ADR 0013) and is written the way a planner would
+# say it, so this also exercises catalog resolution against the deployment.
 _PREDICT = {
-    "vehicle_category": "ANGBER",
+    "vehicle": "truck crane 01",
     "activity_mode": "transport_and_lifting",
     "lifting_hours": 2,
     "total_distance_km": 35,
 }
+_SIMILAR = {"vehicle": "truck crane 01", "activity_mode": "transport", "total_distance_km": 35}
 
 
 def _report(label: str, ok: bool, detail: str = "") -> bool:
@@ -67,8 +71,25 @@ async def verify(url: str, token: str) -> int:
                 "predict_fuel",
                 not result.isError
                 and payload.get("estimated_fuel_requirement_liters", 0) > 0
-                and bool(payload.get("safety_policy")),
+                and bool(payload.get("safety_policy"))
+                and payload.get("details", {}).get("vehicle") == "Truck Crane 01"
+                and isinstance(payload.get("similar_operations"), list),
                 result.content[0].text[:70],
+            )
+
+        if "find_similar_operations" in listed:
+            result = await session.call_tool("find_similar_operations", _SIMILAR)
+            payload = json.loads(result.content[0].text) if not result.isError else {}
+            failures += not _report(
+                "find_similar_operations",
+                not result.isError and isinstance(payload.get("similar_operations"), list),
+                result.content[0].text[:70],
+            )
+
+        if "search_locations" in listed:
+            result = await session.call_tool("search_locations", {"query": "limau"})
+            failures += not _report(
+                "search_locations", not result.isError, result.content[0].text[:70]
             )
 
         for name in _READ_ONLY:

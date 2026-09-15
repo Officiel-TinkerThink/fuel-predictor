@@ -62,6 +62,7 @@ from fuel_predictor.application.retained_package_activation import (
     RegisterIngestedPackage,
 )
 from fuel_predictor.application.routing import RoutingProvider, UnavailableRoutingProvider
+from fuel_predictor.application.similar_operations import FindSimilarOperations
 from fuel_predictor.application.vehicles import VehicleCatalog
 from fuel_predictor.configuration import ApplicationSettings
 from fuel_predictor.delivery.actual_fuel_pages import build_actual_fuel_pages_router
@@ -139,6 +140,9 @@ from fuel_predictor.infrastructure.sqlalchemy_monitoring_runs import (
     SqlAlchemyMonitoringRunRepository,
 )
 from fuel_predictor.infrastructure.sqlalchemy_predictions import SqlAlchemyPredictionRepository
+from fuel_predictor.infrastructure.sqlalchemy_similar_operations import (
+    SqlAlchemyHistoricalOperationSource,
+)
 from fuel_predictor.infrastructure.sqlalchemy_vehicles import SqlAlchemyVehicleRepository
 from fuel_predictor.infrastructure.system_memory_probe import SystemMemoryProbe
 from fuel_predictor.infrastructure.zip_model_package_archive import ZipModelPackageArchiveReader
@@ -217,9 +221,7 @@ def create_app(
         if maps_api_key
         else None
     )
-    resolved_routing_provider = (
-        routing_provider or maps_provider or UnavailableRoutingProvider()
-    )
+    resolved_routing_provider = routing_provider or maps_provider or UnavailableRoutingProvider()
     create_daily_operation = CreateDailyOperation(repository, resolved_routing_provider)
     get_daily_operation = GetDailyOperation(repository)
     import_historical_dataset = ImportHistoricalDataset(
@@ -363,6 +365,9 @@ def create_app(
     issue_agent_credential = IssueAgentCredential(agent_client_repository, record_audit)
     revoke_agent_credential = RevokeAgentCredential(agent_client_repository, record_audit)
     list_agent_clients = ListAgentClients(agent_client_repository)
+    find_similar_operations = FindSimilarOperations(
+        SqlAlchemyHistoricalOperationSource(session_factory), resolved_vehicle_catalog
+    )
     mcp_registry = build_registry(
         generate_prediction=generate_fuel_prediction,
         create_operation=create_daily_operation,
@@ -371,6 +376,12 @@ def create_app(
         model_reader=prediction_repository,
         monitoring_runs=monitoring_run_repository,
         has_retained_package=activate_retained_package.can_activate,
+        vehicle_catalog=resolved_vehicle_catalog,
+        location_catalog=resolved_location_catalog,
+        find_similar_operations=find_similar_operations,
+        # The same provider the planner's page previews with, so an agent and
+        # a human asking about the same stops get the same kilometres.
+        route_preview=maps_provider,
     )
     if settings.mcp_privileged_tools_enabled:
         # Off by default. The plan gates validate/activate/rollback on the
@@ -518,6 +529,9 @@ def create_app(
             revoke_agent_credential,
             list_agent_clients,
             guard,
+            rate_limit_per_minute=settings.mcp_max_calls_per_window
+            * 60
+            // settings.mcp_rate_limit_window_seconds,
         )
     )
     app.include_router(

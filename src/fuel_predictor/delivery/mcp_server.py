@@ -10,11 +10,25 @@ operation has proven itself, per the plan.
 """
 
 import json
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
 
+from fuel_predictor.application.catalog_resolution import (
+    resolve_location,
+    resolve_vehicle,
+    search_locations,
+)
+from fuel_predictor.application.locations import LocationCatalog
+from fuel_predictor.application.routing import RoutePreviewProvider, RoutingProviderUnavailable
+from fuel_predictor.application.similar_operations import (
+    FindSimilarOperations,
+    SimilarOperation,
+    SimilarOperationsQuery,
+)
+from fuel_predictor.application.vehicles import VehicleCatalog
+from fuel_predictor.domain.daily_operation import ActivityMode, DistanceSource, VehicleCategory
 from fuel_predictor.domain.identity import AgentClient, AgentScope, AuditOutcome
 
 _BEARER = "bearer "
@@ -233,6 +247,14 @@ class McpRequestHandler:
         )
 
 
+def _required(arguments: Mapping[str, Any], key: str) -> Any:
+    """A missing argument is the agent's mistake, and the message should say
+    which one rather than surface as a bare KeyError."""
+    if key not in arguments or arguments[key] is None:
+        raise ValueError(f"Argumen '{key}' wajib diisi.")
+    return arguments[key]
+
+
 def _outcome_note(result: Any) -> str | None:
     """The tool's own status, when it reports one, so the audit is unambiguous."""
     if isinstance(result, Mapping):
@@ -256,28 +278,90 @@ def build_registry(
     model_reader: Any,
     monitoring_runs: Any,
     has_retained_package: Callable[[str], bool] = lambda _version: False,
+    vehicle_catalog: VehicleCatalog | None = None,
+    location_catalog: LocationCatalog | None = None,
+    find_similar_operations: FindSimilarOperations | None = None,
+    route_preview: RoutePreviewProvider | None = None,
 ) -> McpToolRegistry:
-    """Wire the plan's initial read/compute tools onto existing use cases."""
+    """Wire the plan's initial read/compute tools onto existing use cases.
+
+    The catalogs, the similar-history search and the route preview are
+    optional only so that a registry can be built for the monitoring tools
+    alone; a prediction credential without them gets tool errors that say what
+    is missing rather than a registry that quietly lacks the tools.
+    """
+
+    def _vehicles() -> VehicleCatalog:
+        if vehicle_catalog is None:
+            raise RuntimeError("Katalog kendaraan tidak tersedia untuk alat ini.")
+        return vehicle_catalog
+
+    def _locations() -> LocationCatalog:
+        if location_catalog is None:
+            raise RuntimeError("Katalog lokasi tidak tersedia untuk alat ini.")
+        return location_catalog
+
+    def _resolved_stops(written: Sequence[str]) -> tuple[str, ...]:
+        """Every stop as the catalog spells it, in the planner's order. An
+        unknown one raises with candidates, and nothing has been created yet."""
+        return tuple(resolve_location(_locations(), name).name for name in written)
+
+    def _similar(
+        vehicle: str,
+        activity_mode: ActivityMode | None,
+        lifting_hours: float | None,
+        total_distance_km: float | None,
+        limit: int,
+        exclude_operation_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        if find_similar_operations is None or limit <= 0:
+            return []
+        results = find_similar_operations.execute(
+            SimilarOperationsQuery(
+                vehicle=vehicle,
+                activity_mode=activity_mode,
+                lifting_hours=lifting_hours,
+                total_distance_km=total_distance_km,
+                limit=limit,
+                exclude_operation_id=exclude_operation_id,
+            )
+        )
+        return [_similar_operation_payload(item) for item in results]
+
+    def _written_vehicle(arguments: Mapping[str, Any]) -> str:
+        """The vehicle is what the model keys on and what history is found by;
+        without it the answer would be a fleet average dressed up as a
+        recommendation for one unit, so its absence is refused up front."""
+        written = arguments.get("vehicle")
+        if not isinstance(written, str) or not written.strip():
+            raise ValueError(
+                "Kendaraan wajib disebutkan ('vehicle'). Gunakan alat list_vehicles "
+                "untuk melihat armada yang tersedia."
+            )
+        return written
 
     def predict_fuel(arguments: Mapping[str, Any]) -> dict[str, Any]:
         from fuel_predictor.application.daily_operations import CreateDailyOperationCommand
-        from fuel_predictor.domain.daily_operation import (
-            ActivityMode,
-            DistanceSource,
-            VehicleCategory,
-        )
+
+        vehicle = resolve_vehicle(_vehicles(), _written_vehicle(arguments))
+        stop_sequence = _resolved_stops(tuple(arguments.get("stop_sequence") or ()))
+        raw_distance = arguments.get("total_distance_km")
+        activity_mode = ActivityMode(_required(arguments, "activity_mode"))
+        lifting_hours = arguments.get("lifting_hours")
 
         operation = create_operation.execute(
             CreateDailyOperationCommand(
-                vehicle_category=VehicleCategory(arguments["vehicle_category"]),
-                activity_mode=ActivityMode(arguments["activity_mode"]),
-                lifting_hours=arguments.get("lifting_hours"),
-                total_distance_km=float(arguments["total_distance_km"]),
+                vehicle_category=VehicleCategory(arguments.get("vehicle_category", "ANGBER")),
+                vehicle=vehicle.name,
+                activity_mode=activity_mode,
+                lifting_hours=lifting_hours,
+                total_distance_km=float(raw_distance) if raw_distance is not None else None,
                 distance_source=DistanceSource(arguments.get("distance_source", "manual")),
-                stop_sequence=tuple(arguments.get("stop_sequence", ())),
+                stop_sequence=stop_sequence,
             )
         )
         prediction = generate_prediction.execute(operation.operation_id)
+        similar_limit = int(arguments.get("similar_limit", _DEFAULT_SIMILAR_ON_PREDICT))
         return {
             "operation_id": prediction.operation_id,
             "estimated_fuel_requirement_liters": prediction.estimated_fuel_requirement_liters,
@@ -290,6 +374,88 @@ def build_registry(
             # Carried deliberately: an agent must be able to tell an estimate
             # of prepared fuel from verified consumption.
             "safety_policy": prediction.safety_policy,
+            # What the number was computed from, as resolved — the planner
+            # said "truck crane 01" and "SP II"; this is what that became.
+            "details": {
+                "vehicle": vehicle.name,
+                "vehicle_group": vehicle.group or None,
+                "vehicle_category": operation.vehicle_category.value,
+                "activity_mode": operation.activity_mode.value,
+                "lifting_hours": operation.lifting_hours,
+                "total_distance_km": operation.total_distance_km,
+                "distance_source": operation.distance_source.value,
+                "route_distance_manual_fallback": operation.route_distance_manual_fallback,
+                "stop_sequence": list(operation.stop_sequence),
+                "model": {
+                    "model_version_id": prediction.model.model_version_id,
+                    "algorithm": prediction.model.algorithm,
+                    "feature_version": prediction.model.feature_version,
+                    "trained_at": prediction.model.trained_at.isoformat(),
+                    "training_row_count": prediction.model.training_row_count,
+                    "uncertainty_liters": prediction.model.uncertainty_liters,
+                },
+            },
+            # Attached to the recommendation rather than left to a second
+            # call: history the agent has to remember to ask for is history
+            # the planner will sometimes not be shown.
+            "similar_operations": _similar(
+                vehicle.name,
+                operation.activity_mode,
+                operation.lifting_hours,
+                operation.total_distance_km,
+                min(max(similar_limit, 0), _MAX_SIMILAR_ON_PREDICT),
+                exclude_operation_id=operation.operation_id,
+            ),
+        }
+
+    def find_similar(arguments: Mapping[str, Any]) -> dict[str, Any]:
+        if find_similar_operations is None:
+            raise RuntimeError("Pencarian riwayat serupa tidak tersedia.")
+        vehicle = resolve_vehicle(_vehicles(), _written_vehicle(arguments))
+        mode = arguments.get("activity_mode")
+        distance = arguments.get("total_distance_km")
+        lifting = arguments.get("lifting_hours")
+        limit = min(max(int(arguments.get("limit", _DEFAULT_SIMILAR)), 0), _MAX_SIMILAR)
+        return {
+            "vehicle": vehicle.name,
+            "vehicle_group": vehicle.group or None,
+            "similar_operations": _similar(
+                vehicle.name,
+                ActivityMode(mode) if mode is not None else None,
+                float(lifting) if lifting is not None else None,
+                float(distance) if distance is not None else None,
+                limit,
+            ),
+        }
+
+    def list_vehicles(_arguments: Mapping[str, Any]) -> list[dict[str, Any]]:
+        return [
+            {"name": option.name, "group": option.group or None, "aliases": list(option.aliases)}
+            for option in _vehicles().options()
+        ]
+
+    def search_locations_tool(arguments: Mapping[str, Any]) -> list[dict[str, Any]]:
+        limit = min(max(int(arguments.get("limit", 10)), 0), 50)
+        return [
+            {"name": option.name, "latitude": option.latitude, "longitude": option.longitude}
+            for option in search_locations(_locations(), str(_required(arguments, "query")), limit)
+        ]
+
+    def estimate_route_distance(arguments: Mapping[str, Any]) -> dict[str, Any]:
+        stops = _resolved_stops(tuple(_required(arguments, "stop_sequence")))
+        if len(stops) < 2:
+            raise ValueError("Urutan pemberhentian harus berisi setidaknya dua lokasi.")
+        hint = "Minta jarak total (total_distance_km) kepada perencana untuk melanjutkan."
+        if route_preview is None:
+            raise RuntimeError(f"Penyedia rute tidak tersedia. {hint}")
+        try:
+            preview = route_preview.preview_route(stops)
+        except RoutingProviderUnavailable as error:
+            # Unreachable is, for the agent's next step, the same as absent.
+            raise RuntimeError(f"{error} {hint}") from error
+        return {
+            "stop_sequence": list(stops),
+            "total_distance_km": round(preview.total_distance_km, 1),
         }
 
     def get_service_health(_arguments: Mapping[str, Any]) -> dict[str, Any]:
@@ -380,12 +546,62 @@ def build_registry(
             McpTool(
                 name="predict_fuel",
                 description=(
-                    "Perkirakan kebutuhan bahan bakar satu operasi harian. Nilai yang "
-                    "dikembalikan adalah estimasi bahan bakar disiapkan, bukan konsumsi aktual."
+                    "Buat rekomendasi bahan bakar untuk satu operasi harian sebuah kendaraan. "
+                    "Kendaraan wajib disebutkan. Mengembalikan estimasi, alokasi yang "
+                    "direkomendasikan, rincian masukan yang terpakai, serta operasi lampau "
+                    "yang serupa sebagai pembanding. Nilai estimasi adalah bahan bakar "
+                    "disiapkan, bukan konsumsi aktual. Sebutkan stop_sequence (termasuk "
+                    "perjalanan pulang) agar jarak dihitung dari rute, atau isi "
+                    "total_distance_km bila jarak sudah diketahui."
                 ),
                 scope=AgentScope.PREDICT,
                 input_schema=_PREDICT_INPUT_SCHEMA,
                 handler=predict_fuel,
+            ),
+            McpTool(
+                name="find_similar_operations",
+                description=(
+                    "Cari operasi lampau yang mirip dengan spesifikasi yang diminta "
+                    "(kendaraan sama, lalu jenis mesin sama, lalu kategori sama; mode "
+                    "aktivitas sama; jarak terdekat). Menampilkan bahan bakar disiapkan "
+                    "dari riwayat impor serta estimasi dan bahan bakar aktual dari operasi "
+                    "yang tercatat. Tidak membuat operasi baru."
+                ),
+                scope=AgentScope.PREDICT,
+                input_schema=_SIMILAR_INPUT_SCHEMA,
+                handler=find_similar,
+            ),
+            McpTool(
+                name="list_vehicles",
+                description=(
+                    "Daftar kendaraan armada beserta jenis mesin dan nama aliasnya. "
+                    "Gunakan untuk memastikan nama kendaraan sebelum predict_fuel."
+                ),
+                scope=AgentScope.PREDICT,
+                input_schema=_EMPTY_SCHEMA,
+                handler=list_vehicles,
+            ),
+            McpTool(
+                name="search_locations",
+                description=(
+                    "Cari lokasi pemberhentian dari katalog berdasarkan potongan nama "
+                    "(tidak peka huruf besar/kecil, tanda hubung, atau spasi). Gunakan "
+                    "untuk memastikan ejaan pemberhentian sebelum predict_fuel."
+                ),
+                scope=AgentScope.PREDICT,
+                input_schema=_SEARCH_LOCATIONS_SCHEMA,
+                handler=search_locations_tool,
+            ),
+            McpTool(
+                name="estimate_route_distance",
+                description=(
+                    "Hitung jarak rute (km) untuk urutan pemberhentian sesuai urutan "
+                    "perencana, tanpa membuat operasi. Gagal bila penyedia rute tidak "
+                    "dikonfigurasi; saat itu minta jarak total kepada perencana."
+                ),
+                scope=AgentScope.PREDICT,
+                input_schema=_ROUTE_INPUT_SCHEMA,
+                handler=estimate_route_distance,
             ),
             McpTool(
                 name="get_service_health",
@@ -442,26 +658,121 @@ def build_registry(
 
 _EMPTY_SCHEMA: dict[str, Any] = {"type": "object", "properties": {}, "additionalProperties": False}
 
+_ACTIVITY_MODES = ["transport", "lifting", "transport_and_lifting"]
+
 _PREDICT_INPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["vehicle_category", "activity_mode", "total_distance_km"],
+    "required": ["vehicle", "activity_mode"],
     "properties": {
-        "vehicle_category": {"type": "string", "enum": ["ANGBER"]},
-        "activity_mode": {
+        "vehicle": {
             "type": "string",
-            "enum": ["transport", "lifting", "transport_and_lifting"],
+            "description": (
+                "Nama kendaraan sebagaimana disebut perencana, misalnya 'Truck Crane 01' "
+                "atau alias 'T CRANE 01'. Lihat list_vehicles."
+            ),
         },
+        "activity_mode": {"type": "string", "enum": _ACTIVITY_MODES},
         "lifting_hours": {
             "type": ["number", "null"],
             "minimum": 0,
             "description": "Wajib untuk mode yang mencakup lifting.",
         },
-        "total_distance_km": {"type": "number", "exclusiveMinimum": 0},
+        "stop_sequence": {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 2,
+            "description": (
+                "Pemberhentian sesuai urutan perencana, termasuk perjalanan pulang bila "
+                "kendaraan kembali, misalnya ['POOL LIMAU', 'SP-II', 'POOL LIMAU']. "
+                "Nama dicocokkan ke katalog lokasi; lihat search_locations."
+            ),
+        },
+        "total_distance_km": {
+            "type": ["number", "null"],
+            "exclusiveMinimum": 0,
+            "description": (
+                "Jarak total bila sudah diketahui, atau cadangan bila rute tidak dapat "
+                "dihitung. Wajib bila stop_sequence tidak diberikan."
+            ),
+        },
+        "vehicle_category": {"type": "string", "enum": ["ANGBER"], "default": "ANGBER"},
         "distance_source": {"type": "string", "enum": ["manual", "routing_provider"]},
-        "stop_sequence": {"type": "array", "items": {"type": "string"}},
+        "similar_limit": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20,
+            "default": 5,
+            "description": "Berapa operasi lampau serupa yang disertakan.",
+        },
     },
 }
+
+_SIMILAR_INPUT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["vehicle"],
+    "properties": {
+        "vehicle": {"type": "string"},
+        "activity_mode": {"type": ["string", "null"], "enum": [*_ACTIVITY_MODES, None]},
+        "lifting_hours": {"type": ["number", "null"], "minimum": 0},
+        "total_distance_km": {"type": ["number", "null"], "exclusiveMinimum": 0},
+        "limit": {"type": "integer", "minimum": 0, "maximum": 50, "default": 10},
+    },
+}
+
+_SEARCH_LOCATIONS_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["query"],
+    "properties": {
+        "query": {"type": "string", "minLength": 2},
+        "limit": {"type": "integer", "minimum": 0, "maximum": 50, "default": 10},
+    },
+}
+
+_ROUTE_INPUT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["stop_sequence"],
+    "properties": {
+        "stop_sequence": {"type": "array", "items": {"type": "string"}, "minItems": 2},
+    },
+}
+
+_DEFAULT_SIMILAR_ON_PREDICT = 5
+_MAX_SIMILAR_ON_PREDICT = 20
+_DEFAULT_SIMILAR = 10
+_MAX_SIMILAR = 50
+
+
+def _similar_operation_payload(item: SimilarOperation) -> dict[str, Any]:
+    record = item.record
+    return {
+        "source": record.source.value,
+        "operation_id": record.operation_id,
+        "vehicle": record.vehicle,
+        "vehicle_group": item.vehicle_group,
+        "activity_mode": record.activity_mode.value,
+        "lifting_hours": record.lifting_hours,
+        "total_distance_km": record.total_distance_km,
+        "distance_source": record.distance_source.value,
+        "stop_sequence": list(record.stop_sequence) if record.stop_sequence else None,
+        "prepared_fuel_liters": record.prepared_fuel_liters,
+        "estimated_fuel_requirement_liters": record.estimated_fuel_requirement_liters,
+        "recommended_allocation_liters": record.recommended_allocation_liters,
+        "actual_fuel_liters": record.actual_fuel_liters,
+        "recorded_at": record.recorded_at.isoformat() if record.recorded_at else None,
+        "operation_date": record.operation_date,
+        "source_reference": record.source_reference,
+        "match": {
+            "vehicle": item.match.vehicle.value,
+            "activity_mode": item.match.activity_mode,
+            "distance_delta_km": item.match.distance_delta_km,
+            "lifting_hours_delta": item.match.lifting_hours_delta,
+            "score": item.match.score,
+        },
+    }
 
 
 def tool_result_to_text(result: Any) -> str:
