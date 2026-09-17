@@ -1,4 +1,10 @@
-"""Managing MCP client credentials (Phase 4, ADR 0008)."""
+"""Managing MCP client credentials (ADR 0008) and user-connected agents (ADR 0014).
+
+Two pages. *Integrasi Agen* is the administrator's: static credentials are
+issued and revoked there, and every user's OAuth grant is listed with a
+revoke action. *Agen Saya* is everyone's: their own grants, and how to
+connect a new agent without a credential at all.
+"""
 
 import json
 from typing import TYPE_CHECKING
@@ -10,6 +16,11 @@ from fuel_predictor.application.agent_credentials import (
     IssueAgentCredential,
     ListAgentClients,
     RevokeAgentCredential,
+)
+from fuel_predictor.application.agent_grants import (
+    AgentGrantSummary,
+    ListAgentGrants,
+    RevokeAgentGrant,
 )
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
@@ -29,12 +40,30 @@ def build_agent_pages_router(
     list_clients: ListAgentClients,
     guard: SecurityGuard,
     rate_limit_per_minute: int = 0,
+    *,
+    list_grants: ListAgentGrants,
+    revoke_grant: RevokeAgentGrant,
 ) -> APIRouter:
     router = APIRouter()
 
+    def _admin_page(
+        caller: "ActiveCaller",
+        issued_token: str | None = None,
+        error: str | None = None,
+        connection: dict[str, object] | None = None,
+    ) -> str:
+        return _render(
+            caller,
+            list_clients,
+            issued_token,
+            error,
+            connection=connection,
+            grants=list_grants.execute(),
+        )
+
     @router.get("/integrasi-agen", response_class=HTMLResponse)
     def show_agents(request: Request) -> HTMLResponse:
-        return HTMLResponse(_render(guard.require_caller(request), list_clients, None, None))
+        return HTMLResponse(_admin_page(guard.require_caller(request)))
 
     @router.post("/integrasi-agen", response_class=HTMLResponse)
     async def issue(request: Request) -> Response:
@@ -49,17 +78,15 @@ def build_agent_pages_router(
             )
         except IdentityValidationError as error:
             return HTMLResponse(
-                _render(caller, list_clients, None, error.message),
+                _admin_page(caller, error=error.message),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         # Shown exactly once. Only the hash is stored, so this value cannot be
         # recovered later — a lost credential is reissued, not looked up.
         return HTMLResponse(
-            _render(
+            _admin_page(
                 caller,
-                list_clients,
-                issued.token,
-                None,
+                issued_token=issued.token,
                 connection=_connection_guide(
                     _mcp_url(request), issued.token, rate_limit_per_minute
                 ),
@@ -74,10 +101,59 @@ def build_agent_pages_router(
             revoke_credential.execute(client_id, revoked_by=caller.user.username)
         except IdentityValidationError as error:
             return HTMLResponse(
-                _render(caller, list_clients, None, error.message),
+                _admin_page(caller, error=error.message),
                 status_code=status.HTTP_404_NOT_FOUND,
             )
-        return HTMLResponse(_render(caller, list_clients, None, None))
+        return HTMLResponse(_admin_page(caller))
+
+    @router.post("/integrasi-agen/grant/{grant_id}/cabut", response_class=HTMLResponse)
+    async def revoke_any_grant(grant_id: str, request: Request) -> Response:
+        caller = guard.require_caller(request)
+        try:
+            revoke_grant.execute(grant_id, revoked_by=caller.user)
+        except IdentityValidationError as error:
+            return HTMLResponse(
+                _admin_page(caller, error=error.message),
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        return HTMLResponse(_admin_page(caller))
+
+    # --- Agen Saya: a user's own grants -------------------------------------
+
+    def _own_page(request: Request, caller: "ActiveCaller", error: str | None = None) -> str:
+        url = _mcp_url(request)
+        return render(
+            "agen-saya.html",
+            caller=caller,
+            page_title="Agen Saya",
+            active_path="/agen-saya",
+            eyebrow="PENGATURAN",
+            page_lead=(
+                "Agen pengkodean yang Anda sambungkan bertindak atas nama akun Anda. "
+                "Cabut sambungannya di sini bila tidak dipakai lagi."
+            ),
+            grants=list_grants.execute(user_id=caller.user.user_id),
+            error=error,
+            mcp_url=url,
+            mcp_json=json.dumps(
+                {"mcpServers": {"fuel-predictor": {"type": "http", "url": url}}}, indent=2
+            ),
+        )
+
+    @router.get("/agen-saya", response_class=HTMLResponse)
+    def show_own_agents(request: Request) -> HTMLResponse:
+        return HTMLResponse(_own_page(request, guard.require_caller(request)))
+
+    @router.post("/agen-saya/{grant_id}/cabut", response_class=HTMLResponse)
+    async def revoke_own_grant(grant_id: str, request: Request) -> Response:
+        caller = guard.require_caller(request)
+        try:
+            revoke_grant.execute(grant_id, revoked_by=caller.user)
+        except IdentityValidationError as error:
+            return HTMLResponse(
+                _own_page(request, caller, error.message), status_code=status.HTTP_404_NOT_FOUND
+            )
+        return HTMLResponse(_own_page(request, caller))
 
     return router
 
@@ -140,6 +216,7 @@ def _render(
     issued_token: str | None,
     error: str | None,
     connection: dict[str, object] | None = None,
+    grants: tuple[AgentGrantSummary, ...] = (),
 ) -> str:
     return render(
         "integrasi-agen.html",
@@ -162,4 +239,5 @@ def _render(
         mcp_url=connection["mcp_url"] if connection else None,
         rate_limit=connection["rate_limit"] if connection else None,
         snippets=connection["snippets"] if connection else None,
+        grants=grants,
     )

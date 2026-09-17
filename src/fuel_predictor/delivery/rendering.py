@@ -88,6 +88,7 @@ NAVIGATION: tuple[NavigationGroup, ...] = (
     NavigationGroup(
         title="Pengaturan",
         items=(
+            NavigationItem("Agen Saya", "/agen-saya", Capability.MANAGE_OWN_AGENTS),
             NavigationItem("Integrasi Agen", "/integrasi-agen", Capability.MANAGE_USERS),
             NavigationItem("Pengguna", "/pengguna", Capability.MANAGE_USERS),
             NavigationItem("Catatan Audit", "/audit", Capability.VIEW_AUDIT),

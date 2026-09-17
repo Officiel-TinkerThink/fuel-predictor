@@ -64,4 +64,7 @@ def test_migrations_create_daily_operation_dataset_and_prediction_lineage_tables
         "predictions",
         "actual_fuel_records",
         "monitoring_alerts",
+        "agent_registrations",
+        "agent_authorization_codes",
+        "agent_grants",
     } <= table_names

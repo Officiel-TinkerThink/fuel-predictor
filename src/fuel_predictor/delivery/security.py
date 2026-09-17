@@ -38,8 +38,19 @@ _PUBLIC_PATHS = frozenset(
         # trail (Phase 4). It is "public" only to the *session* middleware —
         # an unauthenticated MCP call is still rejected, by the MCP handler.
         "/mcp",
+        # The OAuth surface (ADR 0014). Discovery, registration and the token
+        # endpoint are reached by a program with no cookie; /oauth/authorize
+        # is reached by a person and asks for the session itself, so that a
+        # missing one becomes a sign-in redirect that comes back here.
+        "/.well-known",
+        "/oauth",
     }
 )
+
+# Form-encoded POSTs that carry no cookie-based authority: OAuth mandates
+# `application/x-www-form-urlencoded` here, and the caller is a program
+# proving itself with PKCE, not a browser session a forged form could ride.
+_CSRF_EXEMPT_PATHS = frozenset({"/oauth/token", "/oauth/revoke"})
 
 # One entry per route: (method, path pattern, capability). A pattern segment of
 # "*" matches exactly one path segment, so "/api/v1/model-candidates/*/promote"
@@ -75,6 +86,9 @@ ROUTE_CAPABILITIES: tuple[tuple[str, str, Capability], ...] = (
     ("GET", "/integrasi-agen", Capability.MANAGE_USERS),
     ("POST", "/integrasi-agen", Capability.MANAGE_USERS),
     ("POST", "/integrasi-agen/*/cabut", Capability.MANAGE_USERS),
+    ("POST", "/integrasi-agen/grant/*/cabut", Capability.MANAGE_USERS),
+    ("GET", "/agen-saya", Capability.MANAGE_OWN_AGENTS),
+    ("POST", "/agen-saya/*/cabut", Capability.MANAGE_OWN_AGENTS),
     ("GET", "/pengguna", Capability.MANAGE_USERS),
     ("POST", "/pengguna", Capability.MANAGE_USERS),
     ("GET", "/audit", Capability.VIEW_AUDIT),
@@ -273,6 +287,8 @@ def _required_capability(method: str, path: str) -> Capability | None:
 def _requires_csrf(request: Request) -> bool:
     if request.method in _SAFE_METHODS:
         return False
+    if request.url.path in _CSRF_EXEMPT_PATHS:
+        return False
     content_type = request.headers.get("content-type", "")
     return any(content_type.startswith(form_type) for form_type in _FORM_CONTENT_TYPES)
 
@@ -314,7 +330,12 @@ def _authentication_required_response(request: Request) -> Response:
                 }
             },
         )
-    destination = quote(request.url.path, safe="")
+    # Path *and* query: an OAuth authorization request arrives as query
+    # parameters, and dropping them would sign the user in to a blank page.
+    target = request.url.path
+    if request.url.query:
+        target = f"{target}?{request.url.query}"
+    destination = quote(target, safe="")
     return RedirectResponse(
         f"/masuk?tujuan={destination}", status_code=status.HTTP_303_SEE_OTHER
     )

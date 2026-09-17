@@ -279,6 +279,80 @@ class AgentClientRow(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class AgentRegistrationRow(Base):
+    """A program that registered itself as an OAuth client (ADR 0014).
+
+    Public clients only, so there is no secret column to protect. The name is
+    the client's own claim and is shown to the user as such.
+    """
+
+    __tablename__ = "agent_registrations"
+
+    registration_id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    client_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    redirect_uris: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    registered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class AuthorizationCodeRow(Base):
+    """A user's consent on its way to the client: single use, minutes to live."""
+
+    __tablename__ = "agent_authorization_codes"
+
+    code_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    registration_id: Mapped[str] = mapped_column(
+        ForeignKey("agent_registrations.registration_id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False
+    )
+    scopes: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    redirect_uri: Mapped[str] = mapped_column(String(1024), nullable=False)
+    code_challenge: Mapped[str] = mapped_column(String(128), nullable=False)
+    issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    redeemed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class AgentGrantRow(Base):
+    """A user's standing delegation to one registered client (ADR 0014).
+
+    Both token hashes live on the grant and are replaced together on refresh,
+    so one row is one consent and revoking it ends every token it ever had.
+    """
+
+    __tablename__ = "agent_grants"
+
+    grant_id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    registration_id: Mapped[str] = mapped_column(
+        ForeignKey("agent_registrations.registration_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    scopes: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    access_token_hash: Mapped[str] = mapped_column(
+        String(64), unique=True, nullable=False, index=True
+    )
+    access_token_expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    refresh_token_hash: Mapped[str] = mapped_column(
+        String(64), unique=True, nullable=False, index=True
+    )
+    refresh_token_expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    refreshed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    previous_refresh_token_hash: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
+
+
 class MonitoringRunRow(Base):
     """One completed scheduled monitoring run (Phase 3).
 

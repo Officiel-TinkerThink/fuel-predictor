@@ -13,16 +13,42 @@ over together with a credential issued from **Integrasi Agen**.
 | URL | `https://<domain>/mcp` (the same host as the web application) |
 | Transport | MCP **Streamable HTTP**, stateless: one `POST` per JSON-RPC message, one JSON body back. No SSE stream (`GET /mcp` → 405), no sessions (`DELETE /mcp` → 405). |
 | Protocol revision | Server answers `initialize` with `2024-11-05`. Clients on `2025-03-26`, `2025-06-18`, `2025-11-25` downgrade automatically (verified with the official Python and TypeScript SDKs). |
-| Authentication | `Authorization: Bearer fpa_…` on **every** request, `initialize` included. |
-| Capabilities | `tools` only. No resources, prompts, sampling or OAuth. |
+| Authentication | `Authorization: Bearer …` on **every** request, `initialize` included. Two ways to get a token: OAuth (a user signs in and consents from the client; §1a) or a static credential issued by an administrator (§1b). |
+| Capabilities | `tools` only. No resources, prompts or sampling. |
 | Rate limit | Per credential, default 120 calls / 60 s. Exceeding it returns HTTP 429 with `Retry-After` and JSON-RPC error `-32004`. |
 
-### Credentials
+### 1a. OAuth: a user connects their own agent (ADR 0014)
+
+Add the URL with **no** credential. A standards-compliant client does the rest:
+
+1. `POST /mcp` without a token → `401` with
+   `WWW-Authenticate: Bearer realm="fuel-predictor", resource_metadata="https://<domain>/.well-known/oauth-protected-resource"`.
+2. `GET /.well-known/oauth-protected-resource` → `authorization_servers: ["https://<domain>"]`;
+   `GET /.well-known/oauth-authorization-server` (or `/.well-known/openid-configuration`) lists
+   the endpoints below.
+3. `POST /oauth/register` (RFC 7591, open, JSON `{"client_name": …, "redirect_uris": […]}`) →
+   `client_id`. Public clients only (`token_endpoint_auth_method: "none"`); redirect URIs must be
+   `https://` or loopback `http://` and are matched exactly.
+4. Browser to `/oauth/authorize` with `response_type=code`, `client_id`, `redirect_uri`,
+   `code_challenge` (+ `code_challenge_method=S256`, mandatory), optional `scope`, `state`,
+   `resource=https://<domain>/mcp`. The user signs in if needed, sees the client's name and
+   redirect host, ticks the scopes, and allows or refuses.
+5. `POST /oauth/token` (form-encoded) with `grant_type=authorization_code`, `code`, `client_id`,
+   `redirect_uri`, `code_verifier` → `{access_token, token_type: "Bearer", expires_in: 3600,
+   refresh_token, scope}`. `grant_type=refresh_token` rotates both tokens; presenting a rotated
+   refresh token again revokes the grant.
+6. `POST /oauth/revoke` (RFC 7009) with `token` and `client_id` hands a grant back.
+
+The agent acts **as the user**, audited as `<username> via <client name>`, and can never hold a
+scope the user's own role does not. Access tokens last one hour, refresh tokens thirty days of
+disuse. The user sees and revokes their grants on **Agen Saya**; an administrator sees everyone's
+on **Integrasi Agen**. Revocation is immediate.
+
+### 1b. Static credentials: headless agents and CI
 
 An administrator issues one per client on **Integrasi Agen** (shown once; only its hash is
 stored) and can revoke it at any time, effective immediately. A revoked or unknown token gets the
-same `401` with `WWW-Authenticate: Bearer realm="fuel-predictor"`. Scopes decide which tools are
-listed and callable:
+same `401` as above. Scopes decide which tools are listed and callable, for both kinds of token:
 
 | Scope | Tools |
 |---|---|
@@ -35,7 +61,18 @@ listed and callable:
 
 ## 2. Client configuration
 
-The page that issues the credential renders these with the token filled in. For reference:
+**OAuth (any user, own laptop)** — omit the header and the client opens the browser:
+
+```bash
+claude mcp add --transport http fuel-predictor https://<domain>/mcp
+```
+
+```json
+{ "mcpServers": { "fuel-predictor": { "type": "http", "url": "https://<domain>/mcp" } } }
+```
+
+**Static credential (headless)** — the page that issues the credential renders these with the
+token filled in. For reference:
 
 **Claude Code**
 
@@ -134,7 +171,7 @@ Result:
 
 | What comes back | Meaning | What to do |
 |---|---|---|
-| HTTP 401 | Missing, wrong or revoked credential | Ask the administrator for a new one. Do not retry. |
+| HTTP 401 | Missing, expired, wrong or revoked token | OAuth client: refresh, or re-run the browser flow if the refresh is refused. Static credential: ask the administrator for a new one. Do not retry blindly. |
 | JSON-RPC `-32003` | Tool needs a scope the credential lacks | Ask for the scope; `tools/list` already hides such tools. |
 | HTTP 429 / `-32004` | Rate limit | Back off for `Retry-After` seconds. |
 | `-32601` | Unknown tool or method | Re-read `tools/list`. |
@@ -144,9 +181,9 @@ Every call is audited (client name, tool, outcome) on the **Catatan Audit** page
 
 ## 5. What this is not
 
-- Not OAuth. Clients that only support OAuth-discovered remote servers (claude.ai custom
-  connectors, ChatGPT connectors) cannot use a static bearer token. Coding agents (Claude Code,
-  Cursor, Codex, VS Code, Windsurf, Gemini CLI) can.
+- Not a confidential OAuth client. No client secrets are issued and only the authorization-code
+  (with PKCE) and refresh-token grants exist; a client that needs `client_credentials` uses a
+  static credential instead.
 - Not a browser API. There is no CORS; use it from an agent or a server.
 - Not actual consumption. Every number is an estimate of fuel to prepare (ADR 0002); the
   `actual_fuel_liters` in history rows is the only verified quantity.

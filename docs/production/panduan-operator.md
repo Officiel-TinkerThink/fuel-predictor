@@ -187,6 +187,22 @@ potongan itu memuat kredensialnya. Mereka tidak memerlukan akun di aplikasi ini;
 kredensial itu. Bila mereka butuh penjelasan alat-alatnya, berikan berkas
 `docs/production/mcp-integration.md`.
 
+### 7a. Menyambungkan agen Anda sendiri
+
+Semua akun. Menu **Agen Saya**.
+
+Untuk agen pengkodean di laptop Anda sendiri (Claude Code, Cursor, dan sejenisnya) tidak perlu
+kredensial dari administrator. Tambahkan alamat MCP yang tertera di halaman itu ke agen Anda
+*tanpa* kredensial; agen akan membuka peramban ke halaman izin aplikasi ini. Periksa nama agen
+dan alamat kembalinya, centang yang boleh dilakukannya, lalu tekan **Izinkan**.
+
+Agen itu bertindak atas nama akun Anda dan tidak pernah bisa melakukan lebih dari yang boleh
+Anda lakukan. Di **Agen Saya** Anda melihat setiap agen yang tersambung dan dapat menekan
+**Cabut** kapan saja; berlaku seketika. Sambungan yang tidak dipakai 30 hari berakhir sendiri.
+
+Administrator melihat sambungan semua pengguna di bagian bawah **Integrasi Agen** dan dapat
+mencabutnya juga.
+
 ---
 
 ## 8. Kalau ada yang tidak beres

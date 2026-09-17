@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+<section class="card consent-card">
+  <p><strong>{{ client_name }}</strong> meminta izin untuk bertindak atas nama akun Anda
+    (<strong>{{ caller_user.username }}</strong>). Setelah diizinkan, agen ini memakai hak akses
+    Anda sampai Anda mencabutnya di halaman <a href="/agen-saya">Agen Saya</a>.</p>
+  <p class="hint">Agen akan dikembalikan ke <code>{{ redirect_host }}</code>. Bila Anda tidak
+    baru saja menyambungkan agen dari alamat itu, tolak permintaan ini.</p>
+
+  <form method="post" action="/oauth/authorize" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% for name, value in hidden_fields.items() %}
+    <input type="hidden" name="{{ name }}" value="{{ value }}">
+    {% endfor %}
+
+    <fieldset>
+      <legend>Yang boleh dilakukan agen</legend>
+      {% for scope in offered_scopes %}
+      <div class="field">
+        <label>
+          <input type="checkbox" name="scopes" value="{{ scope.value }}" checked>
+          {{ scope.description }} <code>{{ scope.value }}</code>
+        </label>
+      </div>
+      {% endfor %}
+    </fieldset>
+
+    {% if refused_scopes %}
+    <p class="hint">Diminta tetapi di luar hak akses peran Anda, sehingga tidak diberikan:
+      {% for scope in refused_scopes %}<code>{{ scope }}</code>{% if not loop.last %}, {% endif %}{% endfor %}.</p>
+    {% endif %}
+
+    <div class="form-actions">
+      <button type="submit" name="decision" value="izinkan">Izinkan</button>
+      <button type="submit" name="decision" value="tolak" class="button button--secondary">Tolak</button>
+    </div>
+  </form>
+</section>
+
+{% endblock %}

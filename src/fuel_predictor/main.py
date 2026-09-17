@@ -14,6 +14,18 @@ from fuel_predictor.application.agent_credentials import (
     ResolveAgentCredential,
     RevokeAgentCredential,
 )
+from fuel_predictor.application.agent_grants import (
+    IssueAuthorizationCode,
+    ListAgentGrants,
+    RedeemAuthorizationCode,
+    RefreshGrant,
+    RegisterAgentClient,
+    ResolveAgentBearer,
+    ResolveGrantAccessToken,
+    RevokeAgentGrant,
+    RevokeGrantByToken,
+    ValidateAuthorizationRequest,
+)
 from fuel_predictor.application.baseline_predictions import (
     GenerateFuelPrediction,
     TrainBaselineCandidate,
@@ -88,6 +100,7 @@ from fuel_predictor.delivery.mcp_server import (
 from fuel_predictor.delivery.model_governance_pages import build_model_governance_pages_router
 from fuel_predictor.delivery.model_upload_pages import build_model_upload_pages_router
 from fuel_predictor.delivery.monitoring_pages import build_monitoring_pages_router
+from fuel_predictor.delivery.oauth_routes import build_oauth_router
 from fuel_predictor.delivery.prediction_pages import build_prediction_pages_router
 from fuel_predictor.delivery.rendering import STATIC_DIRECTORY
 from fuel_predictor.delivery.security import (
@@ -118,6 +131,11 @@ from fuel_predictor.infrastructure.model_artifact_loader import build_loader
 from fuel_predictor.infrastructure.model_artifact_store import FilesystemModelArtifactStore
 from fuel_predictor.infrastructure.password_hashing import ScryptPasswordHasher
 from fuel_predictor.infrastructure.sqlalchemy_actual_fuel import SqlAlchemyActualFuelRepository
+from fuel_predictor.infrastructure.sqlalchemy_agent_grants import (
+    SqlAlchemyAgentGrantRepository,
+    SqlAlchemyAgentRegistrationRepository,
+    SqlAlchemyAuthorizationCodeRepository,
+)
 from fuel_predictor.infrastructure.sqlalchemy_daily_operations import (
     SqlAlchemyDailyOperationRepository,
 )
@@ -365,6 +383,12 @@ def create_app(
     issue_agent_credential = IssueAgentCredential(agent_client_repository, record_audit)
     revoke_agent_credential = RevokeAgentCredential(agent_client_repository, record_audit)
     list_agent_clients = ListAgentClients(agent_client_repository)
+    # OAuth grants (ADR 0014): a user connecting their own coding agent.
+    agent_registrations = SqlAlchemyAgentRegistrationRepository(session_factory)
+    authorization_codes = SqlAlchemyAuthorizationCodeRepository(session_factory)
+    agent_grants = SqlAlchemyAgentGrantRepository(session_factory)
+    list_agent_grants = ListAgentGrants(agent_grants, agent_registrations, user_repository)
+    revoke_agent_grant = RevokeAgentGrant(agent_grants, record_audit)
     find_similar_operations = FindSimilarOperations(
         SqlAlchemyHistoricalOperationSource(session_factory), resolved_vehicle_catalog
     )
@@ -406,7 +430,14 @@ def create_app(
         )
     mcp_handler = McpRequestHandler(
         registry=mcp_registry,
-        resolve_credential=ResolveAgentCredential(agent_client_repository),
+        # Either kind of bearer: an administrator-issued credential or a
+        # token from a user's grant. The handler never learns which.
+        resolve_credential=ResolveAgentBearer(
+            resolve_credential=ResolveAgentCredential(agent_client_repository),
+            resolve_grant=ResolveGrantAccessToken(
+                agent_grants, agent_registrations, user_repository
+            ),
+        ),
         record_audit=record_audit,
         max_calls_per_window=settings.mcp_max_calls_per_window,
         window_seconds=settings.mcp_rate_limit_window_seconds,
@@ -532,6 +563,22 @@ def create_app(
             rate_limit_per_minute=settings.mcp_max_calls_per_window
             * 60
             // settings.mcp_rate_limit_window_seconds,
+            list_grants=list_agent_grants,
+            revoke_grant=revoke_agent_grant,
+        )
+    )
+    app.include_router(
+        build_oauth_router(
+            register_client=RegisterAgentClient(agent_registrations, record_audit),
+            validate_request=ValidateAuthorizationRequest(agent_registrations),
+            issue_code=IssueAuthorizationCode(authorization_codes, record_audit),
+            redeem_code=RedeemAuthorizationCode(
+                authorization_codes, agent_grants, user_repository, record_audit
+            ),
+            refresh_grant=RefreshGrant(agent_grants, user_repository, record_audit),
+            revoke_by_token=RevokeGrantByToken(agent_grants, record_audit),
+            guard=guard,
+            is_system_provisioned=resolve_session.is_system_provisioned,
         )
     )
     app.include_router(

@@ -568,23 +568,29 @@ button[type="submit"]:hover {
   color: var(--color-text-inverse);
 }
 
-.button--secondary {
+/* Repeated with the element selector so a <button type="submit"> can be
+   secondary too; the attribute selector above would otherwise outrank it. */
+.button--secondary,
+button[type="submit"].button--secondary {
   background: var(--color-surface);
   color: var(--color-brand-strong);
   border-color: var(--color-border-strong);
 }
 
-.button--secondary:hover {
+.button--secondary:hover,
+button[type="submit"].button--secondary:hover {
   background: var(--color-surface-sunken);
   color: var(--color-brand-strong);
 }
 
-.button--danger {
+.button--danger,
+button[type="submit"].button--danger {
   background: var(--color-danger);
   border-color: var(--color-danger);
 }
 
-.button--danger:hover {
+.button--danger:hover,
+button[type="submit"].button--danger:hover {
   background: #7d1c19;
   border-color: #7d1c19;
 }

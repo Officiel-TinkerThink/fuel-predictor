@@ -129,8 +129,11 @@ def test_mcp_refuses_calls_that_carry_no_credential(tmp_path: Path) -> None:
 
     assert response.status_code == 401
     # A compliant client needs to learn it must authenticate, not guess that
-    # the server is broken.
-    assert response.headers["WWW-Authenticate"] == 'Bearer realm="fuel-predictor"'
+    # the server is broken; `resource_metadata` is where it learns how (ADR 0014).
+    assert response.headers["WWW-Authenticate"] == (
+        'Bearer realm="fuel-predictor", '
+        'resource_metadata="http://testserver/.well-known/oauth-protected-resource"'
+    )
 
 
 def test_a_nonsense_token_is_refused_the_same_way_a_revoked_one_is(tmp_path: Path) -> None:

@@ -74,9 +74,16 @@ def build_mcp_router(handler: McpRequestHandler, server_version: str) -> APIRout
         except McpAuthenticationError as error:
             # 401 with WWW-Authenticate so a standards-compliant client knows
             # to obtain a credential rather than treating this as a bug.
+            # `resource_metadata` (RFC 9728) is how it finds the OAuth
+            # discovery document and starts the browser flow (ADR 0014).
+            metadata = str(request.base_url).rstrip("/") + "/.well-known/oauth-protected-resource"
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                headers={"WWW-Authenticate": 'Bearer realm="fuel-predictor"'},
+                headers={
+                    "WWW-Authenticate": (
+                        f'Bearer realm="fuel-predictor", resource_metadata="{metadata}"'
+                    )
+                },
                 content=_body(request_id, error=(-32001, str(error))),
             )
 

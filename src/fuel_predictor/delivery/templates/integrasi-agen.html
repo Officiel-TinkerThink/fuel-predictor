@@ -97,4 +97,39 @@
   </section>
 </div>
 
+<section class="card">
+  <h2>Agen yang disambungkan pengguna</h2>
+  <p class="hint">Pengguna menyambungkan agen pengkodeannya sendiri lewat OAuth dari halaman
+    <em>Agen Saya</em>; agen itu bertindak dengan hak akses pengguna tersebut, tidak lebih.
+    Administrator dapat mencabutnya kapan saja.</p>
+  {% if grants %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Pengguna</th><th>Agen</th><th>Cakupan</th><th>Disambungkan</th><th>Status</th><th>Tindakan</th></tr></thead>
+      <tbody>
+        {% for summary in grants %}
+        <tr>
+          <td>{{ summary.full_name }}<br><span class="hint">{{ summary.username }}</span></td>
+          <td>{{ summary.client_name }}<br><span class="hint">{{ summary.redirect_hosts | join(', ') }}</span></td>
+          <td>{{ summary.grant.scopes | map('string') | sort | join(', ') }}</td>
+          <td>{{ summary.grant.granted_at | waktu }}</td>
+          <td>{% if summary.is_active %}{{ ui.badge('Aktif', 'success') }}{% else %}{{ ui.badge('Dicabut', 'neutral') }}{% endif %}</td>
+          <td>
+            {% if summary.is_active %}
+            <form method="post" action="/integrasi-agen/grant/{{ summary.grant_id }}/cabut">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit" class="button button--danger">Cabut</button>
+            </form>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ ui.empty_state('Belum ada pengguna yang menyambungkan agen.') }}
+  {% endif %}
+</section>
+
 {% endblock %}

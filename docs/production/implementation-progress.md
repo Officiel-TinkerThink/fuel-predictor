@@ -598,6 +598,19 @@ token against `/mcp`, revoke it, watch the next call 401).
       renders paste-ready configuration (Claude Code, Cursor/VS Code `mcp.json`, Codex
       `config.toml`, curl) with the public URL and the token filled in. The contract for the
       other side is `docs/production/mcp-integration.md`.
+- [x] **OAuth for a user's own agent (ADR 0014).** The application is its own OAuth 2.1
+      authorization server: `/.well-known/oauth-protected-resource` and
+      `/.well-known/oauth-authorization-server`, open dynamic registration (`/oauth/register`,
+      public clients only), `/oauth/authorize` with a consent page behind the existing session,
+      `/oauth/token` (authorization-code with mandatory PKCE S256, refresh-token with rotation
+      and reuse detection) and `/oauth/revoke`. A grant is presented to `/mcp` as an agent
+      client named `<username> via <client>` so the existing handler, scopes, rate limit and
+      audit apply unchanged; static `fpa_` credentials stay for headless use. Scopes are capped
+      by the user's role. New page **Agen Saya** for everyone; **Integrasi Agen** lists every
+      user's grant. No new dependency. Pinned by `tests/test_agent_authorization_model.py`,
+      `tests/test_agent_grants.py`, `tests/test_oauth_mcp_connection.py`. **Not yet verified
+      against real clients** (Claude Code, Cursor, claude.ai connector); the ADR stays
+      *Proposed* until that is done.
 
 Bug found and fixed while testing this phase: the transport caught `LookupError` to mean "unknown
 tool", but `KeyError` is a `LookupError`. A prediction attempted with no trained model therefore

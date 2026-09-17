@@ -27,6 +27,9 @@ class Capability(StrEnum):
     MANAGE_MODELS = "manage_models"
     MANAGE_USERS = "manage_users"
     VIEW_AUDIT = "view_audit"
+    # Connecting one's own coding agent and cutting it off again (ADR 0014).
+    # Every role has it: the agent can never do more than the person could.
+    MANAGE_OWN_AGENTS = "manage_own_agents"
 
 
 _OPERATOR_CAPABILITIES = frozenset(
@@ -36,6 +39,7 @@ _OPERATOR_CAPABILITIES = frozenset(
         Capability.IMPORT_OPERATIONS,
         Capability.VIEW_MONITORING,
         Capability.VIEW_MODELS,
+        Capability.MANAGE_OWN_AGENTS,
     }
 )
 

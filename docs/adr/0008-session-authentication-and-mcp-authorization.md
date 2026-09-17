@@ -58,7 +58,8 @@ provider, and we never forward an inbound MCP credential to another service.
 - [MCP authorization](https://modelcontextprotocol.io/specification/draft/basic/authorization)
   describes OAuth 2.1 resource-server behaviour for remote MCP servers. Phase 4 implements the
   bearer-token and scope checks against locally issued credentials; adopting full dynamic client
-  registration is deferred until a real harness needs it.
+  registration is deferred until a real harness needs it. *(Superseded on this point by
+  ADR 0014, which adds the OAuth flow beside the static credentials.)*
 
 We rejected Keycloak, Auth0, and any external identity provider: each adds either a service that
 does not fit the memory envelope or an external dependency and recurring cost that five users do

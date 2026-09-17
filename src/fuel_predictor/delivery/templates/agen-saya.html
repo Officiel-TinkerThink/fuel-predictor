@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{% if error %}
+{{ ui.banner('danger', 'Grant belum dapat dicabut', error) }}
+{% endif %}
+
+<section class="card">
+  <h2>Agen yang tersambung</h2>
+  {% if grants %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Agen</th><th>Cakupan</th><th>Disambungkan</th><th>Token berlaku sampai</th><th>Status</th><th>Tindakan</th></tr></thead>
+      <tbody>
+        {% for summary in grants %}
+        <tr>
+          <td>{{ summary.client_name }}<br><span class="hint">{{ summary.redirect_hosts | join(', ') }}</span></td>
+          <td>{{ summary.grant.scopes | map('string') | sort | join(', ') }}</td>
+          <td>{{ summary.grant.granted_at | waktu }}</td>
+          <td>{{ summary.grant.refresh_token_expires_at | waktu }}</td>
+          <td>{% if summary.is_active %}{{ ui.badge('Aktif', 'success') }}{% else %}{{ ui.badge('Dicabut', 'neutral') }}{% endif %}</td>
+          <td>
+            {% if summary.is_active %}
+            <form method="post" action="/agen-saya/{{ summary.grant_id }}/cabut">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit" class="button button--danger">Cabut</button>
+            </form>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ ui.empty_state('Belum ada agen yang tersambung ke akun Anda.') }}
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Cara menyambungkan agen</h2>
+  <p>Tambahkan alamat <code>{{ mcp_url }}</code> sebagai server MCP di agen pengkodean Anda
+    <em>tanpa</em> kredensial. Agen akan membuka peramban ke halaman ini untuk meminta izin;
+    setelah Anda mengizinkannya, agen tersambung sebagai <strong>{{ caller_user.username }}</strong>
+    dan tidak pernah bisa melakukan lebih dari yang boleh Anda lakukan.</p>
+  <h3>Claude Code</h3>
+  <pre class="snippet">claude mcp add --transport http fuel-predictor {{ mcp_url }}</pre>
+  <h3>Cursor · Windsurf · VS Code (mcp.json)</h3>
+  <pre class="snippet">{{ mcp_json }}</pre>
+  <p class="hint">Token akses berlaku satu jam dan diperbarui otomatis oleh agen; sambungan
+    berakhir sendiri setelah 30 hari tanpa dipakai, atau seketika saat Anda mencabutnya.</p>
+</section>
+
+{% endblock %}
