@@ -107,26 +107,51 @@
     }
   });
 
-  // Client-side table filtering. The server already returns the full table.
-  document.querySelectorAll("[data-table-filter]").forEach(function (input) {
-    var table = document.getElementById(input.getAttribute("data-table-filter"));
-    if (!table) {
+  // Client-side filtering of a table or a row list. The server already
+  // returns everything; every control naming the same target narrows it
+  // together: a text input matches the row's text, a control with
+  // data-filter-attribute matches that attribute on the row exactly.
+  var filterTargets = {};
+  document.querySelectorAll("[data-table-filter]").forEach(function (control) {
+    var id = control.getAttribute("data-table-filter");
+    (filterTargets[id] = filterTargets[id] || []).push(control);
+  });
+  Object.keys(filterTargets).forEach(function (id) {
+    var target = document.getElementById(id);
+    if (!target) {
       return;
     }
-    var status = document.getElementById(input.getAttribute("aria-describedby"));
-    input.addEventListener("input", function () {
-      var needle = input.value.trim().toLowerCase();
+    var controls = filterTargets[id];
+    var status = document.getElementById(controls[0].getAttribute("aria-describedby"));
+    var rowSelector = target.tagName === "UL" ? "li" : "tbody tr";
+    var apply = function () {
+      var active = false;
       var shown = 0;
-      table.querySelectorAll(table.tagName === "UL" ? "li" : "tbody tr").forEach(function (row) {
-        var match = needle === "" || row.textContent.toLowerCase().indexOf(needle) !== -1;
+      target.querySelectorAll(rowSelector).forEach(function (row) {
+        var match = controls.every(function (control) {
+          var value = control.value.trim();
+          if (value === "") {
+            return true;
+          }
+          active = true;
+          var attribute = control.getAttribute("data-filter-attribute");
+          if (attribute) {
+            return row.getAttribute(attribute) === value;
+          }
+          return row.textContent.toLowerCase().indexOf(value.toLowerCase()) !== -1;
+        });
         row.hidden = !match;
         if (match) {
           shown += 1;
         }
       });
       if (status) {
-        status.textContent = needle === "" ? "" : shown + " baris cocok.";
+        status.textContent = active ? shown + " baris cocok." : "";
       }
+    };
+    controls.forEach(function (control) {
+      control.addEventListener("input", apply);
+      control.addEventListener("change", apply);
     });
   });
 

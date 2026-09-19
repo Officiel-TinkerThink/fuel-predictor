@@ -3,6 +3,18 @@
 
 {% block content %}
 
+{% if setup_needed %}
+<section class="card">
+  <h2>Siapkan model pertama</h2>
+  <p>Belum ada model yang bisa membuat estimasi. Tiga langkah, semuanya manual:</p>
+  <ol class="setup-steps">
+    <li><a href="/impor-data-historis">Impor data historis</a> — riwayat operasi beserta BBM yang disiapkan.</li>
+    <li>Latih kandidat baseline dari dataset itu (tombolnya muncul setelah impor).</li>
+    <li>{% if candidate_count %}<a href="/pengelolaan-model">Promosikan kandidat</a> — {{ candidate_count }} kandidat sudah menunggu.{% else %}Promosikan kandidat di <a href="/pengelolaan-model">Pengelolaan Model</a>.{% endif %}</li>
+  </ol>
+</section>
+{% endif %}
+
 {% if quick_actions %}
 <section class="card">
   <h2>Mulai dari sini</h2>

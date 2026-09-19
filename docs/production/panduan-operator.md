@@ -147,6 +147,12 @@ Spanduk di atas juga memberi tahu apakah peringatan dikirim ke luar aplikasi. Bi
 
 Hanya untuk akun dengan peran pengelola model.
 
+**Model pertama, atau melatih ulang dari riwayat:** menu **Impor Data Historis**, unggah
+riwayat operasi beserta BBM yang disiapkan (templatnya ada di halaman itu). Setelah impor,
+tekan **Latih kandidat baseline secara manual**; kandidatnya lalu muncul di **Pengelolaan
+Model** untuk dibandingkan dan dipromosikan. Selama belum ada model aktif, halaman
+**Ringkasan** menampilkan ketiga langkah ini.
+
 **Mengunggah paket model baru:** menu **Unggah Kandidat**, pilih berkas `.zip` dari pembuat model.
 
 Aplikasi memeriksa paket itu lebih dulu. Kalau ada yang tidak beres, paket **ditolak** dan

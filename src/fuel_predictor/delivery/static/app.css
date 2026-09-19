@@ -820,6 +820,24 @@ th.numeric {
   font-variant-numeric: tabular-nums;
 }
 
+/* Recorded details under an audit row: small, muted, one item per line. */
+.detail-inline {
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  font-size: 0.84rem;
+  overflow-wrap: anywhere;
+}
+
+/* Numbered setup walkthrough on the overview. */
+.setup-steps {
+  margin: 0;
+  padding-left: 1.4rem;
+  display: grid;
+  gap: var(--space-2);
+  max-width: var(--measure);
+}
+
 .table-toolbar {
   display: flex;
   flex-wrap: wrap;

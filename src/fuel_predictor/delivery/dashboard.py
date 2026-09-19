@@ -20,7 +20,12 @@ from fuel_predictor.application.monitoring_runs import (
 )
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
-from fuel_predictor.domain.identity import Capability, IdentityValidationError, UserRole
+from fuel_predictor.domain.identity import (
+    AuditRecord,
+    Capability,
+    IdentityValidationError,
+    UserRole,
+)
 
 _ROLE_LABELS = {
     UserRole.OPERATOR: "Operator",
@@ -86,6 +91,13 @@ def build_dashboard_router(
                     for label, href, capability in _QUICK_ACTIONS
                     if caller.allows(capability)
                 ],
+                # A fresh installation has nothing to predict with until history
+                # is imported and a candidate trained and promoted. Only the
+                # people who can do those steps are walked through them.
+                setup_needed=(
+                    governance.active_model is None and caller.allows(Capability.IMPORT_OPERATIONS)
+                ),
+                candidate_count=len(governance.candidate_models),
                 freshness=_freshness(),
                 last_backup=backup_runs.latest(),
             )
@@ -157,8 +169,62 @@ def build_dashboard_router(
                 active_path="/audit",
                 eyebrow="PENGATURAN",
                 page_lead="Riwayat masuk, tindakan istimewa, dan hasilnya.",
-                records=list_audit_records.execute(),
+                records=[_audit_row(record) for record in list_audit_records.execute()],
             )
         )
 
     return router
+
+
+# What each recorded action means, in words. The code itself stays on the
+# page in small type so a log line can still be matched against it.
+_ACTION_LABELS = {
+    "sign_in_succeeded": "Masuk berhasil",
+    "sign_in_failed": "Masuk gagal",
+    "sign_out": "Keluar",
+    "password_changed": "Kata sandi diubah",
+    "user_created": "Pengguna dibuat",
+    "user_activated": "Pengguna diaktifkan",
+    "model_rollback_requested": "Pengembalian model diminta",
+    "agent_credential_issued": "Kredensial agen diterbitkan",
+    "agent_credential_revoked": "Kredensial agen dicabut",
+    "agent_client_registered": "Klien agen mendaftar",
+    "agent_consent_granted": "Izin agen diberikan",
+    "agent_grant_issued": "Akses agen diberikan",
+    "agent_grant_revoked": "Akses agen dicabut",
+    "mcp_rate_limited": "Agen melebihi batas laju",
+}
+_ACTOR_KIND_LABELS = {"user": "Pengguna", "agent": "Agen", "system": "Sistem"}
+_DETAIL_LABELS = {
+    "reason": "alasan",
+    "role": "peran",
+    "note": "catatan",
+    "client_id": "klien",
+    "scopes": "cakupan",
+    "username": "pengguna",
+}
+
+
+def _action_label(action: str) -> str:
+    if action in _ACTION_LABELS:
+        return _ACTION_LABELS[action]
+    if action.startswith("mcp_tool:"):
+        return f"Alat agen {action.removeprefix('mcp_tool:')}"
+    return action.replace("_", " ").capitalize()
+
+
+def _audit_row(record: AuditRecord) -> dict[str, object]:
+    return {
+        "occurred_at": record.occurred_at,
+        "actor": record.actor,
+        "actor_kind": _ACTOR_KIND_LABELS.get(record.actor_kind, record.actor_kind),
+        "action": record.action,
+        "action_label": _action_label(record.action),
+        "subject": record.subject,
+        "outcome": record.outcome.value,
+        "details": [
+            (_DETAIL_LABELS.get(key, key), value)
+            for key, value in record.details.items()
+            if value not in (None, "")
+        ],
+    }

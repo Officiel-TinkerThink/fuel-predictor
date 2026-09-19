@@ -85,6 +85,9 @@ NAVIGATION: tuple[NavigationGroup, ...] = (
         collapsible=True,
         items=(
             NavigationItem("Pengelolaan Model", "/pengelolaan-model", Capability.VIEW_MODELS),
+            NavigationItem(
+                "Impor Data Historis", "/impor-data-historis", Capability.IMPORT_OPERATIONS
+            ),
             NavigationItem("Unggah Kandidat", "/model/unggah", Capability.MANAGE_MODELS),
             NavigationItem("Riwayat Paket", "/model/riwayat", Capability.VIEW_MODELS),
         ),
