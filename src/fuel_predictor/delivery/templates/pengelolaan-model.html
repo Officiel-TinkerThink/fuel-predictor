@@ -46,4 +46,40 @@
     tindakan manual dipilih.</p>
 </section>
 
+<section class="card">
+  <h2>Semua versi</h2>
+  <p class="hint">Terbaru di atas. Versi yang pernah aktif dan paketnya masih tersimpan bisa
+    diaktifkan kembali — itulah cara mengembalikan model bila versi baru bermasalah.</p>
+  {% if dashboard.all_versions %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Versi</th><th>Algoritma</th><th>Dilatih</th><th>Status</th><th><span class="visually-hidden">Tindakan</span></th></tr></thead>
+      <tbody>
+        {% for model in dashboard.all_versions %}
+        <tr>
+          <td><code class="mono-id">{{ model.model_version_id }}</code></td>
+          <td>{{ model.algorithm }}</td>
+          <td>{{ model.trained_at | waktu }}<br><span class="hint">{{ model.training_row_count }} baris</span></td>
+          <td>
+            {% if model.lifecycle_status.value == 'active' %}{{ ui.badge('Aktif', 'success') }}
+            {% elif model.lifecycle_status.value == 'candidate' %}{{ ui.badge('Kandidat', 'warning') }}
+            {% else %}{{ ui.badge('Pensiun', 'neutral') }}{% endif %}
+          </td>
+          <td>
+            {% if model.model_version_id in reactivatable %}
+            {{ ui.confirm_button('aktifkan-' ~ loop.index, 'Aktifkan kembali', 'Kembalikan model ke versi ini?', 'Versi ' ~ model.model_version_id ~ ' dimuat ulang dari paket yang tersimpan dan menggantikan model aktif untuk semua estimasi berikutnya.', '/kandidat-model/' ~ model.model_version_id ~ '/promosikan', csrf_token, tone='secondary') }}
+            {% elif model.lifecycle_status.value == 'retired' %}
+            <span class="hint">Tidak ada paket tersimpan</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ ui.empty_state('Belum ada versi model.') }}
+  {% endif %}
+</section>
+
 {% endblock %}

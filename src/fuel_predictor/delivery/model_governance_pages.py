@@ -24,6 +24,7 @@ from fuel_predictor.domain.model_activation import (
     PostActivationHealthCheckFailedError,
 )
 from fuel_predictor.domain.model_package import ModelPackageValidationError
+from fuel_predictor.domain.prediction import ModelLifecycleStatus
 
 
 def build_model_governance_pages_router(
@@ -38,6 +39,7 @@ def build_model_governance_pages_router(
     @router.get("/pengelolaan-model", response_class=HTMLResponse)
     def show_governance(request: Request) -> HTMLResponse:
         caller = guard.require_caller(request)
+        dashboard = get_model_governance_dashboard.execute()
         return HTMLResponse(
             render(
                 "pengelolaan-model.html",
@@ -45,7 +47,15 @@ def build_model_governance_pages_router(
                 page_title="Pengelolaan Model",
                 active_path="/pengelolaan-model",
                 eyebrow="TATA KELOLA MODEL",
-                dashboard=get_model_governance_dashboard.execute(),
+                dashboard=dashboard,
+                # A retired version can come back only from retained package
+                # bytes; one trained in this process has nothing to reload.
+                reactivatable={
+                    model.model_version_id
+                    for model in dashboard.all_versions
+                    if model.lifecycle_status is ModelLifecycleStatus.RETIRED
+                    and activate_retained_package.can_activate(model.model_version_id)
+                },
             )
         )
 

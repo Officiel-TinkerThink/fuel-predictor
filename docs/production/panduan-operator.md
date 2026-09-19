@@ -169,8 +169,9 @@ Kalau aktivasi gagal, model lama **tetap melayani prediksi**. Anda akan melihat 
 menjelaskan sebabnya. Tidak ada yang perlu Anda pulihkan sendiri.
 
 Kalau setelah aktivasi muncul pesan bahwa **pemeriksaan gagal**, model baru sudah terlanjur
-melayani. Segera aktifkan kembali versi sebelumnya dari halaman yang sama, lalu hubungi
-penanggung jawab teknis.
+melayani. Segera kembalikan: di **Pengelolaan Model**, tabel *Semua versi*, tekan
+**Aktifkan kembali** pada versi sebelumnya (tersedia untuk versi yang paketnya masih
+tersimpan), lalu hubungi penanggung jawab teknis.
 
 ![Pengelolaan Model: model aktif dengan MAE 0,58 L, dan dua kandidat menunggu keputusan, masing-masing dengan tautan Bandingkan dan tombol Promosikan manual.](images/05-pengelolaan-model.png)
 

@@ -22,6 +22,8 @@ class ModelVersionReader(Protocol):
 
     def list_candidates(self) -> Sequence[ModelVersion]: ...
 
+    def list_all(self) -> Sequence[ModelVersion]: ...
+
 
 class ModelPromotionWriter(Protocol):
     def promote(self, model_version_id: str, promoted_at: datetime) -> ModelVersion | None: ...
@@ -60,6 +62,9 @@ class ModelGovernanceDashboard:
     active_model: ModelVersion | None
     active_performance: PerformanceMetrics | None
     candidate_models: tuple[ModelVersion, ...]
+    # Every version there has ever been, newest first: the active one, the
+    # candidates, and the retired ones a rollback would go back to.
+    all_versions: tuple[ModelVersion, ...]
     retraining_recommended: bool
     recommendation: str
 
@@ -180,6 +185,7 @@ class GetModelGovernanceDashboard:
             active_model=active,
             active_performance=active_performance,
             candidate_models=candidates,
+            all_versions=tuple(self.model_reader.list_all()),
             retraining_recommended=retraining_recommended,
             recommendation=recommendation,
         )

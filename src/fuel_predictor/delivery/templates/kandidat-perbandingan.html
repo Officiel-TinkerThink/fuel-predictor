@@ -83,7 +83,8 @@
 <section class="card">
   <h2>Keputusan</h2>
   <p class="hint">Promosi mengganti model yang dipakai semua estimasi berikutnya. Tidak pernah
-    otomatis, dan bisa dikembalikan dari Riwayat Paket.</p>
+    otomatis. Versi yang digantikan tetap tercatat di Pengelolaan Model dan, bila paketnya
+    tersimpan, bisa diaktifkan kembali dari sana.</p>
   <div class="button-row">
     {{ ui.confirm_button('promosikan-kandidat', 'Promosikan kandidat ini', 'Promosikan kandidat menjadi model aktif?', 'Semua estimasi berikutnya akan memakai kandidat ' ~ comparison.candidate.model_version_id ~ '. Model aktif saat ini dipensiunkan.', '/kandidat-model/' ~ comparison.candidate.model_version_id ~ '/promosikan', csrf_token, tone='primary') }}
     <a class="button button--secondary" href="/pengelolaan-model">Kembali tanpa mengubah apa pun</a>
