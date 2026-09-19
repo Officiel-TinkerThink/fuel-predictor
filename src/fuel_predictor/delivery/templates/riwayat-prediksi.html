@@ -30,8 +30,11 @@
     </li>
     {% endfor %}
   </ul>
-  {% if entries | length >= limit %}
-  <p class="hint">Menampilkan {{ limit }} prediksi terbaru.</p>
+  {% if more_limit and more_limit > limit %}
+  <div class="button-row"><a class="button button--secondary" href="/riwayat-prediksi?jumlah={{ more_limit }}">Tampilkan {{ more_limit }} terbaru</a>
+    <span class="hint">Sedang menampilkan {{ limit }} prediksi terbaru.</span></div>
+  {% elif entries | length >= limit %}
+  <p class="hint">Menampilkan {{ limit }} prediksi terbaru — batas maksimum halaman ini.</p>
   {% endif %}
   {% else %}
   {{ ui.empty_state('Belum ada prediksi. Estimasi yang dibuat akan muncul di sini.', 'Buat prediksi', '/prediksi') }}

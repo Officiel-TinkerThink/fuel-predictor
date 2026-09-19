@@ -38,6 +38,7 @@ from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.daily_operation import DailyOperation, DailyOperationValidationError
 from fuel_predictor.domain.prediction import FuelPrediction
 
+_HISTORY_MAX = 500
 _MODE_LABELS = {
     "transport": "Angkut",
     "lifting": "Lifting",
@@ -199,8 +200,12 @@ def build_prediction_pages_router(
         )
 
     @router.get("/riwayat-prediksi", response_class=HTMLResponse)
-    def show_history(request: Request) -> HTMLResponse:
+    def show_history(request: Request, jumlah: int = 0) -> HTMLResponse:
         caller = guard.require_caller(request)
+        # The default page is enough for "yesterday"; "?jumlah=" reaches
+        # further back, capped so one request cannot pull the whole table.
+        limit = min(jumlah, _HISTORY_MAX) if jumlah > 0 else list_recent_predictions.limit
+        entries = list_recent_predictions.execute(limit)
         return HTMLResponse(
             render(
                 "riwayat-prediksi.html",
@@ -211,8 +216,9 @@ def build_prediction_pages_router(
                     "Estimasi yang pernah dibuat, terbaru di atas. Buka satu untuk melihat "
                     "angkanya lagi atau mencatat BBM aktualnya."
                 ),
-                entries=list_recent_predictions.execute(),
-                limit=list_recent_predictions.limit,
+                entries=entries,
+                limit=limit,
+                more_limit=min(limit * 4, _HISTORY_MAX) if len(entries) >= limit else None,
             )
         )
 

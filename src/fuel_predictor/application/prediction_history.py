@@ -38,8 +38,8 @@ class ListRecentPredictions:
     reader: PredictionHistoryReader
     limit: int = 50
 
-    def execute(self) -> tuple[PredictionHistoryEntry, ...]:
-        return tuple(self.reader.get_recent_predictions(self.limit))
+    def execute(self, limit: int | None = None) -> tuple[PredictionHistoryEntry, ...]:
+        return tuple(self.reader.get_recent_predictions(limit or self.limit))
 
 
 @dataclass(frozen=True, slots=True)

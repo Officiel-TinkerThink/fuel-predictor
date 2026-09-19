@@ -219,14 +219,25 @@
 </dialog>
 {%- endmacro %}
 
-{% macro sparkline(points, label) -%}
-{% if points %}
-<svg class="sparkline" viewBox="0 0 320 110" role="img" aria-label="{{ label }}" preserveAspectRatio="none">
-  <line class="axis" x1="0" y1="100" x2="320" y2="100"></line>
-  <polyline class="series" points="{{ points | map(attribute='svg_point') | join(' ') }}"></polyline>
-  {% for point in points %}
-  <circle class="point" cx="{{ point.x }}" cy="{{ point.y }}" r="2.5"></circle>
+{% macro trend_chart(chart, label) -%}
+{# One series over time, drawn against its threshold. Text uses the text
+   tokens; only the line and the markers carry the series colour. Each point
+   has a <title>, so hovering reads the exact value; the table next to it is
+   the accessible equivalent. #}
+<svg class="trend-chart" viewBox="0 0 {{ chart.width }} {{ chart.height }}" role="img" aria-label="{{ label }}">
+  <line class="trend-chart__axis" x1="{{ chart.left }}" y1="{{ chart.baseline_y }}" x2="{{ chart.right }}" y2="{{ chart.baseline_y }}"></line>
+  <line class="trend-chart__threshold" x1="{{ chart.left }}" y1="{{ chart.threshold_y }}" x2="{{ chart.right }}" y2="{{ chart.threshold_y }}"></line>
+  <text class="trend-chart__text" x="{{ chart.right }}" y="{{ chart.threshold_y - 5 }}" text-anchor="end">{{ chart.threshold_label }}</text>
+  <text class="trend-chart__text" x="{{ chart.left - 6 }}" y="{{ chart.baseline_y + 4 }}" text-anchor="end">0 L</text>
+  <text class="trend-chart__text" x="{{ chart.left - 6 }}" y="16" text-anchor="end">{{ chart.top_label }}</text>
+  <text class="trend-chart__text" x="{{ chart.left }}" y="{{ chart.height - 8 }}">{{ chart.first_date }}</text>
+  <text class="trend-chart__text" x="{{ chart.right }}" y="{{ chart.height - 8 }}" text-anchor="end">{{ chart.last_date }}</text>
+  <polyline class="trend-chart__series" points="{{ chart.path }}"></polyline>
+  {% for point in chart.points %}
+  <circle class="trend-chart__point{% if loop.last and chart.above_threshold %} trend-chart__point--alert{% endif %}" cx="{{ point.x }}" cy="{{ point.y }}" r="4"><title>{{ point.label }}</title></circle>
+  {% if loop.first or loop.last %}
+  <text class="trend-chart__value" x="{{ point.x + (8 if loop.first else -8) }}" y="{{ point.y - 10 }}" text-anchor="{{ 'start' if loop.first else 'end' }}">{{ point.value }} L</text>
+  {% endif %}
   {% endfor %}
 </svg>
-{% endif %}
 {%- endmacro %}

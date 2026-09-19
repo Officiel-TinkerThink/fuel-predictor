@@ -16,8 +16,8 @@
 {% endif %}
 
 <div class="grid grid--metrics">
-  {{ ui.metric('Isu kualitas data', unresolved_data_quality_issue_count) }}
-  {{ ui.metric('Aktual BBM tertunda', missing_actual_prediction_count, context='Lebih dari ' ~ missing_actual_after_days ~ ' hari sejak prediksi') }}
+  {{ ui.metric('Isu kualitas data', unresolved_data_quality_issue_count, context='Baris impor yang dikarantina dan belum diperbaiki.') }}
+  {{ ui.metric('Aktual BBM tertunda', missing_actual_prediction_count, context='Lebih dari ' ~ missing_actual_after_days ~ ' hari sejak prediksi', href='/bahan-bakar-aktual') }}
   {% if freshness.last_success is none %}
   {{ ui.metric('Pemantauan terjadwal', 'Belum pernah berhasil', unavailable=true, context='Jalankan python -m fuel_predictor monitor.') }}
   {% elif freshness.is_stale %}

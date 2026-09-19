@@ -189,6 +189,44 @@
     syncLifting();
   }
 
+  // The same unit leaves the same pool most days. Remember the last vehicle
+  // and departure point in this browser and offer them when the form is
+  // otherwise empty; a value the server sent back (a rejected submission)
+  // always wins. Storage can be missing or refused, hence the guards.
+  var operationForm = document.querySelector('form[action="/operasi-harian"]');
+  if (operationForm) {
+    var LAST_PLAN = "last-operation-plan";
+    var vehicleSelect = operationForm.querySelector("#field-vehicle");
+    var departureInput = operationForm.querySelector('input[name="stop_sequence"]');
+    try {
+      var remembered = JSON.parse(window.localStorage.getItem(LAST_PLAN) || "null");
+      if (remembered) {
+        if (vehicleSelect && !vehicleSelect.value && remembered.vehicle) {
+          vehicleSelect.value = remembered.vehicle;
+        }
+        if (departureInput && !departureInput.value && remembered.departure) {
+          departureInput.value = remembered.departure;
+          departureInput.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      }
+    } catch (error) {
+      // Nothing remembered; the form simply starts empty.
+    }
+    operationForm.addEventListener("submit", function () {
+      try {
+        window.localStorage.setItem(
+          LAST_PLAN,
+          JSON.stringify({
+            vehicle: vehicleSelect ? vehicleSelect.value : "",
+            departure: departureInput ? departureInput.value.trim() : "",
+          })
+        );
+      } catch (error) {
+        // Private mode or storage disabled: next time starts empty again.
+      }
+    });
+  }
+
   // Ordered stop-sequence rows: add, remove, and drag to reorder.
   // Without JS the rows the server rendered are still submittable as-is; the
   // departure point is always the first row and never moves.

@@ -47,7 +47,7 @@ _ROLE_LABELS = {
 _QUICK_ACTIONS = (
     ("Buat prediksi", "/prediksi", Capability.CREATE_PREDICTION),
     ("Catat BBM aktual", "/bahan-bakar-aktual", Capability.RECORD_ACTUAL_FUEL),
-    ("Prediksi dari berkas", "/prediksi-operasi-massal", Capability.IMPORT_OPERATIONS),
+    ("Prediksi massal dari berkas", "/prediksi-operasi-massal", Capability.IMPORT_OPERATIONS),
 )
 
 

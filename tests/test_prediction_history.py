@@ -84,3 +84,19 @@ def test_an_operation_saved_without_a_model_has_a_page_that_offers_the_estimate(
     assert page.status_code == 200
     assert "Operasi harian tersimpan" in page.text
     assert "Buat estimasi kebutuhan BBM" in page.text
+
+
+def test_history_can_reach_further_back_on_request(tmp_path: Path) -> None:
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        _train_baseline(client)
+        ids = [
+            _operation_with_prediction(client, 20 + i)["operation"]["operation_id"]
+            for i in range(3)
+        ]
+
+        default_page = client.get("/riwayat-prediksi?jumlah=2").text
+        wider_page = client.get("/riwayat-prediksi?jumlah=10").text
+
+    assert ids[0] not in default_page and ids[2] in default_page
+    assert 'href="/riwayat-prediksi?jumlah=8"' in default_page
+    assert all(operation_id in wider_page for operation_id in ids)

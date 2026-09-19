@@ -136,7 +136,9 @@ kesimpulannya lemah — jangan mengambil keputusan besar dari situ.
 
 **Kinerja model.** Dihitung dari operasi yang sudah punya angka aktual. Kalau tertulis data
 belum cukup, itu jujur — bukan kerusakan. Isi lebih banyak angka aktual
-([bagian 4](#4-mencatat-bahan-bakar-aktual)).
+([bagian 4](#4-mencatat-bahan-bakar-aktual)). Grafik *Tren kesalahan bergulir* menunjukkan
+arahnya: garis yang naik melewati garis putus-putus berarti prediksi makin meleset; titik
+terakhir berwarna merah bila sudah melewati batas.
 
 **Kesehatan Sistem.** Menunjukkan kapan pemantauan terakhir berhasil dan kapan pencadangan
 terakhir berhasil. Kalau tertulis **Kedaluwarsa**, angka di halaman ini mungkin sudah lama —
