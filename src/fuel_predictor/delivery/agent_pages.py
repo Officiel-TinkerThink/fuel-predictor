@@ -22,6 +22,7 @@ from fuel_predictor.application.agent_grants import (
     ListAgentGrants,
     RevokeAgentGrant,
 )
+from fuel_predictor.delivery.oauth_routes import SCOPE_DESCRIPTIONS
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.identity import (
@@ -231,7 +232,9 @@ def _render(
         clients=list_clients.execute(),
         issued_token=issued_token,
         error=error,
-        available_scopes=[str(scope) for scope in AgentScope],
+        available_scopes=[
+            {"value": str(scope), "description": SCOPE_DESCRIPTIONS[scope]} for scope in AgentScope
+        ],
         # Only the read/compute scopes are pre-checked. A privileged scope must
         # be a deliberate tick, not something a credential inherits from an
         # administrator accepting the form as presented.

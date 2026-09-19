@@ -7,7 +7,11 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from fuel_predictor.application.actual_fuel import GetPredictionPerformance, RecordActualFuel
+from fuel_predictor.application.actual_fuel import (
+    GetPredictionPerformance,
+    ListOperationsAwaitingActualFuel,
+    RecordActualFuel,
+)
 from fuel_predictor.application.agent_credentials import (
     IssueAgentCredential,
     ListAgentClients,
@@ -284,6 +288,7 @@ def create_app(
         SpreadsheetHistoricalDatasetSourceReader(), record_actual_fuel
     )
     get_prediction_performance = GetPredictionPerformance(actual_fuel_repository)
+    list_awaiting_actual = ListOperationsAwaitingActualFuel(actual_fuel_repository)
     promote_candidate_model = PromoteCandidateModel(prediction_repository, prediction_repository)
     get_candidate_model_comparison = GetCandidateModelComparison(
         prediction_repository, actual_fuel_repository, model_store
@@ -509,6 +514,7 @@ def create_app(
         build_actual_fuel_pages_router(
             record_actual_fuel,
             bulk_actual_fuel,
+            list_awaiting_actual,
             guard,
         )
     )

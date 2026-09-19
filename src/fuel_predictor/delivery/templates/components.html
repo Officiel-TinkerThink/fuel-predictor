@@ -107,6 +107,9 @@
 {% macro stop_sequence_field(values, location_options, route_preview_available=false) -%}
 {% set known_names = location_options | map(attribute='name') | list %}
 {% set stop_values = values or ['', ''] %}
+{# An empty map is just a large grey box, so the canvas stays hidden until
+   there is a route to draw; app.js shows it once two stops are chosen. #}
+{% set has_route = (stop_values | select | list | length) >= 2 %}
 <fieldset class="stops-field" aria-describedby="stops-help">
   <legend>Rute &amp; pemberhentian</legend>
   <p id="stops-help" class="hint">Masukkan titik keberangkatan dan pemberhentian setelahnya.
@@ -115,7 +118,7 @@
     <aside class="route-preview" aria-label="Pratinjau rute"
            {% if route_preview_available %}data-route-preview="on"{% endif %}>
       <p class="route-preview__title">PETA RUTE — PRATINJAU</p>
-      <div class="route-preview__canvas">
+      <div class="route-preview__canvas" id="route-canvas"{% if not has_route %} hidden{% endif %}>
         <iframe id="route-map" title="Rute Google Maps melalui pemberhentian yang dipilih"
                 loading="lazy" referrerpolicy="no-referrer-when-downgrade" hidden></iframe>
       </div>

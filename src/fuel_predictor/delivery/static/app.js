@@ -10,6 +10,57 @@
     summary.focus();
   }
 
+  // Phone-width menu. The <html class="js"> hook in base.html is what hides
+  // the drawer, so a browser with no script never loses its navigation.
+  var navToggle = document.querySelector(".nav-toggle");
+  var navHeader = document.querySelector(".app__nav");
+  if (navToggle && navHeader) {
+    navToggle.addEventListener("click", function () {
+      var open = navHeader.classList.toggle("app__nav--open");
+      navToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+  }
+
+  // Folding sidebar groups. The server opens the group that holds the current
+  // page; this remembers the ones the person unfolded themselves so they stay
+  // open on the next page. Storage can be missing or refused, hence the guards.
+  var NAV_STATE = "nav-groups-open";
+  var readOpenGroups = function () {
+    try {
+      return JSON.parse(window.localStorage.getItem(NAV_STATE) || "[]");
+    } catch (error) {
+      return [];
+    }
+  };
+  var openGroups = readOpenGroups();
+  document.querySelectorAll("details[data-nav-group]").forEach(function (group) {
+    var name = group.getAttribute("data-nav-group");
+    if (openGroups.indexOf(name) !== -1) {
+      group.open = true;
+    }
+    group.addEventListener("toggle", function () {
+      var remembered = readOpenGroups().filter(function (item) {
+        return item !== name;
+      });
+      if (group.open) {
+        remembered.push(name);
+      }
+      try {
+        window.localStorage.setItem(NAV_STATE, JSON.stringify(remembered));
+      } catch (error) {
+        // Private mode or storage disabled: the menu still works, it just forgets.
+      }
+    });
+  });
+
+  // Arriving with the operation already chosen (a "Catat" link), the only
+  // thing left to type is the litres, so start there.
+  var chosenOperation = document.querySelector("#field-operation_id");
+  var actualLitres = document.querySelector("#field-actual_fuel_liters");
+  if (chosenOperation && actualLitres && chosenOperation.value && !actualLitres.value && !summary) {
+    actualLitres.focus();
+  }
+
   // Confirmation dialogs. Without JavaScript the dialog stays in the page and its
   // form still submits, so the destructive action remains reachable.
   document.addEventListener("click", function (event) {
@@ -130,6 +181,7 @@
     // this panel any more: a second, differently-sourced number next to the
     // map's own badge read as a discrepancy, not extra information.
     var mapImage = document.querySelector("#route-map");
+    var mapCanvas = document.querySelector("#route-canvas");
     var statusLine = document.querySelector("#route-status");
 
     var chosenStops = function () {
@@ -183,6 +235,9 @@
         mapImage.hidden = true;
         mapImage.removeAttribute("src");
       }
+      if (mapCanvas) {
+        mapCanvas.hidden = true;
+      }
       if (statusLine) {
         statusLine.textContent = message;
       }
@@ -198,6 +253,9 @@
 
       // The map itself needs no API key: Google's embed draws the route from
       // the coordinates the location catalog already gave us.
+      if (mapCanvas) {
+        mapCanvas.hidden = false;
+      }
       if (mapImage) {
         mapImage.src = embedUrl(points);
         mapImage.hidden = false;
@@ -335,20 +393,4 @@
     refreshStops();
   }
 
-  // The fallback distance only applies when the planner is entering it by
-  // hand; a route-sourced distance is computed from the stops instead.
-  var distanceSource = document.querySelector("#field-distance_source");
-  var manualDistance = document.querySelector("#manual-distance");
-  if (distanceSource && manualDistance) {
-    var syncDistanceSource = function () {
-      var manual = distanceSource.value === "manual";
-      manualDistance.hidden = !manual;
-      var input = manualDistance.querySelector("input");
-      if (input) {
-        input.required = manual;
-      }
-    };
-    distanceSource.addEventListener("change", syncDistanceSource);
-    syncDistanceSource();
-  }
 })();

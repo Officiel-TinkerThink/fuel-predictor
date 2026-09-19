@@ -8,6 +8,8 @@ from pydantic import ValidationError
 
 from fuel_predictor.application.actual_fuel import (
     ActualFuelAlreadyRecordedError,
+    ListOperationsAwaitingActualFuel,
+    OperationAwaitingActualFuel,
     RecordActualFuel,
     RecordActualFuelCommand,
 )
@@ -28,21 +30,27 @@ _UPLOAD_FILE = File(...)
 def build_actual_fuel_pages_router(
     record_actual_fuel: RecordActualFuel,
     bulk_actual_fuel: BulkActualFuel,
+    list_awaiting_actual: ListOperationsAwaitingActualFuel,
     guard: SecurityGuard,
 ) -> APIRouter:
     router = APIRouter()
 
+    def _form(caller: "ActiveCaller", values: dict[str, Any], errors: list[dict[str, str]]) -> str:
+        return _render_form(caller, values, errors, list_awaiting_actual.execute())
+
     @router.get("/bahan-bakar-aktual", response_class=HTMLResponse)
     def show_form(request: Request) -> HTMLResponse:
-        return HTMLResponse(_render_form(guard.require_caller(request), {}, []))
+        # A "Catat" link from the waiting list lands here with the id filled
+        # in, so the person only has to type the litres.
+        chosen = request.query_params.get("operation_id", "").strip()
+        values = {"operation_id": chosen} if chosen else {}
+        return HTMLResponse(_form(guard.require_caller(request), values, []))
 
     @router.post("/bahan-bakar-aktual", response_class=HTMLResponse)
     async def submit_form(request: Request) -> HTMLResponse:
         caller = guard.require_caller(request)
         form_data = await request.form()
-        submitted = {
-            key: str(value) for key, value in form_data.items() if key != "csrf_token"
-        }
+        submitted = {key: str(value) for key, value in form_data.items() if key != "csrf_token"}
         try:
             payload = {key: value for key, value in submitted.items() if key != "operation_id"}
             validated = ActualFuelRequest.model_validate(payload)
@@ -55,19 +63,17 @@ def build_actual_fuel_pages_router(
             )
         except ValidationError as error:
             return HTMLResponse(
-                _render_form(caller, submitted, translate_validation_errors(error.errors())),
+                _form(caller, submitted, translate_validation_errors(error.errors())),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         except DailyOperationValidationError as error:
             return HTMLResponse(
-                _render_form(
-                    caller, submitted, [{"field": error.field, "message": error.message}]
-                ),
+                _form(caller, submitted, [{"field": error.field, "message": error.message}]),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         except ActualFuelAlreadyRecordedError:
             return HTMLResponse(
-                _render_form(
+                _form(
                     caller,
                     submitted,
                     [
@@ -81,7 +87,7 @@ def build_actual_fuel_pages_router(
             )
         except DailyOperationNotFoundError:
             return HTMLResponse(
-                _render_form(
+                _form(
                     caller,
                     submitted,
                     [{"field": "operation_id", "message": "ID operasi tidak ditemukan."}],
@@ -138,7 +144,10 @@ def build_actual_fuel_pages_router(
 
 
 def _render_form(
-    caller: "ActiveCaller", values: dict[str, Any], errors: list[dict[str, str]]
+    caller: "ActiveCaller",
+    values: dict[str, Any],
+    errors: list[dict[str, str]],
+    awaiting: tuple[OperationAwaitingActualFuel, ...],
 ) -> str:
     return render(
         "bbm-aktual.html",
@@ -147,11 +156,12 @@ def _render_form(
         active_path="/bahan-bakar-aktual",
         eyebrow="UMPAN BALIK OPERASI",
         page_lead=(
-            "Masukkan konsumsi BBM setelah operasi selesai. Nilai ini disimpan terpisah "
-            "dari bahan bakar disiapkan."
+            "Pilih operasi yang sudah selesai, lalu masukkan BBM yang benar-benar terpakai. "
+            "Nilai ini disimpan terpisah dari bahan bakar disiapkan."
         ),
         values=values,
         errors=errors,
+        awaiting=awaiting,
     )
 
 

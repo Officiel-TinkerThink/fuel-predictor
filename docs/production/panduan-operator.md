@@ -46,8 +46,8 @@ menahan percobaan berikutnya sebentar. Tunggu, lalu coba lagi.
    - **Kategori kendaraan** — pilih dari daftar.
    - **Mode aktivitas** — `transport`, `lifting`, atau `transport_and_lifting`.
    - **Jam lifting** — wajib diisi kalau mode mencakup lifting.
-   - **Jarak total (km)** — jarak seluruh perjalanan.
-   - **Sumber jarak** — `manual` kalau Anda mengetik sendiri.
+   - **Jarak total (km)** — jarak seluruh perjalanan. Dihitung otomatis dari rute bila
+     penyedia rute tersedia; kalau tidak, ketik sendiri.
 3. Tekan **Simpan operasi harian**. Operasi tersimpan lebih dulu, jadi angkanya bisa
    ditelusuri kembali nanti.
 4. Di halaman berikutnya (*Operasi harian tersimpan*), tekan
@@ -99,7 +99,10 @@ Ini bagian yang paling sering terlewat, dan yang paling menentukan.
 **Tanpa angka aktual, aplikasi tidak bisa mengukur seberapa tepat prediksinya.** Model bisa
 memburuk berbulan-bulan tanpa ada yang tahu.
 
-- **Satu per satu:** menu **Catat Aktual**, pilih operasinya, isi jumlah liter sebenarnya.
+- **Satu per satu:** menu **Catat Aktual**. Daftar *Menunggu BBM aktual* di halaman itu
+  memuat operasi yang belum dilaporkan, terbaru di atas. Tekan **Catat** di baris operasinya —
+  ID-nya terisi sendiri — lalu isi jumlah liter sebenarnya. Halaman hasil estimasi juga punya
+  tombol **Catat BBM aktual untuk operasi ini** yang langsung ke formulir yang sama.
 - **Sekaligus:** menu **Impor Massal**, pakai templatnya, sama seperti prediksi massal.
 
 Lakukan ini rutin — mingguan sudah cukup.

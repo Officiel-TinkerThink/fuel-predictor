@@ -6,34 +6,56 @@
   <title>{% block title %}{{ page_title }}{% endblock %} · Perencana Operasi Harian</title>
   <link rel="stylesheet" href="/statis/app.css">
   <link rel="icon" href="data:,">
+  {# The phone-width menu folds away only when the script that unfolds it is
+     running; without JavaScript every link stays in view. #}
+  <script>document.documentElement.classList.add("js");</script>
 </head>
 <body>
 <a class="skip-link" href="#konten-utama">Lewati ke konten utama</a>
 <div class="app">
   <header class="app__nav">
-    <a class="app__brand" href="/">Perencana Operasi Harian<span>Prediksi kebutuhan BBM</span></a>
-    <nav aria-label="Navigasi utama">
-      {% for group in navigation %}
-      <div class="nav-group">
-        {% if group.title %}<p class="nav-group__title" id="nav-{{ loop.index }}">{{ group.title }}</p>{% endif %}
-        <ul class="nav-list"{% if group.title %} aria-labelledby="nav-{{ loop.index }}"{% endif %}>
-          {% for item in group.items %}
-          <li><a href="{{ item.href }}"{% if item.href == active_path %} aria-current="page"{% endif %}>{{ item.label }}</a></li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% endfor %}
-    </nav>
-    {% if caller_user %}
-    <div class="app__account">
-      <strong>{{ caller_user.full_name }}</strong>
-      <span class="role">{{ role_label }}</span>
-      <form method="post" action="/keluar">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <button type="submit" class="button button--secondary">Keluar</button>
-      </form>
+    <div class="app__masthead">
+      <a class="app__brand" href="/">Perencana Operasi Harian<span>Prediksi kebutuhan BBM</span></a>
+      {% if navigation %}
+      <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="navigasi-utama">Menu</button>
+      {% endif %}
     </div>
-    {% endif %}
+    <div class="app__drawer" id="navigasi-utama">
+      <nav aria-label="Navigasi utama">
+        {% for group in navigation %}
+        {% set holds_active = group.items | selectattr('href', 'equalto', active_path) | list %}
+        {% if group.collapsible %}
+        <details class="nav-group nav-group--folding" data-nav-group="{{ group.title }}"{% if holds_active %} open{% endif %}>
+          <summary class="nav-group__title">{{ group.title }}</summary>
+          <ul class="nav-list">
+            {% for item in group.items %}
+            <li><a href="{{ item.href }}"{% if item.href == active_path %} aria-current="page"{% endif %}>{{ item.label }}</a></li>
+            {% endfor %}
+          </ul>
+        </details>
+        {% else %}
+        <div class="nav-group">
+          {% if group.title %}<p class="nav-group__title" id="nav-{{ loop.index }}">{{ group.title }}</p>{% endif %}
+          <ul class="nav-list"{% if group.title %} aria-labelledby="nav-{{ loop.index }}"{% endif %}>
+            {% for item in group.items %}
+            <li><a href="{{ item.href }}"{% if item.href == active_path %} aria-current="page"{% endif %}>{{ item.label }}</a></li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </nav>
+      {% if caller_user %}
+      <div class="app__account">
+        <strong>{{ caller_user.full_name }}</strong>
+        <span class="role">{{ role_label }}</span>
+        <form method="post" action="/keluar">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="button button--secondary">Keluar</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
   </header>
 
   <main class="app__main" id="konten-utama" tabindex="-1">

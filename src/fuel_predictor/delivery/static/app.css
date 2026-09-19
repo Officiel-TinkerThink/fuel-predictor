@@ -165,6 +165,26 @@ a:hover {
   opacity: 0.75;
 }
 
+.app__masthead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* Only a phone needs a menu button; the sidebar is always open on a desk.
+   Scoped under .app__nav so it outranks the button[type="button"] rule. */
+.app__nav .nav-toggle {
+  display: none;
+}
+
+.app__drawer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  flex: 1;
+}
+
 .nav-group {
   margin-bottom: var(--space-4);
 }
@@ -176,6 +196,48 @@ a:hover {
   opacity: 0.7;
   margin: 0 0 var(--space-2);
   padding-left: var(--space-3);
+}
+
+/* Folding groups: the title doubles as the control, with a chevron that
+   turns when open. The chevron replaces the browser's default triangle. */
+.nav-group--folding > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: var(--space-3);
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-1);
+  border-radius: var(--radius-md);
+  opacity: 0.85;
+}
+
+.nav-group--folding > summary::-webkit-details-marker {
+  display: none;
+}
+
+.nav-group--folding > summary::after {
+  content: "";
+  width: 0.45em;
+  height: 0.45em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+
+.nav-group--folding[open] > summary::after {
+  transform: rotate(45deg);
+}
+
+.nav-group--folding > summary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  opacity: 1;
+}
+
+.nav-group--folding > summary:focus-visible {
+  outline-color: var(--color-text-inverse);
 }
 
 .nav-list {
@@ -301,6 +363,12 @@ a:hover {
 
 .grid--metrics {
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+/* Inside a card the tiles share the card's width, so they may sit tighter
+   than on the page - four fit in a row instead of wrapping three and one. */
+.card .grid--metrics {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
 }
 
 .grid--two {
@@ -483,10 +551,28 @@ legend {
   margin-bottom: var(--space-1);
 }
 
+/* Secondary explanation anywhere on a page; under a field it hugs the control. */
+.hint {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+/* A checkbox reads as one line: box, then its meaning, then the code. */
+.field--checkbox label {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  font-weight: 500;
+}
+
+.field--checkbox label code {
+  color: var(--color-text-muted);
+  margin-left: var(--space-1);
+}
+
 .field .hint {
   display: block;
   font-size: 0.84rem;
-  color: var(--color-text-muted);
   margin-top: var(--space-1);
 }
 
@@ -595,6 +681,11 @@ button[type="submit"].button--danger:hover {
   border-color: #7d1c19;
 }
 
+.button--small {
+  padding: 0.3rem var(--space-3);
+  font-size: 0.86rem;
+}
+
 .button-row {
   display: flex;
   flex-wrap: wrap;
@@ -632,6 +723,9 @@ button[type="submit"].button--danger:hover {
 /* ---------- Tables ---------- */
 
 .table-wrap {
+  /* Anchors absolutely-positioned children (visually-hidden header text) so
+     they scroll with the table instead of widening the page. */
+  position: relative;
   overflow-x: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -672,6 +766,17 @@ tbody tr:last-child td {
   border-bottom: 0;
 }
 
+/* The row whose id is already in the form, so the eye lands on the right one. */
+tbody tr.is-selected td {
+  background: var(--color-brand-soft);
+}
+
+.mono-id {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
 td.numeric,
 th.numeric {
   text-align: right;
@@ -691,8 +796,20 @@ th.numeric {
   max-width: 20rem;
 }
 
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.quick-actions .button {
+  flex: 1 1 14rem;
+  padding-block: var(--space-4);
+  font-size: 1.02rem;
+}
+
 .empty-state {
-  padding: var(--space-6);
+  padding: var(--space-4);
   text-align: center;
   color: var(--color-text-muted);
 }
@@ -700,6 +817,84 @@ th.numeric {
 .empty-state p {
   margin-left: auto;
   margin-right: auto;
+}
+
+/* All-clear checklist: each line carries a tick so it reads as "done", not
+   as a list of things to do. */
+.check-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.check-list li {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.check-list li::before {
+  content: "\2713";
+  flex: 0 0 auto;
+  color: var(--color-success);
+  font-weight: 700;
+}
+
+/* ---------- Row list ----------
+   A list of things to act on, one per row: a few facts and a button. Unlike
+   a table it wraps on a phone instead of scrolling sideways. */
+.row-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+}
+
+.row-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.row-list li:last-child {
+  border-bottom: 0;
+}
+
+.row-list li.is-selected {
+  background: var(--color-brand-soft);
+}
+
+.row-list__main {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.row-list__main strong {
+  display: block;
+}
+
+.row-list__meta {
+  font-size: 0.86rem;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.row-list__figure {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.row-list__action {
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 /* ---------- Step indicator ---------- */
@@ -1025,6 +1220,29 @@ dialog::backdrop {
   }
 }
 
+/* On a phone the location picker needs the width more than "Hapus" does, so
+   the button drops under the picker instead of squeezing it to a few letters. */
+@media (max-width: 40rem) {
+  .stop-row {
+    display: grid;
+    grid-template-columns: 18px 24px minmax(0, 1fr);
+    column-gap: 10px;
+    row-gap: 6px;
+  }
+
+  .stop-row .stop-controls {
+    grid-column: 3;
+    width: auto;
+    margin-top: 0;
+    justify-self: end;
+  }
+
+  .stop-row .stop-controls button {
+    width: auto;
+    height: 34px;
+  }
+}
+
 .stop-controls {
   display: flex;
   gap: var(--space-1);
@@ -1123,18 +1341,38 @@ dialog::backdrop {
     gap: var(--space-4);
   }
 
-  .app__nav nav {
+  .app__nav .nav-toggle {
+    display: inline-flex;
+    padding: 0.4rem var(--space-4);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+
+  .nav-toggle[aria-expanded="true"] {
+    background: var(--color-surface);
+    color: var(--color-brand-strong);
+  }
+
+  /* Folded behind the Menu button, but only when the script that unfolds it
+     is present (html.js); otherwise every link stays visible. */
+  html.js .app__drawer {
+    display: none;
+  }
+
+  html.js .app__nav--open .app__drawer {
     display: flex;
-    flex-wrap: wrap;
+  }
+
+  .app__drawer {
     gap: var(--space-4);
   }
 
   .nav-group {
-    margin-bottom: 0;
+    margin-bottom: var(--space-3);
   }
 
   .app__account {
-    margin-top: var(--space-3);
+    margin-top: var(--space-2);
   }
 
   .app__main {

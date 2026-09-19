@@ -103,9 +103,8 @@ Go to **Buat Prediksi** in the sidebar and fill in one operation:
    `KM-001` as the stop. The map above draws the route between them. Use
    **+ Tambah pemberhentian** to add more stops, and drag the ⠿ handle to
    reorder them.
-4. **Sumber jarak** — choose `Input manual` and enter `64` km. (See *Known
-   limits* below for why the automatic route distance is unavailable in the
-   demo.)
+4. **Jarak total** — enter `64` km. (See *Known limits* below for why the
+   automatic route distance is unavailable in the demo.)
 5. **Simpan operasi harian**, then **Buat estimasi kebutuhan BBM**.
 
 You should see roughly **51 L estimated** and **56 L recommended allocation** —
@@ -132,8 +131,8 @@ the distance, to see which inputs move the number and by how much.
 These are properties of the sample data, not faults to report:
 
 - **Road distances are unavailable.** The route map draws, but the kilometre
-  figure needs a Google Maps API key, which is not shipped. Choose `Input
-  manual` and type a distance. To enable it, put a key in `.env` as
+  figure needs a Google Maps API key, which is not shipped. Type the distance
+  into **Jarak total** instead. To enable it, put a key in `.env` as
   `FUEL_PREDICTOR_GOOGLE_MAPS_API_KEY=…` and restart with `docker compose up -d`.
 - **The vehicle does not change the estimate.** The nine sample journeys do not
   record which vehicle drove them, so the model has no vehicle signal to learn

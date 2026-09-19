@@ -20,13 +20,21 @@ from fuel_predictor.application.monitoring_runs import (
 )
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
-from fuel_predictor.domain.identity import IdentityValidationError, UserRole
+from fuel_predictor.domain.identity import Capability, IdentityValidationError, UserRole
 
 _ROLE_LABELS = {
     UserRole.OPERATOR: "Operator",
     UserRole.MANAGER: "Manajer",
     UserRole.ADMINISTRATOR: "Administrator",
 }
+
+# The day's work, in the order it happens: plan, then report what was burned.
+# The overview leads with these so nobody has to hunt the sidebar for them.
+_QUICK_ACTIONS = (
+    ("Buat prediksi", "/prediksi", Capability.CREATE_PREDICTION),
+    ("Catat BBM aktual", "/bahan-bakar-aktual", Capability.RECORD_ACTUAL_FUEL),
+    ("Prediksi dari berkas", "/prediksi-operasi-massal", Capability.IMPORT_OPERATIONS),
+)
 
 
 def build_dashboard_router(
@@ -73,6 +81,11 @@ def build_dashboard_router(
                 governance=governance,
                 is_healthy=len(critical_alerts) == 0,
                 critical_alert_count=len(critical_alerts),
+                quick_actions=[
+                    {"label": label, "href": href}
+                    for label, href, capability in _QUICK_ACTIONS
+                    if caller.allows(capability)
+                ],
                 freshness=_freshness(),
                 last_backup=backup_runs.latest(),
             )

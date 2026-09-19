@@ -19,14 +19,16 @@
         {{ ui.number_field('lifting_hours', 'Jam lifting', 'jam', values.get('lifting_hours', ''), hint='Total jam lifting sepanjang operasi. Wajib bila aktivitas mencakup lifting.', errors=errors, min=0.01) }}
       </div>
       {{ ui.stop_sequence_field(values.get('stop_sequence'), location_options, route_preview_available=route_preview_available) }}
-      {{ ui.select_field('distance_source', 'Sumber jarak', [('routing_provider', 'Rute otomatis (dihitung dari peta)'), ('manual', 'Input manual')], values.get('distance_source', 'routing_provider'), hint='Jika rute berhasil dihitung, sistem memakai hasil hitung rute. Input manual dipakai bila penyedia rute tidak tersedia.', errors=errors, required=true) }}
-      <div id="manual-distance">
-        {% if route_preview_available %}
-        {{ ui.number_field('total_distance_km', 'Jarak total cadangan', 'km', values.get('total_distance_km', ''), hint='Hanya dipakai bila rute tidak dapat dihitung.', errors=errors, min=0.01) }}
-        {% else %}
-        {{ ui.number_field('total_distance_km', 'Jarak total', 'km', values.get('total_distance_km', ''), hint='Penyedia rute belum dikonfigurasi pada instalasi ini, jadi jarak total wajib diisi secara manual.', errors=errors, required=true, min=0.01) }}
-        {% endif %}
-      </div>
+      {# The planner never chooses the distance source: a route that can be
+         computed always wins, and otherwise the distance typed here is used
+         (CreateDailyOperation). A dropdown for it only hid this field behind
+         a choice that changed nothing. #}
+      <input type="hidden" name="distance_source" value="routing_provider">
+      {% if route_preview_available %}
+      {{ ui.number_field('total_distance_km', 'Jarak total cadangan', 'km', values.get('total_distance_km', ''), hint='Jarak dihitung otomatis dari rute di atas. Isi hanya sebagai cadangan bila rute gagal dihitung saat disimpan.', errors=errors, min=0.01) }}
+      {% else %}
+      {{ ui.number_field('total_distance_km', 'Jarak total', 'km', values.get('total_distance_km', ''), hint='Penyedia rute belum dikonfigurasi pada instalasi ini, jadi jarak total wajib diisi secara manual.', errors=errors, required=true, min=0.01) }}
+      {% endif %}
     </fieldset>
     <button type="submit">Simpan operasi harian</button>
   </form>

@@ -1,9 +1,12 @@
+from collections import defaultdict
+
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from fuel_predictor.application.actual_fuel import (
     ActualFuelAlreadyRecordedError,
     ModelEvaluationCase,
+    OperationAwaitingActualFuel,
     PredictionOutcome,
 )
 from fuel_predictor.domain.actual_fuel import (
@@ -18,6 +21,7 @@ from fuel_predictor.domain.daily_operation import (
 from fuel_predictor.infrastructure.database import (
     ActualFuelRecordRow,
     DailyOperationRow,
+    DailyOperationStopRow,
     PredictionRow,
     SessionFactory,
 )
@@ -44,6 +48,57 @@ class SqlAlchemyActualFuelRepository:
                 )
         except IntegrityError as error:
             raise ActualFuelAlreadyRecordedError() from error
+
+    def get_operations_awaiting_actual(self, limit: int) -> tuple[OperationAwaitingActualFuel, ...]:
+        latest_prediction_id = (
+            select(PredictionRow.prediction_id)
+            .where(PredictionRow.operation_id == DailyOperationRow.operation_id)
+            .order_by(PredictionRow.created_at.desc(), PredictionRow.prediction_id.desc())
+            .limit(1)
+            .correlate(DailyOperationRow)
+            .scalar_subquery()
+        )
+        with self._session_factory() as session:
+            rows = session.execute(
+                select(
+                    DailyOperationRow.operation_id,
+                    DailyOperationRow.vehicle,
+                    DailyOperationRow.vehicle_category,
+                    PredictionRow.created_at,
+                    PredictionRow.estimated_fuel_requirement_liters,
+                    PredictionRow.recommended_allocation_liters,
+                )
+                .select_from(DailyOperationRow)
+                .join(PredictionRow, PredictionRow.prediction_id == latest_prediction_id)
+                .outerjoin(
+                    ActualFuelRecordRow,
+                    ActualFuelRecordRow.operation_id == DailyOperationRow.operation_id,
+                )
+                .where(ActualFuelRecordRow.operation_id.is_(None))
+                .order_by(PredictionRow.created_at.desc(), PredictionRow.prediction_id.desc())
+                .limit(limit)
+            ).all()
+            stops: dict[str, list[str]] = defaultdict(list)
+            for stop in session.execute(
+                select(DailyOperationStopRow.operation_id, DailyOperationStopRow.location_name)
+                .where(DailyOperationStopRow.operation_id.in_([row.operation_id for row in rows]))
+                .order_by(DailyOperationStopRow.operation_id, DailyOperationStopRow.stop_position)
+            ):
+                stops[stop.operation_id].append(stop.location_name)
+        return tuple(
+            OperationAwaitingActualFuel(
+                operation_id=row.operation_id,
+                predicted_at=row.created_at,
+                vehicle=row.vehicle,
+                vehicle_category=VehicleCategory(row.vehicle_category),
+                departure=stops[row.operation_id][0] if stops[row.operation_id] else None,
+                destination=stops[row.operation_id][-1] if stops[row.operation_id] else None,
+                stop_count=len(stops[row.operation_id]),
+                estimated_fuel_requirement_liters=row.estimated_fuel_requirement_liters,
+                recommended_allocation_liters=row.recommended_allocation_liters,
+            )
+            for row in rows
+        )
 
     def get_prediction_outcomes(self) -> tuple[PredictionOutcome, ...]:
         latest_prediction_id = (

@@ -3,7 +3,7 @@
 
 {% block content %}
 
-{{ ui.banner('success', 'Operasi harian berhasil dibuat', 'Gunakan ID ini untuk proses dan pencatatan berikutnya: ' ~ operation.operation_id ~ '.') }}
+{{ ui.banner('success', 'Operasi harian tersimpan', 'Periksa ringkasannya di bawah, lalu buat estimasi kebutuhan BBM-nya.') }}
 
 {% if operation.route_distance_manual_fallback %}
 {{ ui.banner('warning', 'Jarak manual dipakai', 'Penyedia rute tidak tersedia saat perencanaan. Jarak total manual dipakai untuk estimasi ini.') }}
@@ -27,12 +27,12 @@
     <dd><ol class="stop-list">{% for stop in operation.stop_sequence %}<li>{{ stop }}</li>{% endfor %}</ol></dd>
     {% endif %}
   </dl>
-  <form method="post" action="/operasi-harian/{{ operation.operation_id }}/prediksi">
+  <form method="post" action="/operasi-harian/{{ operation.operation_id }}/prediksi" class="button-row">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <button type="submit">Buat estimasi kebutuhan BBM</button>
   </form>
 </section>
 
-<p><a href="/prediksi">Buat operasi lain</a></p>
+<div class="button-row"><a class="button button--secondary" href="/prediksi">Buat operasi lain</a></div>
 
 {% endblock %}

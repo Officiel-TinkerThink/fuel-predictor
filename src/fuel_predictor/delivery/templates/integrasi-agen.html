@@ -46,15 +46,14 @@
       <fieldset>
         <legend>Cakupan</legend>
         {% for scope in available_scopes %}
-        <div class="field">
+        <div class="field field--checkbox">
           <label>
-            <input type="checkbox" name="scopes" value="{{ scope }}"
-              {% if scope in default_scopes %}checked{% endif %}>
-            {{ scope }}
+            <input type="checkbox" name="scopes" value="{{ scope.value }}"
+              {% if scope.value in default_scopes %}checked{% endif %}>
+            <span>{{ scope.description }} <code>{{ scope.value }}</code></span>
           </label>
-          {% if scope not in default_scopes %}
-          <p class="hint">Cakupan istimewa: mengizinkan agen mengaktifkan dan mengembalikan
-            model. Centang hanya bila memang diperlukan.</p>
+          {% if scope.value not in default_scopes %}
+          <p class="hint">Centang hanya bila memang diperlukan.</p>
           {% endif %}
         </div>
         {% endfor %}

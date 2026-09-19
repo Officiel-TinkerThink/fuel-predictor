@@ -24,6 +24,12 @@ class PredictionOutcomeReader(Protocol):
     def get_prediction_outcomes(self) -> Sequence["PredictionOutcome"]: ...
 
 
+class AwaitingActualFuelReader(Protocol):
+    def get_operations_awaiting_actual(
+        self, limit: int
+    ) -> Sequence["OperationAwaitingActualFuel"]: ...
+
+
 class ActualFuelAlreadyRecordedError(ValueError):
     pass
 
@@ -61,6 +67,36 @@ class RecordActualFuel:
         )
         self.actual_fuel_writer.add(record)
         return record
+
+
+@dataclass(frozen=True, slots=True)
+class OperationAwaitingActualFuel:
+    """A predicted operation nobody has reported the real consumption for yet.
+
+    Carries what a person needs to recognise the day - when, which unit, from
+    where to where, how much was estimated - so the id never has to be typed.
+    """
+
+    operation_id: str
+    predicted_at: datetime
+    vehicle: str | None
+    vehicle_category: VehicleCategory
+    departure: str | None
+    destination: str | None
+    stop_count: int
+    estimated_fuel_requirement_liters: float
+    recommended_allocation_liters: float
+
+
+@dataclass(frozen=True, slots=True)
+class ListOperationsAwaitingActualFuel:
+    """Newest first: the operation someone just finished is the one they came to record."""
+
+    reader: AwaitingActualFuelReader
+    limit: int = 20
+
+    def execute(self) -> tuple[OperationAwaitingActualFuel, ...]:
+        return tuple(self.reader.get_operations_awaiting_actual(self.limit))
 
 
 @dataclass(frozen=True, slots=True)

@@ -3,6 +3,17 @@
 
 {% block content %}
 
+{% if quick_actions %}
+<section class="card">
+  <h2>Mulai dari sini</h2>
+  <div class="quick-actions">
+    {% for action in quick_actions %}
+    <a class="button{% if not loop.first %} button--secondary{% endif %}" href="{{ action.href }}">{{ action.label }}</a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
 {% if is_healthy %}
 {{ ui.banner('success', 'Layanan berjalan normal', 'Tidak ada peringatan kritis saat ini.') }}
 {% else %}

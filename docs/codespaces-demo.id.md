@@ -107,8 +107,8 @@ Buka **Buat Prediksi** pada menu samping, lalu isi satu operasi:
    dan `KM-001` sebagai pemberhentian. Peta di atasnya menggambar rute di
    antara keduanya. Gunakan **+ Tambah pemberhentian** untuk menambah
    pemberhentian, dan seret pegangan ⠿ untuk mengubah urutannya.
-4. **Sumber jarak** — pilih `Input manual` lalu isi `64` km. (Alasan jarak
-   otomatis belum tersedia pada demo ini ada di bagian *Batasan* di bawah.)
+4. **Jarak total** — isi `64` km. (Alasan jarak otomatis belum tersedia pada
+   demo ini ada di bagian *Batasan* di bawah.)
 5. Tekan **Simpan operasi harian**, lalu **Buat estimasi kebutuhan BBM**.
 
 Hasilnya kira-kira **51 L estimasi** dengan **56 L alokasi rekomendasi** —
@@ -138,7 +138,7 @@ dilaporkan:
 
 - **Jarak jalan belum tersedia.** Peta rutenya tergambar, tetapi angka
   kilometernya membutuhkan kunci Google Maps API yang tidak ikut disertakan.
-  Pilih `Input manual` dan ketik jaraknya. Untuk mengaktifkannya, isi kunci di
+  Ketik jaraknya di kolom **Jarak total**. Untuk mengaktifkannya, isi kunci di
   `.env` sebagai `FUEL_PREDICTOR_GOOGLE_MAPS_API_KEY=…` lalu jalankan ulang
   dengan `docker compose up -d`.
 - **Pilihan kendaraan belum mengubah estimasi.** Sembilan perjalanan contoh

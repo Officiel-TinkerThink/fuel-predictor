@@ -10,19 +10,20 @@
 {% endif %}
 
 <section class="card">
-  <h2>Keseluruhan</h2>
+  <h2>Seberapa tepat model aktif</h2>
   <div class="grid grid--metrics">
     {% if performance.overall.mae_liters is not none %}
-    {{ ui.metric('MAE', performance.overall.mae_liters | angka, unit='L') }}
-    {{ ui.metric('RMSE', performance.overall.rmse_liters | angka, unit='L') }}
-    {{ ui.metric('sMAPE', performance.overall.smape_percent | angka, unit='%') }}
-    {{ ui.metric('Cakupan interval', performance.overall.interval_coverage_percent | angka, unit='%') }}
+    {{ ui.metric('Selisih rata-rata (MAE)', performance.overall.mae_liters | angka, unit='L', context='Rata-rata jarak antara estimasi dan aktual. Makin kecil makin baik.') }}
+    {{ ui.metric('Selisih besar (RMSE)', performance.overall.rmse_liters | angka, unit='L', context='Seperti MAE, tetapi lebih menghukum kesalahan besar.') }}
+    {{ ui.metric('Selisih relatif (sMAPE)', performance.overall.smape_percent | angka, unit='%', context='Selisih sebagai persentase dari volume operasi.') }}
+    {{ ui.metric('Aktual di dalam rentang', performance.overall.interval_coverage_percent | angka, unit='%', context='Seberapa sering aktual jatuh di rentang ketidakpastian yang diberikan.') }}
     {% else %}
-    {{ ui.metric('MAE', 'Belum cukup data', unavailable=true) }}
+    {{ ui.metric('Selisih rata-rata (MAE)', 'Belum cukup data', unavailable=true, context='Perlu aktual yang tercocokkan dengan prediksi.') }}
     {% endif %}
   </div>
 </section>
 
+{% if performance.by_vehicle_category | length > 1 %}
 <section class="card">
   <h2>Per kategori ANGBER</h2>
   {% if performance.by_vehicle_category %}
@@ -47,6 +48,7 @@
   {{ ui.empty_state('Belum cukup data yang cocok.') }}
   {% endif %}
 </section>
+{% endif %}
 
 <section class="card">
   <h2>Tren kesalahan bergulir</h2>
@@ -96,6 +98,6 @@
   {% endif %}
 </section>
 
-<p><a href="/bahan-bakar-aktual">Catat bahan bakar aktual</a> · <a href="/pengelolaan-model">Kelola model</a></p>
+<div class="button-row"><a class="button button--secondary" href="/bahan-bakar-aktual">Catat bahan bakar aktual</a><a class="button button--secondary" href="/pengelolaan-model">Kelola model</a></div>
 
 {% endblock %}

@@ -4,25 +4,25 @@
 {% block content %}
 
 {% if drift.status == 'ready' and drift.drift_share is not none and drift.drift_share >= drift.threshold %}
-{{ ui.banner('warning', 'Pergeseran data terdeteksi', 'Distribusi fitur prediksi bergeser melewati ambang pemantauan. Pertimbangkan meninjau data referensi atau melatih ulang model.') }}
+{{ ui.banner('warning', 'Operasi belakangan ini berbeda dari data latih', 'Sebagian besar ciri operasi yang diprediksi belakangan ini sudah tidak menyerupai data yang dipakai melatih model. Estimasinya mungkin kurang tepat; pertimbangkan melatih ulang.') }}
 {% elif drift.status == 'ready' %}
-{{ ui.banner('success', 'Distribusi data stabil', 'Share pergeseran saat ini di bawah ambang pemantauan.') }}
+{{ ui.banner('success', 'Data operasi masih mirip data latih', 'Operasi yang diprediksi belakangan ini masih menyerupai data yang dipakai melatih model, jadi estimasinya bisa dipercaya seperti biasa.') }}
 {% else %}
 {{ ui.banner('info', 'Belum cukup data', 'Menunggu data referensi dan data terkini yang cukup untuk menghitung pergeseran.') }}
 {% endif %}
 
 <div class="grid grid--metrics">
-  {{ ui.metric('Baris referensi', drift.reference_row_count) }}
-  {{ ui.metric('Baris terkini', drift.current_row_count) }}
+  {{ ui.metric('Operasi data latih', drift.reference_row_count, context='Pembanding: data pelatihan model aktif.') }}
+  {{ ui.metric('Operasi terkini', drift.current_row_count, context='Prediksi terbaru dengan model aktif.') }}
   {% if drift.drift_share is not none %}
-  {{ ui.metric('Share pergeseran', (drift.drift_share * 100) | angka(0) ~ '%', context='Ambang: ' ~ (drift.threshold * 100) | angka(0) ~ '%') }}
+  {{ ui.metric('Ciri yang bergeser', (drift.drift_share * 100) | angka(0) ~ '%', context='Dari semua ciri operasi. Batas perhatian: ' ~ (drift.threshold * 100) | angka(0) ~ '%') }}
   {% else %}
-  {{ ui.metric('Share pergeseran', 'Belum tersedia', unavailable=true) }}
+  {{ ui.metric('Ciri yang bergeser', 'Belum tersedia', unavailable=true) }}
   {% endif %}
 </div>
 
 <section class="card">
-  <h2>Fitur yang bergeser</h2>
+  <h2>Ciri operasi yang bergeser</h2>
   {% if drift.drifting_features %}
   <ul>
     {% for feature in drift.drifting_features %}
@@ -30,13 +30,12 @@
     {% endfor %}
   </ul>
   {% else %}
-  {{ ui.empty_state('Tidak ada fitur yang bergeser melewati ambang.') }}
+  {{ ui.empty_state('Tidak ada ciri yang bergeser melewati batas.') }}
   {% endif %}
-  <p class="hint">Jendela referensi memakai dataset pelatihan model aktif; jendela saat ini memakai
-    fitur prediksi terbaru dengan model tersebut. Bandingkan kedua jumlah baris di atas sebelum
-    menafsirkan hasilnya — perbandingan dengan sampel kecil kurang bisa diandalkan.</p>
+  <p class="hint">Perbandingan dengan sedikit operasi terkini kurang bisa diandalkan; lihat dulu
+    kedua jumlah di atas sebelum menafsirkan hasilnya.</p>
 </section>
 
-<p><a href="/pengelolaan-model">Kelola model</a></p>
+<div class="button-row"><a class="button button--secondary" href="/pengelolaan-model">Kelola model</a></div>
 
 {% endblock %}
