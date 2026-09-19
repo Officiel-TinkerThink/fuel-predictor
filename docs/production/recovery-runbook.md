@@ -132,12 +132,21 @@ at `app:8000`, and make sure it sets `X-Forwarded-Proto` and `X-Forwarded-For`. 
 `FUEL_PREDICTOR_FORWARDED_ALLOW_IPS` to that proxy's address — leaving it `*` lets any client
 forge its own source address, which poisons the audit trail.
 
-**OAuth discovery advertises `http://`.** Something in front (a CDN such as Cloudflare talking plain
-HTTP to the gateway, a proxy that does not forward the scheme) hides the real origin from the app,
-and it publishes `http://` endpoints and a `resource` it then refuses. Set
-`FUEL_PREDICTOR_PUBLIC_URL=https://<domain>` in `.env` and restart `app`; discovery then advertises
-exactly that, whatever the proxies say. Check with
-`curl -s https://<domain>/.well-known/oauth-protected-resource`.
+**OAuth discovery advertises `http://`.** Something in front hides the real scheme from the app,
+so it publishes `http://` endpoints and a `resource` it then refuses (MCP clients cannot connect).
+On this VM the cause is the Cloudflare Tunnel: it delivers plain HTTP to the shared Caddy, which
+then honestly forwards `X-Forwarded-Proto: http`. Fix it in that Caddy's site block for this host -
+everything reaching it was HTTPS at the edge:
+
+```caddyfile
+reverse_proxy host.docker.internal:8000 {
+    header_up X-Forwarded-Proto https
+}
+```
+
+then `docker exec caddy caddy reload --config /etc/caddy/Caddyfile`. If the proxy cannot be
+changed, `FUEL_PREDICTOR_PUBLIC_URL=https://<domain>` in `.env` makes the app advertise that origin
+whatever the proxies say. Check with `curl -s https://<domain>/.well-known/oauth-protected-resource`.
 
 ---
 
