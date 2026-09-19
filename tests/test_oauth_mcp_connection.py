@@ -115,7 +115,7 @@ def _consent(client: TestClient, client_id: str, *, decision: str = "izinkan") -
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return response.headers["location"]
+    return str(response.headers["location"])
 
 
 def _redeem(client: TestClient, client_id: str, code: str) -> dict[str, Any]:
