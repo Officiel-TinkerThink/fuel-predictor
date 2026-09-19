@@ -1,5 +1,7 @@
 """Model governance and candidate comparison pages (ADR 0007)."""
 
+from dataclasses import dataclass
+
 from fastapi import APIRouter, Request, status
 from fastapi.responses import HTMLResponse
 
@@ -8,13 +10,14 @@ from fuel_predictor.application.model_lifecycle import (
     CandidateModelNotFoundError,
     GetCandidateModelComparison,
     GetModelGovernanceDashboard,
+    ModelComparison,
     ModelPromotionNotAllowedError,
     PromoteCandidateModel,
 )
 from fuel_predictor.application.retained_package_activation import (
     ActivateRetainedModelPackage,
 )
-from fuel_predictor.delivery.rendering import render
+from fuel_predictor.delivery.rendering import format_decimal, render
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.model_activation import (
     ModelActivationError,
@@ -72,6 +75,7 @@ def build_model_governance_pages_router(
                 active_path="/pengelolaan-model",
                 eyebrow="PERBANDINGAN MANUAL",
                 comparison=comparison,
+                verdict=_verdict(comparison),
             )
         )
 
@@ -196,3 +200,62 @@ def build_model_governance_pages_router(
         )
 
     return router
+
+
+@dataclass(frozen=True, slots=True)
+class ComparisonVerdict:
+    """The one-line answer a manager reads before the table of numbers."""
+
+    tone: str
+    title: str
+    body: str
+
+
+def _verdict(comparison: ModelComparison) -> ComparisonVerdict:
+    candidate = comparison.candidate_overall.mae_liters
+    active = comparison.active_overall.mae_liters if comparison.active_overall else None
+    tested_on = comparison.candidate_overall.matched_record_count
+    if candidate is None:
+        return ComparisonVerdict(
+            "info",
+            "Belum bisa dibandingkan",
+            "Belum ada operasi dengan bahan bakar aktual untuk menguji kandidat ini. "
+            "Catat aktual beberapa operasi dulu, lalu buka halaman ini lagi.",
+        )
+    candidate_text = f"{format_decimal(candidate)} L"
+    if comparison.active_model is None:
+        return ComparisonVerdict(
+            "info",
+            "Belum ada model aktif untuk dibandingkan",
+            f"Kandidat meleset rata-rata {candidate_text} pada {tested_on} operasi dengan aktual.",
+        )
+    if active is None:
+        return ComparisonVerdict(
+            "info",
+            "Model aktif belum punya angka pembanding",
+            f"Kandidat meleset rata-rata {candidate_text}; model aktif belum bisa diuji pada "
+            "operasi yang sama.",
+        )
+    if active == 0:
+        return ComparisonVerdict("info", "Model aktif tepat sempurna pada data ini", "")
+    active_text = f"{format_decimal(active)} L"
+    change = (candidate - active) / active * 100
+    if abs(change) < 1:
+        return ComparisonVerdict(
+            "info",
+            "Sama tepatnya dengan model aktif",
+            f"Selisih rata-rata keduanya {candidate_text}; tidak ada alasan kuat untuk mengganti.",
+        )
+    if change < 0:
+        return ComparisonVerdict(
+            "success",
+            "Kandidat lebih tepat",
+            f"Meleset rata-rata {candidate_text}, dibandingkan {active_text} pada model aktif "
+            f"— {abs(change):.0f}% lebih kecil.",
+        )
+    return ComparisonVerdict(
+        "warning",
+        "Kandidat kurang tepat dari model aktif",
+        f"Meleset rata-rata {candidate_text}, dibandingkan {active_text} pada model aktif "
+        f"— {change:.0f}% lebih besar. Promosi kemungkinan memperburuk estimasi.",
+    )

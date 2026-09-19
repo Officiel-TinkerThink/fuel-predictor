@@ -30,12 +30,9 @@
         <tr>
           <td>{{ candidate.model_version_id }}</td>
           <td>{{ candidate.dataset_version_id }}</td>
-          <td><a href="/kandidat-model/{{ candidate.model_version_id }}/perbandingan">Bandingkan</a></td>
+          <td><a class="button button--secondary button--small" href="/kandidat-model/{{ candidate.model_version_id }}/perbandingan">Bandingkan</a></td>
           <td>
-            <form method="post" action="/kandidat-model/{{ candidate.model_version_id }}/promosikan">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-              <button type="submit">Promosikan manual</button>
-            </form>
+            {{ ui.confirm_button('promosikan-' ~ loop.index, 'Promosikan', 'Promosikan kandidat menjadi model aktif?', 'Semua estimasi berikutnya akan memakai ' ~ candidate.model_version_id ~ '. Bandingkan dulu bila belum yakin.', '/kandidat-model/' ~ candidate.model_version_id ~ '/promosikan', csrf_token, tone='primary') }}
           </td>
         </tr>
         {% endfor %}

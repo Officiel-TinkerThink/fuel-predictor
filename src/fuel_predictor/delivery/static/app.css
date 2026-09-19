@@ -686,16 +686,24 @@ button[type="submit"]:hover {
 /* Repeated with the element selector so a <button type="submit"> can be
    secondary too; the attribute selector above would otherwise outrank it. */
 .button--secondary,
-button[type="submit"].button--secondary {
+button[type="submit"].button--secondary,
+button[type="button"].button--secondary {
   background: var(--color-surface);
   color: var(--color-brand-strong);
   border-color: var(--color-border-strong);
 }
 
 .button--secondary:hover,
-button[type="submit"].button--secondary:hover {
+button[type="submit"].button--secondary:hover,
+button[type="button"].button--secondary:hover {
   background: var(--color-surface-sunken);
   color: var(--color-brand-strong);
+}
+
+/* tone='primary' on the confirm macro: the ordinary brand button. */
+.button--primary {
+  background: var(--color-brand);
+  border-color: var(--color-brand);
 }
 
 .button--danger,

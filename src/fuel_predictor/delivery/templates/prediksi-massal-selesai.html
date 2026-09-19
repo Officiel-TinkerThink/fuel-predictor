@@ -3,24 +3,31 @@
 
 {% block content %}
 
-{{ ui.banner('success', 'Rencana operasi sudah diproses', accepted_count ~ ' baris valid memperoleh ID operasi dan prediksi. ' ~ quarantined_count ~ ' baris dikarantina. ' ~ ignored_count ~ ' baris kosong diabaikan.') }}
+{% set summary = accepted_count ~ ' baris valid memperoleh ID operasi dan prediksi.' %}
+{% if quarantined_count %}{% set summary = summary ~ ' ' ~ quarantined_count ~ ' baris dikarantina — lihat laporan koreksi di bawah.' %}{% endif %}
+{% if ignored_count %}{% set summary = summary ~ ' ' ~ ignored_count ~ ' baris kosong diabaikan.' %}{% endif %}
+{{ ui.banner('success' if accepted_count else 'warning', 'Rencana operasi sudah diproses', summary) }}
 
 <section class="card">
   {% if result.accepted_rows %}
+  <div class="card__title">
+    <h2>Baris berhasil diprediksi</h2>
+    {# A data: link needs no script and no server-side copy of the result. #}
+    <a class="button" download="{{ results_filename }}"
+       href="data:text/csv;charset=utf-8,{{ results_csv | urlencode }}">Unduh hasil (CSV)</a>
+  </div>
   <div class="table-wrap">
     <table>
-      <caption>Baris berhasil diprediksi</caption>
       <thead>
-        <tr><th>Baris sumber</th><th>ID operasi</th><th class="numeric">Estimasi kebutuhan BBM</th><th class="numeric">Alokasi rekomendasi</th><th>Model</th></tr>
+        <tr><th>Baris sumber</th><th>ID operasi</th><th class="numeric">Estimasi kebutuhan BBM</th><th class="numeric">Alokasi rekomendasi</th></tr>
       </thead>
       <tbody>
         {% for row in result.accepted_rows %}
         <tr>
           <td>{{ row.source.sheet_name }} {{ row.source.row_number }}</td>
-          <td>{{ row.operation.operation_id }}</td>
+          <td><a href="/operasi-harian/{{ row.operation.operation_id }}"><code class="mono-id">{{ row.operation.operation_id }}</code></a></td>
           <td class="numeric">{{ row.prediction.estimated_fuel_requirement_liters | angka }} L</td>
           <td class="numeric">{{ row.prediction.recommended_allocation_liters | angka }} L</td>
-          <td>{{ row.prediction.model.model_version_id }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -51,6 +58,9 @@
 </section>
 {% endif %}
 
-<p><a class="button button--secondary" href="/prediksi-operasi-massal">Prediksi berkas lain</a></p>
+<div class="button-row">
+  <a class="button button--secondary" href="/prediksi-operasi-massal">Prediksi berkas lain</a>
+  <a class="button button--secondary" href="/riwayat-prediksi">Lihat di riwayat prediksi</a>
+</div>
 
 {% endblock %}

@@ -153,8 +153,11 @@ Aplikasi memeriksa paket itu lebih dulu. Kalau ada yang tidak beres, paket **dit
 alasannya ditampilkan. Model yang sedang berjalan **tidak tersentuh** — mengunggah tidak pernah
 mengganti model secara diam-diam.
 
-**Mengaktifkan:** menu **Pengelolaan Model**, bandingkan kandidat, lalu tekan **Promosikan manual**
-pada yang Anda pilih.
+**Mengaktifkan:** menu **Pengelolaan Model**, tekan **Bandingkan** pada kandidatnya. Halaman
+perbandingan langsung menyebut kesimpulannya di kotak paling atas — *Kandidat lebih tepat*,
+*Kandidat kurang tepat*, atau *Belum bisa dibandingkan* kalau belum ada BBM aktual untuk
+mengujinya — lalu angka keduanya berdampingan. Kalau setuju, tekan **Promosikan kandidat ini**
+dan konfirmasi.
 
 Kalau aktivasi gagal, model lama **tetap melayani prediksi**. Anda akan melihat pesan yang
 menjelaskan sebabnya. Tidak ada yang perlu Anda pulihkan sendiri.
@@ -165,7 +168,8 @@ penanggung jawab teknis.
 
 ![Pengelolaan Model: model aktif dengan MAE 0,58 L, dan dua kandidat menunggu keputusan, masing-masing dengan tautan Bandingkan dan tombol Promosikan manual.](images/05-pengelolaan-model.png)
 
-Tombol **Promosikan manual** adalah satu-satunya cara model berganti. Tidak ada promosi otomatis.
+Tombol **Promosikan** — selalu dengan konfirmasi — adalah satu-satunya cara model berganti.
+Tidak ada promosi otomatis.
 
 ---
 

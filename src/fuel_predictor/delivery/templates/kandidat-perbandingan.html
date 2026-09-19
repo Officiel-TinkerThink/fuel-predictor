@@ -1,57 +1,93 @@
 {% extends "base.html" %}
 {% import "components.html" as ui %}
 
+{% macro metric_cell(metrics, attribute, unit) -%}
+{%- if metrics is none -%}—
+{%- elif metrics[attribute] is none -%}<span class="hint">Belum cukup data</span>
+{%- else -%}{{ metrics[attribute] | angka }} {{ unit }}{%- endif -%}
+{%- endmacro %}
+
+{% macro model_summary(model, matched) -%}
+<dl class="detail-list">
+  <dt>Versi</dt><dd><code class="mono-id">{{ model.model_version_id }}</code></dd>
+  <dt>Algoritma</dt><dd>{{ model.algorithm }}</dd>
+  <dt>Dilatih</dt><dd>{{ model.trained_at | waktu }} · {{ model.training_row_count }} baris</dd>
+  <dt>Dataset</dt><dd>{{ model.dataset_version_id }}</dd>
+  <dt>Diuji pada</dt><dd>{{ matched }} operasi dengan aktual</dd>
+</dl>
+{%- endmacro %}
+
 {% block content %}
 
-<section class="card">
-  <dl class="detail-list">
-    <dt>Kandidat</dt><dd>{{ comparison.candidate.model_version_id }}</dd>
-    <dt>MAE kandidat</dt>
-    <dd>{% if comparison.candidate_overall.mae_liters is not none %}{{ comparison.candidate_overall.mae_liters | angka }} L{% else %}Belum cukup data{% endif %}</dd>
-    <dt>MAE model aktif</dt>
-    <dd>
-      {% if comparison.active_overall is not none and comparison.active_overall.mae_liters is not none %}
-        {{ comparison.active_overall.mae_liters | angka }} L
-      {% elif comparison.active_model is none %}
-        Belum ada model aktif
-      {% else %}
-        Belum cukup data
-      {% endif %}
-    </dd>
-  </dl>
-</section>
+{{ ui.banner(verdict.tone, verdict.title, verdict.body) }}
+
+<div class="grid grid--two">
+  <section class="card">
+    <div class="card__title"><h2>Kandidat</h2>{{ ui.badge('Menunggu keputusan', 'warning') }}</div>
+    {{ model_summary(comparison.candidate, comparison.candidate_overall.matched_record_count) }}
+  </section>
+  <section class="card">
+    <div class="card__title"><h2>Model aktif</h2>{% if comparison.active_model %}{{ ui.badge('Dipakai sekarang', 'success') }}{% endif %}</div>
+    {% if comparison.active_model %}
+    {{ model_summary(comparison.active_model, comparison.active_overall.matched_record_count if comparison.active_overall else 0) }}
+    {% else %}
+    {{ ui.empty_state('Belum ada model aktif. Kandidat ini akan menjadi yang pertama.') }}
+    {% endif %}
+  </section>
+</div>
 
 <section class="card">
-  <h2>MAE per kategori ANGBER</h2>
-  {% if comparison.by_vehicle_category %}
+  <h2>Seberapa tepat keduanya</h2>
+  <p class="hint">Dihitung ulang pada operasi yang sudah punya bahan bakar aktual. Makin kecil
+    makin baik, kecuali "aktual di dalam rentang".</p>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Kategori</th><th class="numeric">Kandidat</th><th class="numeric">Aktif</th></tr></thead>
+      <thead><tr><th>Ukuran</th><th class="numeric">Kandidat</th><th class="numeric">Model aktif</th></tr></thead>
       <tbody>
-        {% for item in comparison.by_vehicle_category %}
-        <tr>
-          <td>{{ item.vehicle_category.value }}</td>
-          <td class="numeric">{{ item.candidate.mae_liters | angka if item.candidate.mae_liters is not none else 'Belum cukup data' }}</td>
-          <td class="numeric">{{ item.active.mae_liters | angka if item.active and item.active.mae_liters is not none else '-' }}</td>
-        </tr>
-        {% endfor %}
+        <tr><td>Selisih rata-rata (MAE)</td>
+          <td class="numeric">{{ metric_cell(comparison.candidate_overall, 'mae_liters', 'L') }}</td>
+          <td class="numeric">{{ metric_cell(comparison.active_overall, 'mae_liters', 'L') }}</td></tr>
+        <tr><td>Selisih besar (RMSE)</td>
+          <td class="numeric">{{ metric_cell(comparison.candidate_overall, 'rmse_liters', 'L') }}</td>
+          <td class="numeric">{{ metric_cell(comparison.active_overall, 'rmse_liters', 'L') }}</td></tr>
+        <tr><td>Selisih relatif (sMAPE)</td>
+          <td class="numeric">{{ metric_cell(comparison.candidate_overall, 'smape_percent', '%') }}</td>
+          <td class="numeric">{{ metric_cell(comparison.active_overall, 'smape_percent', '%') }}</td></tr>
+        <tr><td>Aktual di dalam rentang</td>
+          <td class="numeric">{{ metric_cell(comparison.candidate_overall, 'interval_coverage_percent', '%') }}</td>
+          <td class="numeric">{{ metric_cell(comparison.active_overall, 'interval_coverage_percent', '%') }}</td></tr>
       </tbody>
     </table>
   </div>
-  {% else %}
-  {{ ui.empty_state('Belum ada bahan bakar aktual untuk evaluasi.') }}
+  {% if comparison.by_vehicle_category | length > 1 %}
+  <details class="technical">
+    <summary>Selisih rata-rata per kategori</summary>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Kategori</th><th class="numeric">Kandidat</th><th class="numeric">Model aktif</th></tr></thead>
+        <tbody>
+          {% for item in comparison.by_vehicle_category %}
+          <tr>
+            <td>{{ item.vehicle_category.value }}</td>
+            <td class="numeric">{{ metric_cell(item.candidate, 'mae_liters', 'L') }}</td>
+            <td class="numeric">{{ metric_cell(item.active, 'mae_liters', 'L') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
   {% endif %}
 </section>
 
 <section class="card">
-  <p class="hint">Metrik dihitung ulang pada operasi yang memiliki bahan bakar aktual. Tindakan ini
-    tidak mengubah model aktif.</p>
-  <form method="post" action="/kandidat-model/{{ comparison.candidate.model_version_id }}/promosikan">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <button type="submit">Promosikan kandidat secara manual</button>
-  </form>
+  <h2>Keputusan</h2>
+  <p class="hint">Promosi mengganti model yang dipakai semua estimasi berikutnya. Tidak pernah
+    otomatis, dan bisa dikembalikan dari Riwayat Paket.</p>
+  <div class="button-row">
+    {{ ui.confirm_button('promosikan-kandidat', 'Promosikan kandidat ini', 'Promosikan kandidat menjadi model aktif?', 'Semua estimasi berikutnya akan memakai kandidat ' ~ comparison.candidate.model_version_id ~ '. Model aktif saat ini dipensiunkan.', '/kandidat-model/' ~ comparison.candidate.model_version_id ~ '/promosikan', csrf_token, tone='primary') }}
+    <a class="button button--secondary" href="/pengelolaan-model">Kembali tanpa mengubah apa pun</a>
+  </div>
 </section>
-
-<div class="button-row"><a class="button button--secondary" href="/pengelolaan-model">Kembali ke pengelolaan model</a></div>
 
 {% endblock %}
