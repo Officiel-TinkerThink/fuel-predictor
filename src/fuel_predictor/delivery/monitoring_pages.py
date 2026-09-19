@@ -7,6 +7,7 @@ only names one "Kinerja Model" item and the two features serve the same
 question (is the model performing well) at different time horizons.
 """
 
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Request
@@ -21,6 +22,12 @@ from fuel_predictor.application.monitoring_runs import (
 )
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
+from fuel_predictor.domain.alert_remediation import remediation_for, urgency_for
+from fuel_predictor.domain.monitoring import (
+    MonitoringAlert,
+    MonitoringAlertKind,
+    MonitoringAlertSeverity,
+)
 
 
 def build_monitoring_pages_router(
@@ -58,6 +65,7 @@ def build_monitoring_pages_router(
                 eyebrow="PEMANTAUAN LOKAL",
                 page_lead="Status layanan, kualitas data, dan hal yang perlu perhatian.",
                 active_alerts=dashboard.active_alerts,
+                alert_groups=group_alerts(dashboard.active_alerts),
                 unresolved_data_quality_issue_count=dashboard.unresolved_data_quality_issue_count,
                 unresolved_data_quality_issues=dashboard.unresolved_data_quality_issues,
                 dataset_validation_summaries=dashboard.dataset_validation_summaries,
@@ -113,3 +121,45 @@ def build_monitoring_pages_router(
         )
 
     return router
+
+
+# The kinds in words. The code stays out of sight: nobody acts on "missing_actual".
+ALERT_KIND_LABELS: dict[MonitoringAlertKind, str] = {
+    MonitoringAlertKind.DATA_QUALITY: "Baris impor perlu diperbaiki",
+    MonitoringAlertKind.MISSING_ACTUAL: "Aktual belum dicatat",
+    MonitoringAlertKind.FEATURE_DRIFT: "Operasi berbeda dari data latih",
+    MonitoringAlertKind.MODEL_DEGRADATION: "Kinerja model menurun",
+}
+
+
+def alert_kind_label(kind: MonitoringAlertKind) -> str:
+    return ALERT_KIND_LABELS.get(kind, kind.value)
+
+
+def group_alerts(alerts: Sequence[MonitoringAlert]) -> list[dict[str, object]]:
+    """One group per kind, worst severity first, carrying the remediation
+    once - three overdue operations are one thing to do, not three."""
+    groups: dict[MonitoringAlertKind, list[MonitoringAlert]] = {}
+    for alert in alerts:
+        groups.setdefault(alert.kind, []).append(alert)
+    ordered = sorted(
+        groups.items(),
+        key=lambda item: (
+            0 if any(a.severity.value == "critical" for a in item[1]) else 1,
+            ALERT_KIND_LABELS.get(item[0], item[0].value),
+        ),
+    )
+    result: list[dict[str, object]] = []
+    for kind, members in ordered:
+        critical = any(a.severity.value == "critical" for a in members)
+        worst = MonitoringAlertSeverity.CRITICAL if critical else MonitoringAlertSeverity.WARNING
+        result.append(
+            {
+                "label": alert_kind_label(kind),
+                "critical": critical,
+                "urgency": urgency_for(worst),
+                "remediation": remediation_for(kind),
+                "messages": [a.message for a in members],
+            }
+        )
+    return result

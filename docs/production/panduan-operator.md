@@ -67,7 +67,7 @@ Hasilnya menampilkan:
 | Rentang ketidakpastian | Batas bawah dan atas yang masuk akal. Rentang lebar = model kurang yakin. |
 | Model yang dipakai | Versi model yang menghitung. Berguna saat menelusuri angka lama. |
 
-![Hasil prediksi: estimasi kebutuhan BBM 26,28 L, alokasi rekomendasi 31,28 L, rentang ketidakpastian 24,97–27,59 L, beserta ID operasi, model, dan kalimat kebijakan keselamatan.](images/02-hasil-prediksi.png)
+![Hasil estimasi: tiga kotak angka — alokasi rekomendasi, estimasi kebutuhan BBM, rentang ketidakpastian — lalu ID operasi dengan tombol Salin ID, kendaraan, aktivitas, rute, jarak total, dan tombol Catat BBM aktual untuk operasi ini.](images/02-hasil-prediksi.png)
 
 Perhatikan kotak hijau di atas: nilai ini **estimasi bahan bakar disiapkan**, bukan konsumsi aktual yang telah diverifikasi. Kalimat itu selalu ikut ditampilkan.
 
@@ -95,7 +95,7 @@ mencakup lifting`.
 Perbaiki baris tersebut di berkas asli, lalu unggah ulang. Baris yang sudah berhasil tidak
 terhitung dua kali.
 
-![Hasil unggah massal: 4 baris berhasil diprediksi, 3 baris dikarantina dengan alasan masing-masing — jam lifting kosong, jarak bukan angka, dan jarak bernilai negatif.](images/03-unggah-massal.png)
+![Hasil unggah massal: 4 baris berhasil diprediksi dengan tombol Unduh hasil (CSV), dan laporan koreksi berisi 3 baris dikarantina dengan alasan masing-masing — jam lifting kosong, jarak bukan angka, dan jarak bernilai negatif.](images/03-unggah-massal.png)
 
 Kolom **Alasan** pada Laporan koreksi menyebutkan persis apa yang salah pada tiap baris, sehingga Anda tahu apa yang perlu diperbaiki di berkas sumber.
 
@@ -142,7 +142,7 @@ belum cukup, itu jujur — bukan kerusakan. Isi lebih banyak angka aktual
 terakhir berhasil. Kalau tertulis **Kedaluwarsa**, angka di halaman ini mungkin sudah lama —
 hubungi penanggung jawab teknis.
 
-![Kesehatan Sistem: 3 peringatan aktif berjenis missing_actual, 0 isu kualitas data, 3 aktual BBM tertunda, pemantauan terjadwal Terkini.](images/04-kesehatan-sistem.png)
+![Kesehatan Sistem: 4 peringatan aktif dikelompokkan menjadi Kinerja model menurun (kritis) dan Aktual belum dicatat (peringatan), masing-masing dengan kalimat Tindakan; 3 aktual BBM tertunda dengan tombol Catat aktual; pemantauan terjadwal Terkini.](images/04-kesehatan-sistem.png)
 
 Spanduk di atas juga memberi tahu apakah peringatan dikirim ke luar aplikasi. Bila tertulis *saluran pemberitahuan belum dikonfigurasi*, peringatan hanya terlihat di halaman ini — sampaikan ke penanggung jawab teknis.
 
@@ -178,7 +178,7 @@ melayani. Segera kembalikan: di **Pengelolaan Model**, tabel *Semua versi*, teka
 **Aktifkan kembali** pada versi sebelumnya (tersedia untuk versi yang paketnya masih
 tersimpan), lalu hubungi penanggung jawab teknis.
 
-![Pengelolaan Model: model aktif dengan MAE 0,58 L, dan dua kandidat menunggu keputusan, masing-masing dengan tautan Bandingkan dan tombol Promosikan manual.](images/05-pengelolaan-model.png)
+![Pengelolaan Model: model aktif beserta MAE-nya, satu kandidat menunggu keputusan dengan tombol Bandingkan dan Promosikan, dan tabel Semua versi yang menampilkan status tiap versi.](images/05-pengelolaan-model.png)
 
 Tombol **Promosikan** — selalu dengan konfirmasi — adalah satu-satunya cara model berganti.
 Tidak ada promosi otomatis.

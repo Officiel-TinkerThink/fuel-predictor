@@ -26,6 +26,7 @@ from fuel_predictor.application.monitoring_runs import (
     MonitoringFreshness,
     MonitoringRunRepository,
 )
+from fuel_predictor.delivery.monitoring_pages import ALERT_KIND_LABELS
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.identity import (
@@ -97,6 +98,7 @@ def build_dashboard_router(
                 governance=governance,
                 is_healthy=len(critical_alerts) == 0,
                 critical_alert_count=len(critical_alerts),
+                alert_kind_labels=ALERT_KIND_LABELS,
                 quick_actions=[
                     {"label": label, "href": href}
                     for label, href, capability in _QUICK_ACTIONS

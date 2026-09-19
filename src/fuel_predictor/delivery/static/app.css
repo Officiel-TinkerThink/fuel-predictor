@@ -833,6 +833,13 @@ tbody tr.is-selected td {
   overflow-wrap: anywhere;
 }
 
+/* In a table the wrapper scrolls sideways, so an id stays on one line rather
+   than breaking into three; in a row list it must wrap for the phone. */
+table .mono-id {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
 td.numeric,
 th.numeric {
   text-align: right;
@@ -891,6 +898,30 @@ th.numeric {
 .empty-state p {
   margin-left: auto;
   margin-right: auto;
+}
+
+/* One card per kind of alert, with the action once underneath. */
+.alert-group {
+  border-left: 5px solid var(--color-warning);
+}
+
+.alert-group--critical {
+  border-left-color: var(--color-danger);
+}
+
+.alert-group__items {
+  margin: 0 0 var(--space-3);
+  padding-left: 1.2rem;
+  max-width: var(--measure);
+}
+
+.alert-group__items li {
+  margin-bottom: var(--space-1);
+  overflow-wrap: anywhere;
+}
+
+.alert-group__action {
+  max-width: var(--measure);
 }
 
 /* All-clear checklist: each line carries a tick so it reads as "done", not

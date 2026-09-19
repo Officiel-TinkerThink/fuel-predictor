@@ -38,23 +38,19 @@
 {% set all_clear = [] %}
 
 {% if active_alerts %}
-<section class="card">
-  <h2>Peringatan aktif</h2>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Jenis</th><th>Pesan</th><th>Tingkat</th></tr></thead>
-      <tbody>
-        {% for alert in active_alerts %}
-        <tr>
-          <td>{{ alert.kind.value }}</td>
-          <td>{{ alert.message }}</td>
-          <td>{% if alert.severity.value == 'critical' %}{{ ui.badge('Kritis', 'danger') }}{% else %}{{ ui.badge('Peringatan', 'warning') }}{% endif %}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+{% for group in alert_groups %}
+<section class="card alert-group{% if group.critical %} alert-group--critical{% endif %}">
+  <div class="card__title">
+    <h2>{{ group.label }}</h2>
+    {{ ui.badge('Kritis' if group.critical else 'Peringatan', 'danger' if group.critical else 'warning') }}
   </div>
+  <ul class="alert-group__items">
+    {% for message in group.messages %}<li>{{ message }}</li>{% endfor %}
+  </ul>
+  <p class="alert-group__action"><strong>Tindakan:</strong> {{ group.remediation }}</p>
+  <p class="hint">{{ group.urgency }}</p>
 </section>
+{% endfor %}
 {% else %}
 {% set _ = all_clear.append('Tidak ada peringatan aktif.') %}
 {% endif %}

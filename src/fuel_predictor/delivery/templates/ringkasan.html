@@ -68,7 +68,7 @@
         <tbody>
           {% for alert in monitoring.active_alerts %}
           <tr>
-            <td>{{ alert.kind.value }}</td>
+            <td>{{ alert_kind_labels.get(alert.kind, alert.kind.value) }}</td>
             <td>{{ alert.message }}</td>
             <td>{{ ui.badge('Kritis' if alert.severity.value == 'critical' else 'Peringatan', 'danger' if alert.severity.value == 'critical' else 'warning') }}</td>
           </tr>
