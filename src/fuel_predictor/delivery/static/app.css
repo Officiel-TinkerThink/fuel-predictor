@@ -285,8 +285,25 @@ a:hover {
   font-size: 0.8rem;
 }
 
+.app__account-link {
+  display: block;
+  margin-top: var(--space-2);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.84rem;
+}
+
+.app__account-link:hover {
+  color: var(--color-text-inverse);
+}
+
 .app__account form {
   margin-top: var(--space-3);
+}
+
+/* Actions inside a table cell sit close together and never push the row apart. */
+.button-row--tight {
+  margin-top: 0;
+  gap: var(--space-2);
 }
 
 .app__main {
@@ -707,13 +724,15 @@ button[type="button"].button--secondary:hover {
 }
 
 .button--danger,
-button[type="submit"].button--danger {
+button[type="submit"].button--danger,
+button[type="button"].button--danger {
   background: var(--color-danger);
   border-color: var(--color-danger);
 }
 
 .button--danger:hover,
-button[type="submit"].button--danger:hover {
+button[type="submit"].button--danger:hover,
+button[type="button"].button--danger:hover {
   background: #7d1c19;
   border-color: #7d1c19;
 }

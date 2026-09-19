@@ -10,7 +10,15 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from fuel_predictor.application.identity import CreateUser, ListAuditRecords, ListUsers
+from fuel_predictor.application.identity import (
+    ActiveCaller,
+    ChangeOwnPassword,
+    ChangePassword,
+    CreateUser,
+    ListAuditRecords,
+    ListUsers,
+    SetUserActivation,
+)
 from fuel_predictor.application.model_lifecycle import GetModelGovernanceDashboard
 from fuel_predictor.application.monitoring import GetMonitoringDashboard
 from fuel_predictor.application.monitoring_runs import (
@@ -47,6 +55,9 @@ def build_dashboard_router(
     get_model_governance_dashboard: GetModelGovernanceDashboard,
     create_user: CreateUser,
     list_users: ListUsers,
+    set_user_activation: SetUserActivation,
+    change_password: ChangePassword,
+    change_own_password: ChangeOwnPassword,
     list_audit_records: ListAuditRecords,
     guard: SecurityGuard,
     monitoring_runs: MonitoringRunRepository,
@@ -103,22 +114,120 @@ def build_dashboard_router(
             )
         )
 
+    def _users_page(
+        caller: ActiveCaller,
+        errors: list[dict[str, str]],
+        form_values: dict[str, str],
+        notice: str | None = None,
+    ) -> str:
+        return render(
+            "pengguna.html",
+            caller=caller,
+            page_title="Pengguna",
+            active_path="/pengguna",
+            eyebrow="PENGATURAN",
+            page_lead="Kelola akun operator, manajer, dan administrator.",
+            users=list_users.execute(),
+            role_options=[(role.value, _ROLE_LABELS[role]) for role in UserRole],
+            errors=errors,
+            form_values=form_values,
+            notice=notice,
+        )
+
     @router.get("/pengguna", response_class=HTMLResponse)
     def show_users(request: Request) -> HTMLResponse:
         caller = guard.require_caller(request)
-        return HTMLResponse(
-            render(
-                "pengguna.html",
-                caller=caller,
-                page_title="Pengguna",
-                active_path="/pengguna",
-                eyebrow="PENGATURAN",
-                page_lead="Kelola akun operator, manajer, dan administrator.",
-                users=list_users.execute(),
-                role_options=[(role.value, _ROLE_LABELS[role]) for role in UserRole],
-                errors=[],
-                form_values={},
+        notice = {
+            "kata-sandi": "Kata sandi diatur ulang. Sesi lama pengguna itu sudah diakhiri.",
+            "nonaktif": "Akun dinonaktifkan dan sesinya diakhiri.",
+            "aktif": "Akun diaktifkan kembali.",
+        }.get(request.query_params.get("pesan", ""))
+        return HTMLResponse(_users_page(caller, [], {}, notice))
+
+    @router.post("/pengguna/{user_id}/kata-sandi", response_class=HTMLResponse)
+    async def reset_password(user_id: str, request: Request) -> Response:
+        caller = guard.require_caller(request)
+        form = await request.form()
+        try:
+            change_password.execute(
+                user_id, str(form.get("password", "")), changed_by=caller.user.username
             )
+        except IdentityValidationError as error:
+            return HTMLResponse(
+                _users_page(caller, [{"field": "reset_password", "message": error.message}], {}),
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            )
+        return RedirectResponse("/pengguna?pesan=kata-sandi", status_code=status.HTTP_303_SEE_OTHER)
+
+    @router.post("/pengguna/{user_id}/status", response_class=HTMLResponse)
+    async def set_status(user_id: str, request: Request) -> Response:
+        caller = guard.require_caller(request)
+        form = await request.form()
+        is_active = str(form.get("is_active", "")).lower() == "true"
+        # Switching off the account you are signed in with would end this very
+        # session mid-request and could leave no administrator at all.
+        if user_id == caller.user.user_id and not is_active:
+            return HTMLResponse(
+                _users_page(
+                    caller,
+                    [
+                        {
+                            "field": "status",
+                            "message": "Anda tidak dapat menonaktifkan akun Anda sendiri.",
+                        }
+                    ],
+                    {},
+                ),
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            )
+        try:
+            set_user_activation.execute(user_id, is_active, changed_by=caller.user.username)
+        except IdentityValidationError as error:
+            return HTMLResponse(
+                _users_page(caller, [{"field": "status", "message": error.message}], {}),
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            )
+        return RedirectResponse(
+            f"/pengguna?pesan={'aktif' if is_active else 'nonaktif'}",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    @router.get("/kata-sandi", response_class=HTMLResponse)
+    def show_own_password(request: Request) -> HTMLResponse:
+        return HTMLResponse(_own_password_page(guard.require_caller(request), []))
+
+    @router.post("/kata-sandi", response_class=HTMLResponse)
+    async def submit_own_password(request: Request) -> Response:
+        caller = guard.require_caller(request)
+        form = await request.form()
+        try:
+            change_own_password.execute(
+                caller.user.user_id,
+                str(form.get("current_password", "")),
+                str(form.get("new_password", "")),
+            )
+        except IdentityValidationError as error:
+            field = "new_password" if error.field == "password" else error.field
+            return HTMLResponse(
+                _own_password_page(caller, [{"field": field, "message": error.message}]),
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            )
+        # Every session ended with the old password, this one included, so
+        # the sign-in page is where the person lands - told why.
+        return RedirectResponse("/masuk?pesan=kata-sandi", status_code=status.HTTP_303_SEE_OTHER)
+
+    def _own_password_page(caller: ActiveCaller, errors: list[dict[str, str]]) -> str:
+        return render(
+            "kata-sandi.html",
+            caller=caller,
+            page_title="Ubah Kata Sandi",
+            active_path="/kata-sandi",
+            eyebrow="AKUN SAYA",
+            page_lead=(
+                "Setelah diubah, semua sesi Anda diakhiri dan Anda masuk lagi dengan kata "
+                "sandi baru."
+            ),
+            errors=errors,
         )
 
     @router.post("/pengguna", response_class=HTMLResponse)
@@ -142,18 +251,7 @@ def build_dashboard_router(
             message = error.message if isinstance(error, IdentityValidationError) else str(error)
             field = error.field if isinstance(error, IdentityValidationError) else "role"
             return HTMLResponse(
-                render(
-                    "pengguna.html",
-                    caller=caller,
-                    page_title="Pengguna",
-                    active_path="/pengguna",
-                    eyebrow="PENGATURAN",
-                    page_lead="Kelola akun operator, manajer, dan administrator.",
-                    users=list_users.execute(),
-                    role_options=[(role.value, _ROLE_LABELS[role]) for role in UserRole],
-                    errors=[{"field": field, "message": message}],
-                    form_values=values,
-                ),
+                _users_page(caller, [{"field": field, "message": message}], values),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         return RedirectResponse("/pengguna", status_code=status.HTTP_303_SEE_OTHER)

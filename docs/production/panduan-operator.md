@@ -35,6 +35,11 @@ suatu menu, berarti peran akun Anda memang tidak mencakupnya — itu bukan kerus
 **Kalau kata sandi ditolak:** periksa huruf besar/kecil. Setelah beberapa kali gagal, sistem
 menahan percobaan berikutnya sebentar. Tunggu, lalu coba lagi.
 
+**Lupa kata sandi:** minta administrator mengatur ulang — di menu **Pengguna**, tombol
+**Atur ulang kata sandi** pada baris akun Anda. **Mengganti kata sandi sendiri:** tautan
+**Ubah kata sandi** di bawah nama Anda pada menu samping; Anda diminta kata sandi yang lama
+dulu, lalu masuk lagi dengan yang baru.
+
 ![Halaman Masuk: kartu berisi kolom nama pengguna, kata sandi, dan tombol Masuk.](images/01-masuk.png)
 
 ---

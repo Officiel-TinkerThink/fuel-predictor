@@ -42,12 +42,15 @@ from fuel_predictor.application.historical_datasets import (
     ImportHistoricalDataset,
 )
 from fuel_predictor.application.identity import (
+    ChangeOwnPassword,
+    ChangePassword,
     CreateUser,
     EnsureBootstrapAdministrator,
     ListAuditRecords,
     ListUsers,
     RecordAuditEvent,
     ResolveSession,
+    SetUserActivation,
     SignIn,
     SignOut,
 )
@@ -333,6 +336,11 @@ def create_app(
     )
     create_user = CreateUser(user_repository, password_hasher, record_audit)
     list_users = ListUsers(user_repository)
+    set_user_activation = SetUserActivation(user_repository, session_repository, record_audit)
+    change_password = ChangePassword(
+        user_repository, session_repository, password_hasher, record_audit
+    )
+    change_own_password = ChangeOwnPassword(user_repository, password_hasher, change_password)
     list_audit_records = ListAuditRecords(audit_repository)
     ensure_bootstrap_administrator = EnsureBootstrapAdministrator(user_repository, create_user)
     resolved_bootstrap_administrator = bootstrap_administrator or (
@@ -495,6 +503,9 @@ def create_app(
             get_model_governance_dashboard,
             create_user,
             list_users,
+            set_user_activation,
+            change_password,
+            change_own_password,
             list_audit_records,
             guard,
             monitoring_run_repository,

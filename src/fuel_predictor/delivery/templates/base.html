@@ -49,6 +49,7 @@
       <div class="app__account">
         <strong>{{ caller_user.full_name }}</strong>
         <span class="role">{{ role_label }}</span>
+        <a class="app__account-link" href="/kata-sandi">Ubah kata sandi</a>
         <form method="post" action="/keluar">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <button type="submit" class="button button--secondary">Keluar</button>

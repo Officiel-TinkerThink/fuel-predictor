@@ -398,6 +398,24 @@ class ChangePassword:
 
 
 @dataclass(frozen=True, slots=True)
+class ChangeOwnPassword:
+    """A person changing their own password proves they still hold the old one;
+    an administrator resetting someone else's (ChangePassword) does not."""
+
+    user_repository: UserRepository
+    password_hasher: PasswordHasher
+    change_password: ChangePassword
+
+    def execute(self, user_id: str, current_password: str, new_password: str) -> User:
+        user = self.user_repository.get(user_id)
+        if user is None:
+            raise IdentityValidationError("user_id", "Pengguna tidak ditemukan.")
+        if not self.password_hasher.verify(current_password, user.password_hash):
+            raise IdentityValidationError("current_password", "Kata sandi saat ini salah.")
+        return self.change_password.execute(user_id, new_password, changed_by=user.username)
+
+
+@dataclass(frozen=True, slots=True)
 class ListUsers:
     user_repository: UserRepository
 

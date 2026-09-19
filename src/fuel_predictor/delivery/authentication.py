@@ -68,6 +68,12 @@ class AuditListResponse(BaseModel):
     records: list[AuditRecordResponse]
 
 
+# Why someone is back at the sign-in page, when the reason was their own doing.
+_SIGN_IN_NOTICES = {
+    "kata-sandi": "Kata sandi Anda sudah diubah. Masuk lagi dengan kata sandi yang baru.",
+}
+
+
 def build_authentication_router(
     sign_in: SignIn,
     sign_out: SignOut,
@@ -80,7 +86,7 @@ def build_authentication_router(
     router = APIRouter()
 
     @router.get("/masuk", response_class=HTMLResponse)
-    def show_sign_in(request: Request, tujuan: str = "/") -> Response:
+    def show_sign_in(request: Request, tujuan: str = "/", pesan: str = "") -> Response:
         if guard.caller_or_none(request) is not None:
             return RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
         token = request.cookies.get("fp_csrf") or new_csrf_token()
@@ -91,6 +97,7 @@ def build_authentication_router(
                 destination=_safe_destination(tujuan),
                 username="",
                 error=None,
+                notice=_SIGN_IN_NOTICES.get(pesan),
             )
         )
         issue_pre_session_csrf_token(request, response, token=token)
@@ -112,6 +119,7 @@ def build_authentication_router(
                     destination=destination,
                     username=username,
                     error=error.message,
+                    notice=None,
                 ),
                 status_code=status.HTTP_401_UNAUTHORIZED,
             )
@@ -132,9 +140,7 @@ def build_authentication_router(
         clear_session_cookie(response)
         return response
 
-    @router.post(
-        "/api/v1/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED
-    )
+    @router.post("/api/v1/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
     def create_user_endpoint(request: Request, payload: CreateUserRequest) -> UserResponse:
         actor = guard.require(request, Capability.MANAGE_USERS)
         user = create_user.execute(
