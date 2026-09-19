@@ -43,15 +43,15 @@ menahan percobaan berikutnya sebentar. Tunggu, lalu coba lagi.
 
 1. Menu **Buat Prediksi**.
 2. Isi:
-   - **Kategori kendaraan** — pilih dari daftar.
+   - **Kendaraan** — pilih unit dari daftar.
+   - **Rute & pemberhentian** — ketik nama lokasi; daftar menyaring sambil Anda mengetik.
+     Nama yang tidak ada di katalog ditolak beserta usulan nama yang mirip.
    - **Mode aktivitas** — `transport`, `lifting`, atau `transport_and_lifting`.
    - **Jam lifting** — wajib diisi kalau mode mencakup lifting.
    - **Jarak total (km)** — jarak seluruh perjalanan. Dihitung otomatis dari rute bila
      penyedia rute tersedia; kalau tidak, ketik sendiri.
-3. Tekan **Simpan operasi harian**. Operasi tersimpan lebih dulu, jadi angkanya bisa
-   ditelusuri kembali nanti.
-4. Di halaman berikutnya (*Operasi harian tersimpan*), tekan
-   **Buat estimasi kebutuhan BBM**.
+3. Tekan **Simpan & buat estimasi**. Operasi tersimpan lebih dulu, jadi angkanya bisa
+   ditelusuri kembali nanti, lalu estimasinya langsung ditampilkan.
 
 Hasilnya menampilkan:
 

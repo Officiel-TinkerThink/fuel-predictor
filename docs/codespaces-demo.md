@@ -99,13 +99,13 @@ Go to **Buat Prediksi** in the sidebar and fill in one operation:
    vehicles across Crane, Truck, Forklift and Vacuum Truck.
 2. **Aktivitas** — pick `Angkut dan lifting`. A **Jam lifting** field appears;
    enter `3.5`.
-3. **Rute & pemberhentian** — pick `POOL LIMAU` as the departure point and
+3. **Rute & pemberhentian** — type `POOL LIMAU` as the departure point and
    `KM-001` as the stop. The map above draws the route between them. Use
    **+ Tambah pemberhentian** to add more stops, and drag the ⠿ handle to
    reorder them.
 4. **Jarak total** — enter `64` km. (See *Known limits* below for why the
    automatic route distance is unavailable in the demo.)
-5. **Simpan operasi harian**, then **Buat estimasi kebutuhan BBM**.
+5. **Simpan & buat estimasi** — the estimate appears straight away.
 
 You should see roughly **51 L estimated** and **56 L recommended allocation** —
 the recommendation adds a 5 L safety margin.

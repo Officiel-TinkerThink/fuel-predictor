@@ -22,28 +22,28 @@
 
 <div class="grid grid--metrics">
   {% if governance.active_model %}
-  {{ ui.metric('Model aktif', 'v' ~ governance.active_model.version, context=governance.active_model.algorithm) }}
+  {{ ui.metric('Model aktif', 'v' ~ governance.active_model.version, context=governance.active_model.algorithm, href='/pengelolaan-model') }}
   {% else %}
-  {{ ui.metric('Model aktif', 'Belum ada', unavailable=true, context='Latih dan promosikan kandidat baseline.') }}
+  {{ ui.metric('Model aktif', 'Belum ada', unavailable=true, context='Latih dan promosikan kandidat baseline.', href='/pengelolaan-model') }}
   {% endif %}
 
   {% if governance.active_performance and governance.active_performance.mae_liters is not none %}
-  {{ ui.metric('MAE model aktif', governance.active_performance.mae_liters | angka, unit='L', context=governance.active_performance.matched_record_count ~ ' pasangan tercocokkan') }}
+  {{ ui.metric('Selisih rata-rata prediksi', governance.active_performance.mae_liters | angka, unit='L', context='MAE dari ' ~ governance.active_performance.matched_record_count ~ ' operasi dengan aktual', href='/pemantauan/kinerja-model') }}
   {% else %}
-  {{ ui.metric('MAE model aktif', 'Belum cukup data', unavailable=true, context='Perlu hasil aktual yang tercocokkan dengan prediksi.') }}
+  {{ ui.metric('Selisih rata-rata prediksi', 'Belum cukup data', unavailable=true, context='Perlu hasil aktual yang tercocokkan dengan prediksi.', href='/pemantauan/kinerja-model') }}
   {% endif %}
 
   {% if monitoring.feature_drift.status == 'ready' %}
     {% if monitoring.feature_drift.drift_share is not none and monitoring.feature_drift.drift_share >= monitoring.feature_drift.threshold %}
-    {{ ui.metric('Pergeseran data', (monitoring.feature_drift.drift_share * 100) | angka(0) ~ '%', context='Melewati ambang ' ~ (monitoring.feature_drift.threshold * 100) | angka(0) ~ '%') }}
+    {{ ui.metric('Pergeseran data', (monitoring.feature_drift.drift_share * 100) | angka(0) ~ '%', context='Melewati ambang ' ~ (monitoring.feature_drift.threshold * 100) | angka(0) ~ '%', href='/pemantauan/pergeseran-data') }}
     {% else %}
-    {{ ui.metric('Pergeseran data', 'Stabil', context='Di bawah ambang pemantauan') }}
+    {{ ui.metric('Pergeseran data', 'Stabil', context='Di bawah ambang pemantauan', href='/pemantauan/pergeseran-data') }}
     {% endif %}
   {% else %}
-  {{ ui.metric('Pergeseran data', 'Belum tersedia', unavailable=true, context='Menunggu data referensi dan data terkini.') }}
+  {{ ui.metric('Pergeseran data', 'Belum tersedia', unavailable=true, context='Menunggu data referensi dan data terkini.', href='/pemantauan/pergeseran-data') }}
   {% endif %}
 
-  {{ ui.metric('Aktual BBM belum tercatat', monitoring.missing_actual_prediction_count, context='Lebih dari ' ~ monitoring.missing_actual_after_days ~ ' hari sejak prediksi') }}
+  {{ ui.metric('Aktual BBM belum tercatat', monitoring.missing_actual_prediction_count, context='Lebih dari ' ~ monitoring.missing_actual_after_days ~ ' hari sejak prediksi', href='/bahan-bakar-aktual') }}
 </div>
 
 <div class="grid grid--two">

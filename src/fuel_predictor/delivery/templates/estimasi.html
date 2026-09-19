@@ -18,6 +18,14 @@
 <section class="card">
   <dl class="detail-list">
     <dt>ID operasi</dt><dd><strong>{{ prediction.operation_id }}</strong></dd>
+    {% if operation %}
+    {% if operation.vehicle %}<dt>Kendaraan</dt><dd>{{ operation.vehicle }}</dd>{% endif %}
+    <dt>Aktivitas</dt><dd>{{ mode_label }}{% if operation.lifting_hours is not none %} · {{ operation.lifting_hours | angka }} jam lifting{% endif %}</dd>
+    {% if operation.stop_sequence %}
+    <dt>Rute</dt><dd>{{ operation.stop_sequence | join(' → ') }}</dd>
+    {% endif %}
+    <dt>Jarak total</dt><dd>{{ operation.total_distance_km | angka }} km</dd>
+    {% endif %}
   </dl>
   <p class="hint">Simpan ID ini. Setelah operasi selesai, catat bahan bakar aktual dengan ID yang sama
     agar model bisa belajar dari hasilnya.</p>

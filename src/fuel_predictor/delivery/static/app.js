@@ -184,31 +184,47 @@
     var mapCanvas = document.querySelector("#route-canvas");
     var statusLine = document.querySelector("#route-status");
 
-    var chosenStops = function () {
+    // Stops are typed into inputs backed by one shared <datalist>; the
+    // coordinates live on its options, read once into a map keyed the same
+    // way the server matches names (trimmed, case-insensitive).
+    var coordinates = {};
+    var catalog = document.querySelector("#katalog-lokasi");
+    if (catalog) {
+      Array.prototype.slice.call(catalog.options).forEach(function (option) {
+        var lat = parseFloat(option.dataset.lat);
+        var lon = parseFloat(option.dataset.lon);
+        if (isFinite(lat) && isFinite(lon)) {
+          coordinates[option.value.trim().toLowerCase()] = [lat, lon];
+        }
+      });
+    }
+
+    var stopInputs = function () {
       return rows()
         .map(function (row) {
-          return row.querySelector('select[name="stop_sequence"]');
+          return row.querySelector('input[name="stop_sequence"]');
         })
-        .filter(function (select) {
-          return select && select.value;
+        .filter(function (input) {
+          return input;
+        });
+    };
+
+    var chosenStops = function () {
+      return stopInputs()
+        .map(function (input) {
+          return input.value.trim();
         })
-        .map(function (select) {
-          return select.value;
+        .filter(function (value) {
+          return value;
         });
     };
 
     var chosenPoints = function () {
       var points = [];
-      rows().forEach(function (row) {
-        var select = row.querySelector('select[name="stop_sequence"]');
-        var option = select && select.selectedOptions ? select.selectedOptions[0] : null;
-        if (!option || !option.dataset || option.dataset.lat === undefined) {
-          return;
-        }
-        var lat = parseFloat(option.dataset.lat);
-        var lon = parseFloat(option.dataset.lon);
-        if (isFinite(lat) && isFinite(lon)) {
-          points.push([lat, lon]);
+      chosenStops().forEach(function (name) {
+        var point = coordinates[name.toLowerCase()];
+        if (point) {
+          points.push(point);
         }
       });
       return points;
@@ -274,8 +290,8 @@
       }
       var row = template.cloneNode(true);
       row.classList.remove("stop-row--dragging");
-      Array.prototype.slice.call(row.querySelectorAll("select")).forEach(function (select) {
-        select.selectedIndex = 0;
+      Array.prototype.slice.call(row.querySelectorAll("input")).forEach(function (input) {
+        input.value = "";
       });
       return row;
     };
@@ -287,9 +303,9 @@
       }
       sequence.appendChild(row);
       refreshStops();
-      var select = row.querySelector('select[name="stop_sequence"]');
-      if (select) {
-        select.focus();
+      var input = row.querySelector('input[name="stop_sequence"]');
+      if (input) {
+        input.focus();
       }
     });
 
@@ -306,7 +322,9 @@
       refreshStops();
     });
 
-    sequence.addEventListener("change", function (event) {
+    // "input" rather than "change": picking from the datalist and typing a
+    // full name both fire it, so the map follows without waiting for blur.
+    sequence.addEventListener("input", function (event) {
       if (event.target.name === "stop_sequence") {
         updateRouteDistance();
       }

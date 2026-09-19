@@ -103,13 +103,13 @@ Buka **Buat Prediksi** pada menu samping, lalu isi satu operasi:
    sebenarnya: 23 unit dalam kelompok Crane, Truck, Forklift, dan Vacuum Truck.
 2. **Aktivitas** — pilih `Angkut dan lifting`. Kolom **Jam lifting** akan
    muncul; isi `3.5`.
-3. **Rute & pemberhentian** — pilih `POOL LIMAU` sebagai titik keberangkatan
+3. **Rute & pemberhentian** — ketik `POOL LIMAU` sebagai titik keberangkatan
    dan `KM-001` sebagai pemberhentian. Peta di atasnya menggambar rute di
    antara keduanya. Gunakan **+ Tambah pemberhentian** untuk menambah
    pemberhentian, dan seret pegangan ⠿ untuk mengubah urutannya.
 4. **Jarak total** — isi `64` km. (Alasan jarak otomatis belum tersedia pada
    demo ini ada di bagian *Batasan* di bawah.)
-5. Tekan **Simpan operasi harian**, lalu **Buat estimasi kebutuhan BBM**.
+5. Tekan **Simpan & buat estimasi** — estimasinya langsung tampil.
 
 Hasilnya kira-kira **51 L estimasi** dengan **56 L alokasi rekomendasi** —
 rekomendasi menambahkan margin aman 5 L.

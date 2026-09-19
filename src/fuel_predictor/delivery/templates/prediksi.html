@@ -18,7 +18,7 @@
       <div class="field" id="lifting-field"{% if values.get('activity_mode', 'transport') == 'transport' %} hidden{% endif %}>
         {{ ui.number_field('lifting_hours', 'Jam lifting', 'jam', values.get('lifting_hours', ''), hint='Total jam lifting sepanjang operasi. Wajib bila aktivitas mencakup lifting.', errors=errors, min=0.01) }}
       </div>
-      {{ ui.stop_sequence_field(values.get('stop_sequence'), location_options, route_preview_available=route_preview_available) }}
+      {{ ui.stop_sequence_field(values.get('stop_sequence'), location_options, route_preview_available=route_preview_available, errors=errors) }}
       {# The planner never chooses the distance source: a route that can be
          computed always wins, and otherwise the distance typed here is used
          (CreateDailyOperation). A dropdown for it only hid this field behind
@@ -30,7 +30,7 @@
       {{ ui.number_field('total_distance_km', 'Jarak total', 'km', values.get('total_distance_km', ''), hint='Penyedia rute belum dikonfigurasi pada instalasi ini, jadi jarak total wajib diisi secara manual.', errors=errors, required=true, min=0.01) }}
       {% endif %}
     </fieldset>
-    <button type="submit">Simpan operasi harian</button>
+    <button type="submit">Simpan &amp; buat estimasi</button>
   </form>
 </section>
 

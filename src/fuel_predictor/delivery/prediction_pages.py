@@ -14,6 +14,7 @@ from fuel_predictor.application.baseline_predictions import (
     BaselineModelNotFoundError,
     GenerateFuelPrediction,
 )
+from fuel_predictor.application.catalog_resolution import UnknownLocationError, resolve_location
 from fuel_predictor.application.daily_operations import CreateDailyOperation
 from fuel_predictor.application.identity import ActiveCaller
 from fuel_predictor.application.locations import LocationCatalog, LocationOption
@@ -26,7 +27,8 @@ from fuel_predictor.delivery.http import (
 )
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
-from fuel_predictor.domain.daily_operation import DailyOperationValidationError
+from fuel_predictor.domain.daily_operation import DailyOperation, DailyOperationValidationError
+from fuel_predictor.domain.prediction import FuelPrediction
 
 _MODE_LABELS = {
     "transport": "Angkut",
@@ -53,6 +55,14 @@ def build_prediction_pages_router(
             (option.name, f"{option.name} — {option.group}" if option.group else option.name)
             for option in vehicle_catalog.options()
         ]
+
+    def _resolved_stop_names(names: list[str]) -> list[str]:
+        """A typed stop becomes the catalogue's own spelling, the same tolerant
+        way an agent's request is matched. With no catalogue loaded there is
+        nothing to match against, so the names pass through as written."""
+        if not location_catalog.options():
+            return names
+        return [resolve_location(location_catalog, name).name for name in names]
 
     def _resolved_stops(names: list[str]) -> tuple[str, ...]:
         """Only catalogued stops reach the provider, so the page cannot ask it for
@@ -109,6 +119,20 @@ def build_prediction_pages_router(
             if stop
         ]
         payload: dict[str, Any] = dict(submitted)
+        try:
+            payload["stop_sequence"] = _resolved_stop_names(submitted["stop_sequence"])
+        except UnknownLocationError as error:
+            return HTMLResponse(
+                _render_form(
+                    caller,
+                    submitted,
+                    [{"field": "stop_sequence", "message": _unknown_stop_message(error)}],
+                    location_catalog.options(),
+                    _vehicle_options(),
+                    route_preview is not None,
+                ),
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            )
         if payload.get("lifting_hours") == "":
             payload["lifting_hours"] = None
         if payload.get("vehicle") == "":
@@ -144,16 +168,18 @@ def build_prediction_pages_router(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
 
+        # The estimate is what the planner came for, so it follows the save
+        # directly. The operation is stored either way (ADR 0001); only the
+        # page differs when no model can produce a number for it yet.
+        try:
+            prediction = generate_fuel_prediction.execute(operation.operation_id)
+        except BaselineModelNotFoundError:
+            return HTMLResponse(
+                _render_saved_operation(caller, operation, no_active_model=True),
+                status_code=status.HTTP_201_CREATED,
+            )
         return HTMLResponse(
-            render(
-                "operasi-tersimpan.html",
-                caller=caller,
-                page_title="Operasi harian tersimpan",
-                active_path="/prediksi",
-                operation=operation,
-                mode_label=_MODE_LABELS[operation.activity_mode.value],
-                source_label=_SOURCE_LABELS[operation.distance_source.value],
-            ),
+            _render_estimate(caller, prediction, operation),
             status_code=status.HTTP_201_CREATED,
         )
 
@@ -179,17 +205,56 @@ def build_prediction_pages_router(
                 status_code=status.HTTP_409_CONFLICT,
             )
         return HTMLResponse(
-            render(
-                "estimasi.html",
-                caller=caller,
-                page_title="Estimasi kebutuhan bahan bakar",
-                active_path="/prediksi",
-                prediction=prediction,
+            _render_estimate(
+                caller, prediction, generate_fuel_prediction.operation_reader.get(operation_id)
             ),
             status_code=status.HTTP_201_CREATED,
         )
 
     return router
+
+
+def _render_saved_operation(
+    caller: ActiveCaller, operation: DailyOperation, *, no_active_model: bool
+) -> str:
+    return render(
+        "operasi-tersimpan.html",
+        caller=caller,
+        page_title="Operasi harian tersimpan",
+        active_path="/prediksi",
+        operation=operation,
+        mode_label=_MODE_LABELS[operation.activity_mode.value],
+        source_label=_SOURCE_LABELS[operation.distance_source.value],
+        no_active_model=no_active_model,
+    )
+
+
+def _render_estimate(
+    caller: ActiveCaller, prediction: FuelPrediction, operation: DailyOperation | None
+) -> str:
+    return render(
+        "estimasi.html",
+        caller=caller,
+        page_title="Estimasi kebutuhan bahan bakar",
+        active_path="/prediksi",
+        prediction=prediction,
+        operation=operation,
+        mode_label=_MODE_LABELS[operation.activity_mode.value] if operation else None,
+    )
+
+
+def _unknown_stop_message(error: UnknownLocationError) -> str:
+    if error.ambiguous:
+        return (
+            f'Pemberhentian "{error.written}" cocok dengan lebih dari satu lokasi: '
+            f"{', '.join(error.candidates)}. Pilih salah satu dari daftar."
+        )
+    if error.candidates:
+        return (
+            f'Pemberhentian "{error.written}" tidak ada di katalog lokasi. '
+            f"Mungkin maksud Anda: {', '.join(error.candidates)}?"
+        )
+    return f'Pemberhentian "{error.written}" tidak ada di katalog lokasi.'
 
 
 def _render_form(

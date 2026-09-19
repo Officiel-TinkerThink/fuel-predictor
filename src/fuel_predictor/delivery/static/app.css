@@ -385,6 +385,24 @@ a:hover {
   box-shadow: var(--shadow-sm);
 }
 
+.metric--link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.metric--link:hover {
+  color: inherit;
+  border-color: var(--color-brand);
+  box-shadow: var(--shadow-md);
+}
+
+.metric--link .metric__label::after {
+  content: " \203A";
+  color: var(--color-brand);
+}
+
 .metric__label {
   font-size: 0.84rem;
   color: var(--color-text-muted);
@@ -576,12 +594,22 @@ legend {
   margin-top: var(--space-1);
 }
 
-.field .field-error {
+.field-error {
   display: block;
   font-size: 0.86rem;
   color: var(--color-danger);
   font-weight: 600;
+}
+
+.field .field-error {
   margin-top: var(--space-1);
+}
+
+/* A fieldset that carries an error (the stop list) shows it the way a single
+   control does: a red edge, not just red text somewhere inside. */
+.stops-field:has(> .field-error) {
+  border-color: var(--color-danger);
+  border-style: solid;
 }
 
 input[type="text"],

@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from fuel_predictor.application.actual_fuel import (
     ActualFuelAlreadyRecordedError,
@@ -78,13 +79,7 @@ class SqlAlchemyActualFuelRepository:
                 .order_by(PredictionRow.created_at.desc(), PredictionRow.prediction_id.desc())
                 .limit(limit)
             ).all()
-            stops: dict[str, list[str]] = defaultdict(list)
-            for stop in session.execute(
-                select(DailyOperationStopRow.operation_id, DailyOperationStopRow.location_name)
-                .where(DailyOperationStopRow.operation_id.in_([row.operation_id for row in rows]))
-                .order_by(DailyOperationStopRow.operation_id, DailyOperationStopRow.stop_position)
-            ):
-                stops[stop.operation_id].append(stop.location_name)
+            stops = self._stops_for(session, [row.operation_id for row in rows])
         return tuple(
             OperationAwaitingActualFuel(
                 operation_id=row.operation_id,
@@ -142,6 +137,7 @@ class SqlAlchemyActualFuelRepository:
                 select(
                     DailyOperationRow.operation_id,
                     DailyOperationRow.vehicle_category,
+                    DailyOperationRow.vehicle,
                     DailyOperationRow.activity_mode,
                     DailyOperationRow.lifting_hours,
                     DailyOperationRow.total_distance_km,
@@ -155,18 +151,37 @@ class SqlAlchemyActualFuelRepository:
                     DailyOperationRow.operation_id == ActualFuelRecordRow.operation_id,
                 )
             ).all()
+            # The stops come along because DailyOperation's own invariant
+            # requires them for a manual-fallback route: without them every
+            # such operation failed to rebuild and took the overview down.
+            stops = self._stops_for(session, [row.operation_id for row in rows])
         return tuple(
             ModelEvaluationCase(
                 operation=DailyOperation(
                     operation_id=row.operation_id,
                     vehicle_category=VehicleCategory(row.vehicle_category),
+                    vehicle=row.vehicle,
                     activity_mode=ActivityMode(row.activity_mode),
                     lifting_hours=row.lifting_hours,
                     total_distance_km=row.total_distance_km,
                     distance_source=DistanceSource(row.distance_source),
                     route_distance_manual_fallback=row.route_distance_manual_fallback,
+                    stop_sequence=tuple(stops[row.operation_id]),
                 ),
                 actual_fuel_liters=row.actual_fuel_liters,
             )
             for row in rows
         )
+
+    @staticmethod
+    def _stops_for(session: Session, operation_ids: list[str]) -> dict[str, list[str]]:
+        stops: dict[str, list[str]] = defaultdict(list)
+        if not operation_ids:
+            return stops
+        for stop in session.execute(
+            select(DailyOperationStopRow.operation_id, DailyOperationStopRow.location_name)
+            .where(DailyOperationStopRow.operation_id.in_(operation_ids))
+            .order_by(DailyOperationStopRow.operation_id, DailyOperationStopRow.stop_position)
+        ):
+            stops[stop.operation_id].append(stop.location_name)
+        return stops

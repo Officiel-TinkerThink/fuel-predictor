@@ -5,8 +5,9 @@
 <span class="badge badge--{{ tone }}">{{ text }}</span>
 {%- endmacro %}
 
-{% macro metric(label, value, unit=none, context=none, unavailable=false) -%}
-<div class="metric">
+{% macro metric(label, value, unit=none, context=none, unavailable=false, href=none) -%}
+{# With href the whole tile is the link to the page that explains the number. #}
+<{{ 'a' if href else 'div' }} class="metric{% if href %} metric--link{% endif %}"{% if href %} href="{{ href }}"{% endif %}>
   <p class="metric__label">{{ label }}</p>
   {% if unavailable %}
   <p class="metric__value metric__value--unavailable">{{ value }}</p>
@@ -14,7 +15,7 @@
   <p class="metric__value">{{ value }}{% if unit %}<span class="metric__unit">{{ unit }}</span>{% endif %}</p>
   {% endif %}
   {% if context %}<p class="metric__context">{{ context }}</p>{% endif %}
-</div>
+</{{ 'a' if href else 'div' }}>
 {%- endmacro %}
 
 {% macro banner(tone, title, body, action=none, action_href=none) -%}
@@ -104,16 +105,24 @@
 </div>
 {%- endmacro %}
 
-{% macro stop_sequence_field(values, location_options, route_preview_available=false) -%}
-{% set known_names = location_options | map(attribute='name') | list %}
+{% macro stop_sequence_field(values, location_options, route_preview_available=false, errors=none) -%}
 {% set stop_values = values or ['', ''] %}
+{% set message = _error_for(errors, 'stop_sequence') | trim %}
 {# An empty map is just a large grey box, so the canvas stays hidden until
    there is a route to draw; app.js shows it once two stops are chosen. #}
 {% set has_route = (stop_values | select | list | length) >= 2 %}
-<fieldset class="stops-field" aria-describedby="stops-help">
+<fieldset class="stops-field" id="field-stop_sequence" tabindex="-1"
+          aria-describedby="stops-help{% if message %} error-stop_sequence{% endif %}">
   <legend>Rute &amp; pemberhentian</legend>
-  <p id="stops-help" class="hint">Masukkan titik keberangkatan dan pemberhentian setelahnya.
+  <p id="stops-help" class="hint">Ketik nama lokasi; daftar akan menyaring sambil Anda mengetik.
     Urutan terakhir adalah tujuan akhir.</p>
+  {% if message %}<p class="field-error" id="error-stop_sequence">{{ message }}</p>{% endif %}
+  {# One catalogue for every stop row, instead of a thousand <option>s per row. #}
+  <datalist id="katalog-lokasi">
+    {% for option in location_options %}
+    <option value="{{ option.name }}" data-lat="{{ option.latitude }}" data-lon="{{ option.longitude }}"></option>
+    {% endfor %}
+  </datalist>
   <div class="stops-layout">
     <aside class="route-preview" aria-label="Pratinjau rute"
            {% if route_preview_available %}data-route-preview="on"{% endif %}>
@@ -137,15 +146,9 @@
           <div class="stop-fields">
             <div class="field">
               <label>{% if loop.first %}Titik keberangkatan{% else %}Pemberhentian{% endif %}
-                <select name="stop_sequence" autocomplete="off">
-                  <option value="">{% if loop.first %}Lokasi keberangkatan{% else %}Lokasi pemberhentian{% endif %}</option>
-                  {% for option in location_options %}
-                  <option value="{{ option.name }}" data-lat="{{ option.latitude }}" data-lon="{{ option.longitude }}"{% if option.name == value %} selected{% endif %}>{{ option.name }}</option>
-                  {% endfor %}
-                  {% if value and value not in known_names %}
-                  <option value="{{ value }}" selected>{{ value }}</option>
-                  {% endif %}
-                </select>
+                <input type="text" name="stop_sequence" list="katalog-lokasi" value="{{ value }}"
+                       autocomplete="off" spellcheck="false"
+                       placeholder="{% if loop.first %}Ketik lokasi keberangkatan{% else %}Ketik lokasi pemberhentian{% endif %}">
               </label>
             </div>
           </div>
