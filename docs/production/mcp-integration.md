@@ -39,6 +39,9 @@ Add the URL with **no** credential. A standards-compliant client does the rest:
    refresh token again revokes the grant.
 6. `POST /oauth/revoke` (RFC 7009) with `token` and `client_id` hands a grant back.
 
+The origin in every advertised URL is `FUEL_PREDICTOR_PUBLIC_URL`; set it whenever a CDN or proxy
+in front hides the real scheme from the app (recovery runbook §3).
+
 The agent acts **as the user**, audited as `<username> via <client name>`, and can never hold a
 scope the user's own role does not. Access tokens last one hour, refresh tokens thirty days of
 disuse. The user sees and revokes their grants on **Agen Saya**; an administrator sees everyone's

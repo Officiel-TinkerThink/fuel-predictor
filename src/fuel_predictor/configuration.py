@@ -32,6 +32,13 @@ class ApplicationSettings(BaseSettings):
     # app cannot see the original scheme (for example behind a proxy that has
     # not been configured to forward it yet).
     session_cookies_require_https: bool = False
+    # The origin the outside world reaches this application at, e.g.
+    # https://fuel.example. It is what OAuth discovery advertises as the
+    # issuer, endpoints and `resource` (ADR 0014), so it must be exactly what
+    # an MCP client sees. Unset, the app derives it from each request, which
+    # is only right when every proxy in front forwards the original scheme;
+    # a CDN talking plain HTTP to the gateway silently turns it into http://.
+    public_url: str | None = None
     # Bounds on an uploaded model package (ADR 0009). Defaults are generous
     # for a small ONNX/skops pipeline and deliberately far below the plan's
     # 1-2 GB VM envelope, so a hostile upload cannot exhaust it.
@@ -79,6 +86,20 @@ class ApplicationSettings(BaseSettings):
     alert_smtp_use_starttls: bool = True
     alert_email_sender: str = ""
     alert_email_recipients: str = ""
+
+    @field_validator("public_url")
+    @classmethod
+    def validate_public_url(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        origin = value.strip().rstrip("/")
+        if origin.startswith(("https://", "http://")) and "/" not in origin.split("://", 1)[1]:
+            return origin
+        message = (
+            "FUEL_PREDICTOR_PUBLIC_URL harus berupa origin saja, misalnya "
+            "https://fuel.example, tanpa path."
+        )
+        raise ValueError(message)
 
     @field_validator("database_url")
     @classmethod

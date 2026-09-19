@@ -75,6 +75,10 @@ services:
     environment:
       FUEL_PREDICTOR_DATABASE_URL: postgresql+psycopg://fuel_predictor:${POSTGRES_PASSWORD}@db:5432/fuel_predictor
       FUEL_PREDICTOR_MLFLOW_TRACKING_URI: http://mlflow:5000
+      # The https origin agents reach /mcp at. Required for OAuth (ADR 0014):
+      # the CDN in front of the shared Caddy talks plain HTTP to it, so the
+      # scheme that reaches app is http and cannot be trusted for discovery.
+      FUEL_PREDICTOR_PUBLIC_URL: ${FUEL_PREDICTOR_PUBLIC_URL:-}
       FUEL_PREDICTOR_BOOTSTRAP_ADMIN_USERNAME: ${FUEL_PREDICTOR_BOOTSTRAP_ADMIN_USERNAME:-}
       FUEL_PREDICTOR_BOOTSTRAP_ADMIN_PASSWORD: ${FUEL_PREDICTOR_BOOTSTRAP_ADMIN_PASSWORD:-}
       # Without this the deployment has no routing provider at all: every

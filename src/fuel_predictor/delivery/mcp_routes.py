@@ -28,6 +28,7 @@ from fuel_predictor.delivery.mcp_server import (
     McpUnknownToolError,
     tool_result_to_text,
 )
+from fuel_predictor.delivery.oauth_routes import public_origin
 
 # The revision whose behaviour this server actually implements. Clients on a
 # newer revision are answered with this one rather than echoed back: the spec
@@ -38,7 +39,9 @@ from fuel_predictor.delivery.mcp_server import (
 _PROTOCOL_VERSION = "2024-11-05"
 
 
-def build_mcp_router(handler: McpRequestHandler, server_version: str) -> APIRouter:
+def build_mcp_router(
+    handler: McpRequestHandler, server_version: str, public_url: str | None = None
+) -> APIRouter:
     router = APIRouter()
 
     @router.get("/mcp")
@@ -76,7 +79,7 @@ def build_mcp_router(handler: McpRequestHandler, server_version: str) -> APIRout
             # to obtain a credential rather than treating this as a bug.
             # `resource_metadata` (RFC 9728) is how it finds the OAuth
             # discovery document and starts the browser flow (ADR 0014).
-            metadata = str(request.base_url).rstrip("/") + "/.well-known/oauth-protected-resource"
+            metadata = public_origin(request, public_url) + "/.well-known/oauth-protected-resource"
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 headers={

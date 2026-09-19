@@ -57,8 +57,12 @@ def build_oauth_router(
     revoke_by_token: RevokeGrantByToken,
     guard: SecurityGuard,
     is_system_provisioned: Callable[[], bool],
+    public_url: str | None = None,
 ) -> APIRouter:
     router = APIRouter()
+
+    def base_url(request: Request) -> str:
+        return public_origin(request, public_url)
 
     # --- Discovery (RFC 9728, RFC 8414) --------------------------------------
 
@@ -67,7 +71,7 @@ def build_oauth_router(
     async def protected_resource(request: Request) -> JSONResponse:
         """Where `/mcp` says its tokens come from. Both paths: clients derive
         either the origin-wide or the path-suffixed form from the MCP URL."""
-        base = _base_url(request)
+        base = base_url(request)
         return JSONResponse(
             {
                 "resource": f"{base}/mcp",
@@ -83,7 +87,7 @@ def build_oauth_router(
     async def authorization_server(request: Request) -> JSONResponse:
         """The endpoints below, by name. The OpenID path is the fallback some
         clients try second; the same document satisfies them."""
-        base = _base_url(request)
+        base = base_url(request)
         return JSONResponse(
             {
                 "issuer": base,
@@ -160,7 +164,7 @@ def build_oauth_router(
                 scope=query.get("scope"),
                 state=query.get("state"),
                 resource=query.get("resource"),
-                expected_resource=f"{_base_url(request)}/mcp",
+                expected_resource=f"{base_url(request)}/mcp",
             )
         except RedirectableAuthorizationError as error:
             return _redirect_with_error(error)
@@ -223,7 +227,7 @@ def build_oauth_router(
                 scope=field("scope"),
                 state=field("state"),
                 resource=field("resource"),
-                expected_resource=f"{_base_url(request)}/mcp",
+                expected_resource=f"{base_url(request)}/mcp",
             )
         except RedirectableAuthorizationError as error:
             return _redirect_with_error(error)
@@ -278,7 +282,7 @@ def build_oauth_router(
                     redirect_uri=field("redirect_uri"),
                     code_verifier=field("code_verifier"),
                     resource=field("resource"),
-                    expected_resource=f"{_base_url(request)}/mcp",
+                    expected_resource=f"{base_url(request)}/mcp",
                 )
             elif grant_type == "refresh_token":
                 issued = refresh_grant.execute(
@@ -309,10 +313,16 @@ def build_oauth_router(
     return router
 
 
-def _base_url(request: Request) -> str:
-    """This server as the client reaches it: the public https origin behind
-    the gateway (uvicorn --proxy-headers), the plain local one in development."""
-    return str(request.base_url).rstrip("/")
+def public_origin(request: Request, configured: str | None) -> str:
+    """This server as the client reaches it.
+
+    The configured public URL when there is one: an OAuth issuer has to be
+    stable and exactly what the client sees, and behind a CDN or a gateway
+    that does not forward the original scheme the request alone cannot say.
+    Otherwise the request's own origin: the public https one when every
+    proxy forwards it (uvicorn --proxy-headers), the plain local one in
+    development."""
+    return configured or str(request.base_url).rstrip("/")
 
 
 def _token_body(issued: IssuedGrantTokens) -> dict[str, Any]:

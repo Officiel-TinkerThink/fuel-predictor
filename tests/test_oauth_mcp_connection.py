@@ -169,6 +169,46 @@ def test_an_unauthenticated_mcp_call_points_at_the_discovery_document(tmp_path: 
         assert client.get("/.well-known/openid-configuration").json() == server
 
 
+def test_a_configured_public_url_wins_over_the_scheme_the_proxy_chain_leaks(
+    tmp_path: Path,
+) -> None:
+    """In production a CDN talks plain HTTP to the gateway, so the app sees http://
+    and, left to the request, would advertise http:// endpoints and a `resource`
+    it then refuses. The configured origin is what the client actually sees."""
+    app = create_app(
+        database_path=tmp_path / "operations.sqlite3",
+        bootstrap_administrator=_ADMIN,
+        public_url="https://fuel.example",
+    )
+    with TestClient(app, base_url="http://app:8000") as client:
+        www = _mcp(client, None, {"jsonrpc": "2.0", "id": 1, "method": "initialize"}).headers[
+            "www-authenticate"
+        ]
+        assert 'resource_metadata="https://fuel.example/.well-known/' in www
+        resource = client.get("/.well-known/oauth-protected-resource").json()
+        assert resource["resource"] == "https://fuel.example/mcp"
+        assert resource["authorization_servers"] == ["https://fuel.example"]
+        server = client.get("/.well-known/oauth-authorization-server").json()
+        assert server["issuer"] == "https://fuel.example"
+        assert server["registration_endpoint"] == "https://fuel.example/oauth/register"
+
+        # And the https resource a client copies from that document is accepted:
+        # the anonymous authorize request is sent to sign in, not bounced with
+        # an invalid_target error, and the whole flow completes.
+        _add_operator(client)
+        client_id = _register(client)
+        anonymous = client.get(_authorize_url(client_id), follow_redirects=False)
+        assert anonymous.status_code == 303
+        assert anonymous.headers["location"].startswith("/masuk")
+        _sign_in(client, *_OPERATOR)
+        location = _consent(client, client_id)
+        code = parse_qs(urlsplit(location).query)["code"][0]
+        tokens = _redeem(client, client_id, code)
+        listing = {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}
+        listed = _mcp(client, tokens["access_token"], listing)
+        assert listed.status_code == 200, listed.text
+
+
 def test_registration_refuses_unsafe_redirects_and_malformed_bodies(tmp_path: Path) -> None:
     with _app(tmp_path) as client:
         unsafe = client.post(

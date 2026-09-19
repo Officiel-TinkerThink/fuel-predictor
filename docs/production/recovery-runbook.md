@@ -132,6 +132,13 @@ at `app:8000`, and make sure it sets `X-Forwarded-Proto` and `X-Forwarded-For`. 
 `FUEL_PREDICTOR_FORWARDED_ALLOW_IPS` to that proxy's address — leaving it `*` lets any client
 forge its own source address, which poisons the audit trail.
 
+**OAuth discovery advertises `http://`.** Something in front (a CDN such as Cloudflare talking plain
+HTTP to the gateway, a proxy that does not forward the scheme) hides the real origin from the app,
+and it publishes `http://` endpoints and a `resource` it then refuses. Set
+`FUEL_PREDICTOR_PUBLIC_URL=https://<domain>` in `.env` and restart `app`; discovery then advertises
+exactly that, whatever the proxies say. Check with
+`curl -s https://<domain>/.well-known/oauth-protected-resource`.
+
 ---
 
 ## 4. No active model

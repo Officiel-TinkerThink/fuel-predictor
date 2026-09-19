@@ -207,6 +207,7 @@ def create_app(
     vehicle_catalog: VehicleCatalog | None = None,
     bootstrap_administrator: tuple[str, str] | None = None,
     allow_unprovisioned_access: bool | None = None,
+    public_url: str | None = None,
 ) -> FastAPI:
     if database_path is not None and database_url is not None:
         raise ValueError("Pilih salah satu: database_path atau database_url.")
@@ -226,6 +227,7 @@ def create_app(
     session_repository = SqlAlchemySessionRepository(session_factory)
     audit_repository = SqlAlchemyAuditRepository(session_factory)
     settings = ApplicationSettings()
+    resolved_public_url = settings.public_url if public_url is None else public_url
     resolved_location_catalog = location_catalog or SqlAlchemyLocationRepository(session_factory)
     resolved_vehicle_catalog = vehicle_catalog or SqlAlchemyVehicleRepository(session_factory)
     # One adapter serves both roles when a key is configured: it computes the
@@ -553,7 +555,9 @@ def create_app(
             guard,
         )
     )
-    app.include_router(build_mcp_router(mcp_handler, server_version="1.0.0"))
+    app.include_router(
+        build_mcp_router(mcp_handler, server_version="1.0.0", public_url=resolved_public_url)
+    )
     app.include_router(
         build_agent_pages_router(
             issue_agent_credential,
@@ -579,6 +583,7 @@ def create_app(
             revoke_by_token=RevokeGrantByToken(agent_grants, record_audit),
             guard=guard,
             is_system_provisioned=resolve_session.is_system_provisioned,
+            public_url=resolved_public_url,
         )
     )
     app.include_router(
