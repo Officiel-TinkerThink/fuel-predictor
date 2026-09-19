@@ -59,13 +59,17 @@ def build_prediction_pages_router(
 ) -> APIRouter:
     router = APIRouter()
 
-    def _vehicle_options() -> list[tuple[str, str]]:
-        """Grouped in the label so a planner picking from twenty-odd units can
-        see at a glance which kind of machine each one is."""
-        return [
-            (option.name, f"{option.name} — {option.group}" if option.group else option.name)
-            for option in vehicle_catalog.options()
-        ]
+    def _vehicle_options() -> list[tuple[str, list[tuple[str, str]]]]:
+        """Units under their kind of machine (Crane, Truck, …) in the order the
+        catalogue lists them, so the picker reads as headed groups rather than
+        twenty-odd suffixed names. Units with no group come last, unlabelled."""
+        groups: dict[str, list[tuple[str, str]]] = {}
+        for option in vehicle_catalog.options():
+            groups.setdefault(option.group or "Lainnya", []).append((option.name, option.name))
+        ordered = [(name, units) for name, units in groups.items() if name != "Lainnya"]
+        if "Lainnya" in groups:
+            ordered.append(("Lainnya", groups["Lainnya"]))
+        return ordered
 
     def _resolved_stop_names(names: list[str]) -> list[str]:
         """A typed stop becomes the catalogue's own spelling, the same tolerant
@@ -321,7 +325,7 @@ def _render_form(
     values: dict[str, Any],
     errors: list[dict[str, str]],
     location_options: tuple[LocationOption, ...],
-    vehicle_options: list[tuple[str, str]],
+    vehicle_groups: list[tuple[str, list[tuple[str, str]]]],
     route_preview_available: bool = False,
 ) -> str:
     return render(
@@ -333,7 +337,7 @@ def _render_form(
         page_lead="Catat satu rencana operasi ANGBER secara lengkap dan konsisten.",
         values=values,
         errors=errors,
-        vehicle_options=vehicle_options,
+        vehicle_groups=vehicle_groups,
         location_options=location_options,
         route_preview_available=route_preview_available,
     )

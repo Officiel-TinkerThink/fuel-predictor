@@ -95,7 +95,7 @@ anywhere else.
 
 Go to **Buat Prediksi** in the sidebar and fill in one operation:
 
-1. **Kendaraan** — pick `Prime Mover — Truck`. The list is the real fleet, 23
+1. **Kendaraan** — pick `Prime Mover` (under the *Truck* group). The list is the real fleet, 23
    vehicles across Crane, Truck, Forklift and Vacuum Truck.
 2. **Aktivitas** — pick `Angkut dan lifting`. A **Jam lifting** field appears;
    enter `3.5`.

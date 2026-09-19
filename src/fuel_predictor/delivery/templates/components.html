@@ -77,15 +77,26 @@
 </div>
 {%- endmacro %}
 
-{% macro select_field(name, label, options, value='', hint=none, errors=none, required=false) -%}
+{% macro _options(options, value) -%}
+{% for option_value, option_label in options %}
+    <option value="{{ option_value }}"{% if option_value == value %} selected{% endif %}>{{ option_label }}</option>
+{% endfor %}
+{%- endmacro %}
+
+{# `groups`: optional list of (heading, options) rendered as <optgroup>s after
+   the flat `options`, so a placeholder can come first. #}
+{% macro select_field(name, label, options, value='', hint=none, errors=none, required=false, groups=none) -%}
 {% set message = _error_for(errors, name) | trim %}
 <div class="field">
   <label for="field-{{ name }}">{{ label }}{% if required %} <span aria-hidden="true">*</span><span class="visually-hidden">wajib diisi</span>{% endif %}</label>
   <select id="field-{{ name }}" name="{{ name }}"
     {% if required %}required{% endif %}
     {% if message %}aria-invalid="true" aria-describedby="error-{{ name }}"{% elif hint %}aria-describedby="hint-{{ name }}"{% endif %}>
-    {% for option_value, option_label in options %}
-    <option value="{{ option_value }}"{% if option_value == value %} selected{% endif %}>{{ option_label }}</option>
+    {{ _options(options, value) }}
+    {% for heading, grouped in (groups or []) %}
+    <optgroup label="{{ heading }}">
+    {{ _options(grouped, value) }}
+    </optgroup>
     {% endfor %}
   </select>
   {% if hint %}<span class="hint" id="hint-{{ name }}">{{ hint }}</span>{% endif %}

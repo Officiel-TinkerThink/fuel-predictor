@@ -99,7 +99,7 @@ dipakai di tempat lain.
 
 Buka **Buat Prediksi** pada menu samping, lalu isi satu operasi:
 
-1. **Kendaraan** — pilih `Prime Mover — Truck`. Daftarnya adalah armada
+1. **Kendaraan** — pilih `Prime Mover` (di bawah kelompok *Truck*). Daftarnya adalah armada
    sebenarnya: 23 unit dalam kelompok Crane, Truck, Forklift, dan Vacuum Truck.
 2. **Aktivitas** — pilih `Angkut dan lifting`. Kolom **Jam lifting** akan
    muncul; isi `3.5`.
