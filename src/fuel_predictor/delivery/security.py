@@ -63,7 +63,9 @@ ROUTE_CAPABILITIES: tuple[tuple[str, str, Capability], ...] = (
     # Route preview, drawn while the operation is still being planned.
     ("GET", "/prediksi/rute", Capability.CREATE_PREDICTION),
     ("POST", "/operasi-harian", Capability.CREATE_PREDICTION),
+    ("GET", "/operasi-harian/*", Capability.CREATE_PREDICTION),
     ("POST", "/operasi-harian/*/prediksi", Capability.CREATE_PREDICTION),
+    ("GET", "/riwayat-prediksi", Capability.CREATE_PREDICTION),
     ("GET", "/impor-data-historis", Capability.IMPORT_OPERATIONS),
     ("POST", "/impor-data-historis", Capability.IMPORT_OPERATIONS),
     ("GET", "/contoh-data-riwayat.csv", Capability.IMPORT_OPERATIONS),

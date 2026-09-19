@@ -73,6 +73,10 @@ from fuel_predictor.application.model_promotion_policy import (
     PromotionPolicy,
 )
 from fuel_predictor.application.monitoring import GetMonitoringDashboard
+from fuel_predictor.application.prediction_history import (
+    GetLatestPrediction,
+    ListRecentPredictions,
+)
 from fuel_predictor.application.retained_package_activation import (
     ActivateRetainedModelPackage,
     RegisterIngestedPackage,
@@ -161,6 +165,9 @@ from fuel_predictor.infrastructure.sqlalchemy_monitoring_runs import (
     SqlAlchemyBackupRunRepository,
     SqlAlchemyMonitoringRunRepository,
 )
+from fuel_predictor.infrastructure.sqlalchemy_prediction_history import (
+    SqlAlchemyPredictionHistoryRepository,
+)
 from fuel_predictor.infrastructure.sqlalchemy_predictions import SqlAlchemyPredictionRepository
 from fuel_predictor.infrastructure.sqlalchemy_similar_operations import (
     SqlAlchemyHistoricalOperationSource,
@@ -248,6 +255,7 @@ def create_app(
     resolved_routing_provider = routing_provider or maps_provider or UnavailableRoutingProvider()
     create_daily_operation = CreateDailyOperation(repository, resolved_routing_provider)
     get_daily_operation = GetDailyOperation(repository)
+    prediction_history = SqlAlchemyPredictionHistoryRepository(session_factory)
     import_historical_dataset = ImportHistoricalDataset(
         SpreadsheetHistoricalDatasetSourceReader(),
         historical_dataset_repository,
@@ -498,6 +506,9 @@ def create_app(
         build_prediction_pages_router(
             create_daily_operation,
             generate_fuel_prediction,
+            get_daily_operation,
+            ListRecentPredictions(prediction_history),
+            GetLatestPrediction(prediction_history),
             guard,
             resolved_location_catalog,
             resolved_vehicle_catalog,

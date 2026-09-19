@@ -15,9 +15,17 @@ from fuel_predictor.application.baseline_predictions import (
     GenerateFuelPrediction,
 )
 from fuel_predictor.application.catalog_resolution import UnknownLocationError, resolve_location
-from fuel_predictor.application.daily_operations import CreateDailyOperation
+from fuel_predictor.application.daily_operations import (
+    CreateDailyOperation,
+    DailyOperationNotFoundError,
+    GetDailyOperation,
+)
 from fuel_predictor.application.identity import ActiveCaller
 from fuel_predictor.application.locations import LocationCatalog, LocationOption
+from fuel_predictor.application.prediction_history import (
+    GetLatestPrediction,
+    ListRecentPredictions,
+)
 from fuel_predictor.application.routing import RoutePreviewProvider, RoutingProviderUnavailable
 from fuel_predictor.application.vehicles import VehicleCatalog
 from fuel_predictor.delivery.http import (
@@ -41,6 +49,9 @@ _SOURCE_LABELS = {"manual": "Input manual", "routing_provider": "Penyedia rute"}
 def build_prediction_pages_router(
     create_daily_operation: CreateDailyOperation,
     generate_fuel_prediction: GenerateFuelPrediction,
+    get_daily_operation: GetDailyOperation,
+    list_recent_predictions: ListRecentPredictions,
+    get_latest_prediction: GetLatestPrediction,
     guard: SecurityGuard,
     location_catalog: LocationCatalog,
     vehicle_catalog: VehicleCatalog,
@@ -183,6 +194,49 @@ def build_prediction_pages_router(
             status_code=status.HTTP_201_CREATED,
         )
 
+    @router.get("/riwayat-prediksi", response_class=HTMLResponse)
+    def show_history(request: Request) -> HTMLResponse:
+        caller = guard.require_caller(request)
+        return HTMLResponse(
+            render(
+                "riwayat-prediksi.html",
+                caller=caller,
+                page_title="Riwayat Prediksi",
+                active_path="/riwayat-prediksi",
+                page_lead=(
+                    "Estimasi yang pernah dibuat, terbaru di atas. Buka satu untuk melihat "
+                    "angkanya lagi atau mencatat BBM aktualnya."
+                ),
+                entries=list_recent_predictions.execute(),
+                limit=list_recent_predictions.limit,
+            )
+        )
+
+    @router.get("/operasi-harian/{operation_id}", response_class=HTMLResponse)
+    def show_operation(operation_id: str, request: Request) -> HTMLResponse:
+        """One page per operation: its latest estimate, or - if none was ever
+        made - the saved operation with the button that makes one."""
+        caller = guard.require_caller(request)
+        try:
+            operation = get_daily_operation.execute(operation_id)
+        except DailyOperationNotFoundError:
+            return HTMLResponse(
+                render(
+                    "pesan.html",
+                    caller=caller,
+                    page_title="Operasi tidak ditemukan",
+                    active_path="/riwayat-prediksi",
+                    message=f"Tidak ada operasi dengan ID {operation_id}.",
+                    back_href="/riwayat-prediksi",
+                    back_label="Kembali ke riwayat prediksi",
+                ),
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        prediction = get_latest_prediction.execute(operation_id)
+        if prediction is None:
+            return HTMLResponse(_render_saved_operation(caller, operation, no_active_model=False))
+        return HTMLResponse(_render_estimate(caller, prediction, operation, just_created=False))
+
     @router.post("/operasi-harian/{operation_id}/prediksi", response_class=HTMLResponse)
     def submit_prediction(operation_id: str, request: Request) -> Response:
         caller = guard.require_caller(request)
@@ -230,16 +284,21 @@ def _render_saved_operation(
 
 
 def _render_estimate(
-    caller: ActiveCaller, prediction: FuelPrediction, operation: DailyOperation | None
+    caller: ActiveCaller,
+    prediction: FuelPrediction,
+    operation: DailyOperation | None,
+    *,
+    just_created: bool = True,
 ) -> str:
     return render(
         "estimasi.html",
         caller=caller,
         page_title="Estimasi kebutuhan bahan bakar",
-        active_path="/prediksi",
+        active_path="/prediksi" if just_created else "/riwayat-prediksi",
         prediction=prediction,
         operation=operation,
         mode_label=_MODE_LABELS[operation.activity_mode.value] if operation else None,
+        just_created=just_created,
     )
 
 

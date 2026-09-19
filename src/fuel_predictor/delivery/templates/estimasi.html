@@ -3,7 +3,11 @@
 
 {% block content %}
 
+{% if just_created %}
 {{ ui.banner('success', 'Estimasi berhasil dibuat', 'Estimasi ini dipelajari dari catatan bahan bakar disiapkan. Nilai ini bukan konsumsi aktual yang telah diverifikasi.') }}
+{% else %}
+{{ ui.banner('info', 'Estimasi dibuat ' ~ (prediction.created_at | waktu), 'Estimasi ini dipelajari dari catatan bahan bakar disiapkan. Nilai ini bukan konsumsi aktual yang telah diverifikasi.') }}
+{% endif %}
 
 {% if prediction.route_distance_manual_fallback %}
 {{ ui.banner('warning', 'Jarak manual dipakai', 'Penyedia rute tidak tersedia saat perencanaan; prediksi ini memakai jarak total manual.') }}
@@ -17,7 +21,7 @@
 
 <section class="card">
   <dl class="detail-list">
-    <dt>ID operasi</dt><dd><strong>{{ prediction.operation_id }}</strong></dd>
+    <dt>ID operasi</dt><dd><strong>{{ prediction.operation_id }}</strong> <button type="button" class="button button--secondary button--small" data-copy="{{ prediction.operation_id }}" hidden>Salin ID</button></dd>
     {% if operation %}
     {% if operation.vehicle %}<dt>Kendaraan</dt><dd>{{ operation.vehicle }}</dd>{% endif %}
     <dt>Aktivitas</dt><dd>{{ mode_label }}{% if operation.lifting_hours is not none %} · {{ operation.lifting_hours | angka }} jam lifting{% endif %}</dd>
@@ -27,8 +31,8 @@
     <dt>Jarak total</dt><dd>{{ operation.total_distance_km | angka }} km</dd>
     {% endif %}
   </dl>
-  <p class="hint">Simpan ID ini. Setelah operasi selesai, catat bahan bakar aktual dengan ID yang sama
-    agar model bisa belajar dari hasilnya.</p>
+  <p class="hint">Setelah operasi selesai, catat bahan bakar aktualnya — lewat tombol di bawah atau
+    dari menu Riwayat Prediksi — agar model bisa belajar dari hasilnya.</p>
   <p class="hint">{{ prediction.safety_policy }}</p>
   {# Version identifiers matter for an audit, not for the planner reading the
      number, so they sit behind a fold. #}

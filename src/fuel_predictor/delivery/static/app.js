@@ -61,6 +61,24 @@
     actualLitres.focus();
   }
 
+  // Copy buttons stay hidden until the script runs, since without it they
+  // could not do anything. The label confirms briefly, then returns.
+  document.querySelectorAll("[data-copy]").forEach(function (button) {
+    if (!navigator.clipboard) {
+      return;
+    }
+    button.hidden = false;
+    var label = button.textContent;
+    button.addEventListener("click", function () {
+      navigator.clipboard.writeText(button.getAttribute("data-copy")).then(function () {
+        button.textContent = "Tersalin";
+        window.setTimeout(function () {
+          button.textContent = label;
+        }, 1500);
+      });
+    });
+  });
+
   // Confirmation dialogs. Without JavaScript the dialog stays in the page and its
   // form still submits, so the destructive action remains reachable.
   document.addEventListener("click", function (event) {
@@ -99,7 +117,7 @@
     input.addEventListener("input", function () {
       var needle = input.value.trim().toLowerCase();
       var shown = 0;
-      table.querySelectorAll("tbody tr").forEach(function (row) {
+      table.querySelectorAll(table.tagName === "UL" ? "li" : "tbody tr").forEach(function (row) {
         var match = needle === "" || row.textContent.toLowerCase().indexOf(needle) !== -1;
         row.hidden = !match;
         if (match) {

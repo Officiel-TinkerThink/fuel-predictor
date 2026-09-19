@@ -53,8 +53,7 @@ NAVIGATION: tuple[NavigationGroup, ...] = (
             NavigationItem(
                 "Prediksi Massal", "/prediksi-operasi-massal", Capability.IMPORT_OPERATIONS
             ),
-            # "Riwayat Prediksi" is in the plan's nav but has no page yet; add it
-            # here once it exists rather than linking a 404.
+            NavigationItem("Riwayat Prediksi", "/riwayat-prediksi", Capability.CREATE_PREDICTION),
         ),
     ),
     NavigationGroup(

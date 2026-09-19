@@ -613,6 +613,7 @@ legend {
 }
 
 input[type="text"],
+input[type="search"],
 input[type="number"],
 input[type="password"],
 input[type="date"],
@@ -895,6 +896,12 @@ th.numeric {
   border-bottom: 0;
 }
 
+/* display:flex above would otherwise outrank the browser's [hidden] rule and
+   keep filtered-out rows on screen. */
+.row-list li[hidden] {
+  display: none;
+}
+
 .row-list li.is-selected {
   background: var(--color-brand-soft);
 }
@@ -999,6 +1006,11 @@ th.numeric {
   margin: 0;
   font-weight: 550;
   overflow-wrap: anywhere;
+}
+
+.detail-list dd .button--small {
+  margin-left: var(--space-2);
+  vertical-align: middle;
 }
 
 details.technical {

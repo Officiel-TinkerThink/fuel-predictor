@@ -66,6 +66,10 @@ Hasilnya menampilkan:
 
 Perhatikan kotak hijau di atas: nilai ini **estimasi bahan bakar disiapkan**, bukan konsumsi aktual yang telah diverifikasi. Kalimat itu selalu ikut ditampilkan.
 
+Estimasi yang sudah dibuat bisa dibuka lagi kapan saja dari menu **Riwayat Prediksi**:
+daftarnya terbaru di atas, ada kotak pencarian, dan tiap baris menunjukkan apakah BBM aktualnya
+sudah dicatat.
+
 **Kalau muncul "Belum ada kandidat baseline terlatih":** belum ada model yang aktif.
 Hubungi penanggung jawab model — lihat [bagian 6](#6-mengganti-model).
 

@@ -1,8 +1,5 @@
-from collections import defaultdict
-
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 
 from fuel_predictor.application.actual_fuel import (
     ActualFuelAlreadyRecordedError,
@@ -22,10 +19,10 @@ from fuel_predictor.domain.daily_operation import (
 from fuel_predictor.infrastructure.database import (
     ActualFuelRecordRow,
     DailyOperationRow,
-    DailyOperationStopRow,
     PredictionRow,
     SessionFactory,
 )
+from fuel_predictor.infrastructure.sqlalchemy_daily_operations import stops_for
 
 
 class SqlAlchemyActualFuelRepository:
@@ -79,7 +76,7 @@ class SqlAlchemyActualFuelRepository:
                 .order_by(PredictionRow.created_at.desc(), PredictionRow.prediction_id.desc())
                 .limit(limit)
             ).all()
-            stops = self._stops_for(session, [row.operation_id for row in rows])
+            stops = stops_for(session, [row.operation_id for row in rows])
         return tuple(
             OperationAwaitingActualFuel(
                 operation_id=row.operation_id,
@@ -154,7 +151,7 @@ class SqlAlchemyActualFuelRepository:
             # The stops come along because DailyOperation's own invariant
             # requires them for a manual-fallback route: without them every
             # such operation failed to rebuild and took the overview down.
-            stops = self._stops_for(session, [row.operation_id for row in rows])
+            stops = stops_for(session, [row.operation_id for row in rows])
         return tuple(
             ModelEvaluationCase(
                 operation=DailyOperation(
@@ -172,16 +169,3 @@ class SqlAlchemyActualFuelRepository:
             )
             for row in rows
         )
-
-    @staticmethod
-    def _stops_for(session: Session, operation_ids: list[str]) -> dict[str, list[str]]:
-        stops: dict[str, list[str]] = defaultdict(list)
-        if not operation_ids:
-            return stops
-        for stop in session.execute(
-            select(DailyOperationStopRow.operation_id, DailyOperationStopRow.location_name)
-            .where(DailyOperationStopRow.operation_id.in_(operation_ids))
-            .order_by(DailyOperationStopRow.operation_id, DailyOperationStopRow.stop_position)
-        ):
-            stops[stop.operation_id].append(stop.location_name)
-        return stops
