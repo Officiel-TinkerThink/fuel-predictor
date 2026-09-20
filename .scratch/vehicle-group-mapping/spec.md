@@ -51,6 +51,9 @@ trained model.
    returning the whole lineage. Reason: the taxonomy is a modelling lens over the fleet, not a
    fact about the day. When the owner re-types or re-groups, all history must be reclassified
    consistently; a snapshot would leave training data half `Vacuum Truck`, half `VT A`.
+   The prediction's stored `input_snapshot` does carry the lineage — as a *record* of which
+   lens was applied that day, for traceability. Training and scoring never read it back; they
+   always ask the catalog.
 
 3. **Unknown is its own value at every level.** A unit not in the catalog resolves to
    `tidak diketahui` for both type and group, the convention `_vehicle_of` already uses for an
@@ -58,10 +61,15 @@ trained model.
 
 4. **A model records which taxonomy it was trained on.** A *catalog fingerprint* — a stable hash
    of the sorted `(canonical name, type, group)` triples — is logged as an MLflow param at training time
-   and stored alongside `feature_version` in the model version / package manifest. At activation
-   and in the monitoring job, a fingerprint that differs from the current catalog raises a plain
-   alert ("Penggolongan kendaraan berubah sejak model dilatih; latih ulang kandidat."). It is a
-   signal only: promotion stays manual (ADR 0004).
+   and stored alongside `feature_version` in the model version / package manifest, for every
+   model trained from now on. At activation and in the monitoring job, a fingerprint that
+   differs from the current catalog raises a plain alert ("Penggolongan kendaraan berubah sejak
+   model dilatih; latih ulang kandidat.") — **only for a model whose feature contract consumes
+   the lineage.** The contract in production today (`baseline-v2`) reads the instance name
+   alone, so a re-typing cannot change what it predicts; alerting on it would be noise. The
+   alert therefore checks the model's `feature_version` against a list of lineage-aware
+   contracts (empty until the data-engineering follow-up adds `baseline-v3`). It is a signal
+   only: promotion stays manual (ADR 0004).
 
 5. **Managing the lineage stays CSV + `import-vehicles` for now.** The workbook is where the
    operations staff already keep this, and the CSV is in git so every re-typing is a commit.
@@ -102,7 +110,7 @@ trained model.
   (signature becomes `(operation, lineage)` or the trainer/scorer attaches it — pick the shape
   that keeps `prediction_features.py` the sole feature contract, as its docstring promises).
   Add `vehicle_type` and `vehicle_group` to `input_snapshot` so every stored prediction says
-  which lens was applied. **Do not change the keys of `feature_values` or bump
+  which lens was applied (a record only; nothing reads it back for training — decision 2). **Do not change the keys of `feature_values` or bump
   `FEATURE_VERSION`** — that is the data-engineering follow-up. This spec only guarantees the
   lineage is *available* there.
 - **Fingerprint**: a pure function in the application layer; logged in
@@ -111,20 +119,27 @@ trained model.
   in `src/fuel_predictor/schemas/model-package/` accordingly, keep old packages valid).
 - **Alert**: monitoring (`application/monitoring.py`, `alert_remediation.py`) gains a
   "catalog changed since training" alert kind with its plain-Indonesian remediation text, shown
-  on the dashboard like the existing ones.
+  on the dashboard like the existing ones — raised only when the active model's
+  `feature_version` is lineage-aware (decision 4). Put that list next to `FEATURE_VERSION` in
+  `prediction_features.py` so the follow-up that adds `baseline-v3` cannot forget it.
 - **Surfaces**: `predict_fuel` / `find_similar_operations` MCP results and the web result page
   show `vehicle_type` and `vehicle_group` next to `vehicle` in `details`. Similar-operations
   ranking (`application/similar_operations.py`) gains the type step: same unit → same type →
   same group → same category, with a `same_type` match label; it takes the lineage from the
-  resolver, not from `VehicleOption.group` directly.
+  resolver, not from `VehicleOption.group` directly. That label is an *output* addition to
+  `match.vehicle` (document it in `mcp-integration.md` §3); inputs stay as they are
+  (decision 7).
 - **Tests**: resolver (alias, unknown, empty, blank `tipe` names the type after the group);
   fingerprint stable across row order and changed by a re-typing alone; alert raised on
-  mismatch and silent on match; snapshot carries type and group; similar ranking prefers same
+  mismatch for a lineage-aware model, silent on match, and silent for `baseline-v2` even on
+  mismatch; snapshot carries type and group; similar ranking prefers same
   type over same group; `import-vehicles` followed by a prediction of a previously unknown unit
   succeeds.
 - Docs: `docs/production/mcp-integration.md` §3 (details table) and
   `docs/production/panduan-operator.md` (catalog / alerts sections; regenerate the HTML with
   `build-operator-guide-html.py`) mention the group and the alert.
+
+Tickets, in dependency order, are in `issues/`; each is small enough to land on its own.
 
 ## Out of scope (deliberately)
 
