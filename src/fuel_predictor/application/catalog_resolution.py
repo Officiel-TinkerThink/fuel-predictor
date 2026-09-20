@@ -53,10 +53,20 @@ def normalize_name(value: str) -> str:
     "SP II", "sp-ii", "SP-II" and "SP 2" are the same stop; so are "T CRANE 01"
     and "TCrane01". The stations are numbered in roman numerals in the catalog
     and in digits in speech, so a roman numeral standing alone or ending a word
-    is read as its number before the separators are dropped.
+    is read as its number before the separators are dropped. Leading zeros are
+    noise too: the catalog pads to three digits ("KRG-012") and the sheets and
+    the planners do not ("KRG 12", "KRG-12").
     """
     tokens = re.split(r"[^a-z0-9]+", value.casefold())
-    return "".join(_arabic(token) for token in tokens if token)
+    return "".join(_unpadded(_arabic(token)) for token in tokens if token)
+
+
+_PADDED = re.compile(r"^(?P<stem>[a-z]*)0+(?P<number>\d+)$")
+
+
+def _unpadded(token: str) -> str:
+    match = _PADDED.match(token)
+    return f"{match.group('stem')}{match.group('number')}" if match else token
 
 
 def _arabic(token: str) -> str:

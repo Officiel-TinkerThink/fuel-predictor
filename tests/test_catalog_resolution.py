@@ -85,6 +85,22 @@ def test_a_stop_resolves_through_hyphens_spaces_and_numeral_style(written: str) 
     assert resolve_location(_STOPS, written).name == "SP-II"
 
 
+@pytest.mark.parametrize("written", ["KRG 12", "KRG-12", "krg12", "KRG-012", "KRG 0012"])
+def test_a_stop_resolves_whether_or_not_its_number_is_zero_padded(written: str) -> None:
+    """The catalog pads well numbers to three digits; the sheets and the
+    planners write them bare."""
+    stops = _Locations("KRG-012", "KRG-120", "KRG-001")
+
+    assert resolve_location(stops, written).name == "KRG-012"
+
+
+def test_zero_padding_never_makes_two_different_numbers_one() -> None:
+    stops = _Locations("KRG-012", "KRG-120", "KRG-001")
+
+    assert resolve_location(stops, "KRG 120").name == "KRG-120"
+    assert resolve_location(stops, "KRG 1").name == "KRG-001"
+
+
 def test_a_name_the_catalog_lists_twice_is_ambiguous_rather_than_a_coin_toss() -> None:
     stops = _Locations("WORKSHOP RAM", "Workshop RAM")
 
