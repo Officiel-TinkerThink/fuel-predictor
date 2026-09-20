@@ -47,6 +47,50 @@
   </details>
 </section>
 
+{% if operation and operation.vehicle %}
+<section class="card">
+  <h2>Operasi serupa sebelumnya</h2>
+  {% if similar %}
+  <p class="hint">Hari-hari yang paling mirip dengan rencana ini, dari unit yang sama dulu, lalu
+    tipe dan grupnya. Bandingkan angka di atas dengan yang pernah disiapkan atau benar-benar terpakai.</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Kapan</th>
+          <th>Kendaraan</th>
+          <th>Aktivitas</th>
+          <th>Jarak</th>
+          <th>BBM disiapkan</th>
+          <th>BBM aktual</th>
+          <th>Kecocokan</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in similar %}
+        {% set record = item.record %}
+        <tr>
+          <td>{% if record.operation_date %}{{ record.operation_date }}{% elif record.recorded_at %}{{ record.recorded_at | waktu }}{% else %}—{% endif %}
+            <span class="muted">· {% if record.source.value == 'dataset' %}riwayat{% else %}dicatat{% endif %}</span></td>
+          <td>{{ record.vehicle or '—' }}{% if item.vehicle_group %} <span class="muted">· {{ item.vehicle_type }} · {{ item.vehicle_group }}</span>{% endif %}</td>
+          <td>{{ mode_labels[record.activity_mode.value] }}{% if record.lifting_hours %} · {{ record.lifting_hours | angka }} jam{% endif %}</td>
+          <td>{{ record.total_distance_km | angka }} km</td>
+          <td>{% if record.prepared_fuel_liters is not none %}{{ record.prepared_fuel_liters | angka }} L{% elif record.estimated_fuel_requirement_liters is not none %}{{ record.recommended_allocation_liters | angka }} L <span class="muted">(estimasi)</span>{% else %}—{% endif %}</td>
+          <td>{% if record.actual_fuel_liters is not none %}{{ record.actual_fuel_liters | angka }} L{% else %}—{% endif %}</td>
+          <td>{{ match_labels[item.match.vehicle] }}{% if item.match.activity_mode %} · aktivitas sama{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="hint">Belum ada catatan untuk unit ini, tipe yang sama, atau grup yang sama. Alat berat
+    lain tidak ditampilkan karena tidak sebanding. Setiap operasi yang disimpan dan riwayat yang
+    diimpor untuk unit ini akan muncul di sini pada rencana berikutnya.</p>
+  {% endif %}
+</section>
+{% endif %}
+
 <div class="button-row">
   <a class="button" href="/prediksi">Buat operasi lain</a>
   <a class="button button--secondary" href="/bahan-bakar-aktual?operation_id={{ prediction.operation_id }}">Catat BBM aktual untuk operasi ini</a>

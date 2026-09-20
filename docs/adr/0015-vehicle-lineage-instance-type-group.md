@@ -87,9 +87,12 @@ empty until `baseline-v3` adds itself. Promotion stays manual (ADR 0004); the al
 ### One fallback order for the whole application
 
 Wherever the application looks for "the same kind of vehicle" — the similar-operations ranking
-today, the model's pooling later — the order is same unit → same type → same group → same
-category. The ranking labels a row `same_type` only when the type is a real refinement (type
-differs from group); with one type per group, every label is what it was before this ADR.
+today, the model's pooling later — the order is same unit → same type → same group, and then
+nothing. The category is not a level: every unit is ANGBER, so "same category" would mean any
+other machine, and an unrelated machine shown as similar history misleads more than an empty
+list. ADR 0013's ranking ended in "same category"; this ADR removes that tier. The ranking labels
+a row `same_type` only when the type is a real refinement (type differs from group); with one
+type per group, every label is what it was before this ADR.
 
 ### The lineage is managed where it already lives
 

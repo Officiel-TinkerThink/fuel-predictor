@@ -11,9 +11,12 @@ places the system keeps history:
 
 They are merged and ranked, not modelled: nothing here adjusts the estimate.
 The ranking is deliberately explainable — same unit, then same type, then same
-group, then same category (the fallback order ADR 0015 fixes for the whole
-application), then same activity, then nearest distance — so the agent can say
-*why* a row is shown rather than only that it is.
+group (the fallback order ADR 0015 fixes for the whole application), then same
+activity, then nearest distance — so the agent can say *why* a row is shown
+rather than only that it is. A row related by none of those is not shown at
+all: every unit is ANGBER, so "same category" would mean any other machine,
+and an unrelated machine presented as similar history misleads more than an
+empty list does.
 """
 
 from collections.abc import Sequence
@@ -35,7 +38,6 @@ class VehicleMatch(StrEnum):
     SAME = "same"
     SAME_TYPE = "same_type"
     SAME_GROUP = "same_group"
-    SAME_CATEGORY = "same_category"
 
 
 @dataclass(frozen=True, slots=True)
@@ -136,10 +138,10 @@ class FindSimilarOperations:
             )
             if record.operation_id != query.exclude_operation_id
         ]
-        ranked = sorted(
-            (_score(record, query, wanted_name, wanted_lineage, lineages) for record in candidates),
-            key=_rank_key,
+        scored = (
+            _score(record, query, wanted_name, wanted_lineage, lineages) for record in candidates
         )
+        ranked = sorted((item for item in scored if item is not None), key=_rank_key)
         return tuple(ranked[: query.limit])
 
 
@@ -168,7 +170,7 @@ def _score(
     wanted_name: str,
     wanted_lineage: VehicleLineage | None,
     lineages: dict[str, VehicleLineage],
-) -> SimilarOperation:
+) -> SimilarOperation | None:
     lineage = lineages.get(_vehicle_key(record.vehicle)) if record.vehicle else None
     same_group = same_type = False
     if wanted_lineage is not None and lineage is not None:
@@ -185,10 +187,9 @@ def _score(
     elif same_group:
         vehicle_match = VehicleMatch.SAME_GROUP
     else:
-        # Includes rows with no vehicle recorded: an unnamed row can be the
-        # same crane, but nothing in it says so, and pretending otherwise
-        # would rank it above rows that are known to be that crane.
-        vehicle_match = VehicleMatch.SAME_CATEGORY
+        # Not related at any level - including rows with no vehicle recorded:
+        # an unnamed row can be the same crane, but nothing in it says so.
+        return None
 
     same_mode = None if query.activity_mode is None else record.activity_mode == query.activity_mode
     distance_delta = (
@@ -222,7 +223,6 @@ _VEHICLE_TIER = {
     VehicleMatch.SAME: 0,
     VehicleMatch.SAME_TYPE: 1,
     VehicleMatch.SAME_GROUP: 2,
-    VehicleMatch.SAME_CATEGORY: 3,
 }
 
 

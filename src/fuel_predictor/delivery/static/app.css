@@ -587,6 +587,12 @@ legend {
 }
 
 /* Secondary explanation anywhere on a page; under a field it hugs the control. */
+/* Secondary wording inside a value: the lineage after a vehicle's name. */
+.muted {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
 .hint {
   font-size: 0.9rem;
   color: var(--color-text-muted);

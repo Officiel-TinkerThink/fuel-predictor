@@ -18,7 +18,7 @@
 - **Vehicle group** (grup kendaraan): the kind of machine — Vacuum Truck, Truck, Crane, Forklift.
 - **Vehicle lineage**: a unit's type and group as the catalog says them *right now*: vehicle → type → group → vehicle category (ANGBER). Derived from the catalog when a prediction, a training run or a history lookup needs it; recorded on a prediction only as a trace, never read back (ADR 0015).
 - **Vehicle catalog**: the fleet as the workbook's "Dim_Kendaraan" sheet lists it — name, type, group, aliases. The single place the lineage is defined; editing it is how the owner re-types the fleet.
-- **Fallback order**: same unit → same type → same group → same category. The one order the application uses wherever it looks for "the same kind of vehicle".
+- **Fallback order**: same unit → same type → same group, and then nothing. The one order the application uses wherever it looks for "the same kind of vehicle". The vehicle category is not a level: every unit is ANGBER, so it would only mean "some other machine".
 
 ### Agents and their access
 

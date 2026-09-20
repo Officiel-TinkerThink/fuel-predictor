@@ -7,6 +7,8 @@ baseline-v2's features do not change.
 """
 
 from pathlib import Path
+from typing import Any
+from urllib.parse import urlencode
 
 import pytest
 from alembic.config import Config
@@ -315,19 +317,11 @@ def test_with_two_types_in_a_group_the_same_type_outranks_the_same_group() -> No
         SimilarOperationsQuery(vehicle="vt 01", total_distance_km=30)
     )
 
-    assert [item.record.operation_id for item in results] == [
-        "this",
-        "vt-a-other",
-        "vt-b",
-        "truck",
-        "unnamed",
-    ]
+    assert [item.record.operation_id for item in results] == ["this", "vt-a-other", "vt-b"]
     assert [item.match.vehicle for item in results] == [
         VehicleMatch.SAME,
         VehicleMatch.SAME_TYPE,
         VehicleMatch.SAME_GROUP,
-        VehicleMatch.SAME_CATEGORY,
-        VehicleMatch.SAME_CATEGORY,
     ]
     assert (results[1].vehicle_type, results[1].vehicle_group) == ("VT A", "Vacuum Truck")
     assert (results[2].vehicle_type, results[2].vehicle_group) == ("VT B", "Vacuum Truck")
@@ -351,7 +345,7 @@ def test_with_one_type_per_group_the_ranking_and_its_labels_are_what_they_were()
         SimilarOperationsQuery(vehicle="truck crane 01", total_distance_km=30)
     )
 
-    assert [item.record.operation_id for item in results] == ["this", "other-crane", "truck"]
+    assert [item.record.operation_id for item in results] == ["this", "other-crane"]
     assert results[1].match.vehicle is VehicleMatch.SAME_GROUP
 
 
@@ -447,3 +441,88 @@ def test_retyping_the_fleet_under_baseline_v2_is_silent(tmp_path: Path) -> None:
         fleet.retype("Truck Crane 01", "Crane besar")
 
         assert "vehicle_taxonomy" not in _alert_kinds(client)
+
+
+# --- the estimate page shows what the unit needed before ------------------------------
+
+
+def _save_operation(client: TestClient, vehicle: str, distance: str = "30") -> Any:
+    return client.post(
+        "/operasi-harian",
+        content=urlencode(
+            [
+                ("vehicle_category", "ANGBER"),
+                ("vehicle", vehicle),
+                ("activity_mode", "transport"),
+                ("total_distance_km", distance),
+                ("distance_source", "manual"),
+            ]
+        ),
+        headers={"content-type": "application/x-www-form-urlencoded"},
+    )
+
+
+def test_the_estimate_page_lists_similar_operations_with_why_they_are_shown(
+    tmp_path: Path,
+) -> None:
+    catalog = _Fleet(
+        VehicleOption("Truck Crane 01", "Crane", ("T CRANE 01",)),
+        VehicleOption("Truck Crane 02", "Crane", ()),
+        VehicleOption("Prime Mover", "Truck", ()),
+    )
+    app = create_app(database_path=tmp_path / "operations.sqlite3", vehicle_catalog=catalog)
+    with TestClient(app) as client:
+        dataset = client.post(
+            "/api/v1/historical-datasets", files={"file": ("riwayat.csv", _HISTORY, "text/csv")}
+        ).json()["dataset_version"]
+        candidate = client.post(
+            f"/api/v1/dataset-versions/{dataset['dataset_version_id']}/baseline-candidates"
+        ).json()
+        promoted = client.post(f"/api/v1/model-candidates/{candidate['model_version_id']}/promote")
+        assert promoted.status_code == 200, promoted.text
+
+        # The first plan for the other crane has only the imported history to
+        # lean on; the second plan for the same unit also sees the first.
+        first = _save_operation(client, "Truck Crane 02", "35")
+        second = _save_operation(client, "Truck Crane 02", "36")
+
+    assert first.status_code == 201, first.text
+    assert second.status_code == 201, second.text
+    assert "Operasi serupa sebelumnya" in first.text
+    assert "Grup yang sama" in first.text  # Truck Crane 01 rows from the dataset
+    assert "Unit yang sama" not in first.text
+    assert "Unit yang sama" in second.text  # the plan saved a moment ago
+    assert "35 km" in second.text
+    assert "dicatat" in second.text and "riwayat" in second.text
+
+
+def test_a_unit_with_no_kin_in_history_is_told_so_rather_than_shown_other_machines(
+    tmp_path: Path,
+) -> None:
+    catalog = _Fleet(
+        VehicleOption("Forklift SCM", "Forklift", ()),
+        VehicleOption("Truck Crane 01", "Crane", ()),
+        VehicleOption("Prime Mover", "Truck", ()),
+    )
+    app = create_app(database_path=tmp_path / "operations.sqlite3", vehicle_catalog=catalog)
+    with TestClient(app) as client:
+        dataset = client.post(
+            "/api/v1/historical-datasets", files={"file": ("riwayat.csv", _HISTORY, "text/csv")}
+        ).json()["dataset_version"]
+        candidate = client.post(
+            f"/api/v1/dataset-versions/{dataset['dataset_version_id']}/baseline-candidates"
+        ).json()
+        assert (
+            client.post(
+                f"/api/v1/model-candidates/{candidate['model_version_id']}/promote"
+            ).status_code
+            == 200
+        )
+        page = _save_operation(client, "Forklift SCM")
+
+    assert page.status_code == 201, page.text
+    # No forklift has ever been recorded. Cranes and a prime mover are not
+    # comparable, so the page says there is nothing yet instead of listing them.
+    assert "Operasi serupa sebelumnya" in page.text
+    assert "Belum ada catatan untuk unit ini" in page.text
+    assert "Truck Crane 01" not in page.text.split("Operasi serupa sebelumnya", 1)[1]

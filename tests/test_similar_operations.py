@@ -1,8 +1,9 @@
 """Ranking past operations by how much they resemble the one being planned.
 
 The order is what the agent will explain to the planner, so it is pinned here:
-the same unit first, then the same kind of machine, then anything in the
-category; within that, the same activity; within that, the nearest distance.
+the same unit first, then the same type, then the same group - and nothing
+else, since every unit is ANGBER and "the category" would mean any machine;
+within that, the same activity; within that, the nearest distance.
 """
 
 from collections.abc import Sequence
@@ -93,7 +94,7 @@ def _ids(results: Sequence[SimilarOperation]) -> list[str]:
     return [item.record.operation_id for item in results]
 
 
-def test_the_same_vehicle_outranks_the_same_kind_of_machine_which_outranks_the_category() -> None:
+def test_the_same_unit_outranks_the_same_kind_and_unrelated_machines_are_left_out() -> None:
     history = _History(
         dataset=[
             _row("truck", "Prime Mover", 30),
@@ -106,12 +107,12 @@ def test_the_same_vehicle_outranks_the_same_kind_of_machine_which_outranks_the_c
         SimilarOperationsQuery(vehicle="truck crane 01", total_distance_km=30)
     )
 
-    assert _ids(results) == ["this-crane", "other-crane", "truck", "unnamed"]
+    # A truck and an unnamed row are not similar to a crane; every unit is
+    # ANGBER, so "same category" would only mean "some other machine".
+    assert _ids(results) == ["this-crane", "other-crane"]
     assert [item.match.vehicle for item in results] == [
         VehicleMatch.SAME,
         VehicleMatch.SAME_GROUP,
-        VehicleMatch.SAME_CATEGORY,
-        VehicleMatch.SAME_CATEGORY,
     ]
 
 
@@ -137,7 +138,8 @@ def test_within_a_tier_the_same_activity_then_the_nearest_distance_wins() -> Non
     assert results[-1].match.activity_mode is False
 
 
-def test_a_row_with_no_vehicle_never_outranks_one_known_to_be_the_unit() -> None:
+def test_a_row_with_no_vehicle_is_not_shown_as_similar_however_close_it_looks() -> None:
+    """An unnamed row can be the same crane, but nothing in it says so."""
     history = _History(
         dataset=[_row("unnamed-exact", None, 30), _row("named-far", "Truck Crane 01", 60)]
     )
@@ -145,7 +147,7 @@ def test_a_row_with_no_vehicle_never_outranks_one_known_to_be_the_unit() -> None
         SimilarOperationsQuery(vehicle="Truck Crane 01", total_distance_km=30)
     )
 
-    assert _ids(results) == ["named-far", "unnamed-exact"]
+    assert _ids(results) == ["named-far"]
 
 
 def test_recorded_and_dataset_rows_are_merged_and_the_newest_breaks_ties() -> None:

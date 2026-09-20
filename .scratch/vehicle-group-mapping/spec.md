@@ -89,7 +89,8 @@ trained model.
 
 8. **Fallback order is fixed and shared.** Wherever the application looks for "the same kind of
    vehicle" — similar-operations ranking today, the model's pooling later — the order is
-   same unit → same type → same group → same category. One place defines it.
+   same unit → same type → same group, then nothing (the category is not a level:
+   every unit is ANGBER). One place defines it.
 
 ## What to build
 
@@ -125,7 +126,7 @@ trained model.
 - **Surfaces**: `predict_fuel` / `find_similar_operations` MCP results and the web result page
   show `vehicle_type` and `vehicle_group` next to `vehicle` in `details`. Similar-operations
   ranking (`application/similar_operations.py`) gains the type step: same unit → same type →
-  same group → same category, with a `same_type` match label; it takes the lineage from the
+  same group, with a `same_type` match label and no category tier; it takes the lineage from the
   resolver, not from `VehicleOption.group` directly. That label is an *output* addition to
   `match.vehicle` (document it in `mcp-integration.md` §3); inputs stay as they are
   (decision 7).

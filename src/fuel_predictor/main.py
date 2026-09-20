@@ -529,6 +529,7 @@ def create_app(
             resolved_location_catalog,
             resolved_vehicle_catalog,
             maps_provider,
+            find_similar_operations,
         )
     )
     app.include_router(

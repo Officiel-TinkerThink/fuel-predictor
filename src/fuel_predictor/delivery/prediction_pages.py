@@ -27,6 +27,12 @@ from fuel_predictor.application.prediction_history import (
     ListRecentPredictions,
 )
 from fuel_predictor.application.routing import RoutePreviewProvider, RoutingProviderUnavailable
+from fuel_predictor.application.similar_operations import (
+    FindSimilarOperations,
+    SimilarOperation,
+    SimilarOperationsQuery,
+    VehicleMatch,
+)
 from fuel_predictor.application.vehicles import VehicleCatalog
 from fuel_predictor.delivery.http import (
     CreateDailyOperationRequest,
@@ -45,6 +51,15 @@ _MODE_LABELS = {
     "transport_and_lifting": "Angkut dan lifting",
 }
 _SOURCE_LABELS = {"manual": "Input manual", "routing_provider": "Penyedia rute"}
+# Why a past operation is shown, in the planner's words: the fallback order
+# ADR 0015 fixes, same unit before same type before same group.
+_MATCH_LABELS = {
+    VehicleMatch.SAME: "Unit yang sama",
+    VehicleMatch.SAME_TYPE: "Tipe yang sama",
+    VehicleMatch.SAME_GROUP: "Grup yang sama",
+}
+# Enough to judge the number against, few enough to read at a glance.
+_SIMILAR_LIMIT = 5
 
 
 def build_prediction_pages_router(
@@ -57,6 +72,7 @@ def build_prediction_pages_router(
     location_catalog: LocationCatalog,
     vehicle_catalog: VehicleCatalog,
     route_preview: RoutePreviewProvider | None = None,
+    find_similar_operations: FindSimilarOperations | None = None,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -89,6 +105,24 @@ def build_prediction_pages_router(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Pemberhentian tidak dikenal."
             )
         return tuple(match.name for match in resolved if match is not None)
+
+    def _similar(operation: DailyOperation | None) -> tuple[SimilarOperation, ...]:
+        """What the same unit - or the nearest kind of unit - needed on days
+        like this one. The number is easier to trust next to them (ADR 0013).
+        Without a named vehicle there is nothing to look them up by."""
+        if find_similar_operations is None or operation is None or not operation.vehicle:
+            return ()
+        return find_similar_operations.execute(
+            SimilarOperationsQuery(
+                vehicle=operation.vehicle,
+                vehicle_category=operation.vehicle_category,
+                activity_mode=operation.activity_mode,
+                lifting_hours=operation.lifting_hours,
+                total_distance_km=operation.total_distance_km,
+                limit=_SIMILAR_LIMIT,
+                exclude_operation_id=operation.operation_id,
+            )
+        )
 
     @router.get("/prediksi", response_class=HTMLResponse)
     def show_form(request: Request) -> HTMLResponse:
@@ -195,7 +229,7 @@ def build_prediction_pages_router(
                 status_code=status.HTTP_201_CREATED,
             )
         return HTMLResponse(
-            _render_estimate(caller, prediction, operation),
+            _render_estimate(caller, prediction, operation, similar=_similar(operation)),
             status_code=status.HTTP_201_CREATED,
         )
 
@@ -245,7 +279,11 @@ def build_prediction_pages_router(
         prediction = get_latest_prediction.execute(operation_id)
         if prediction is None:
             return HTMLResponse(_render_saved_operation(caller, operation, no_active_model=False))
-        return HTMLResponse(_render_estimate(caller, prediction, operation, just_created=False))
+        return HTMLResponse(
+            _render_estimate(
+                caller, prediction, operation, similar=_similar(operation), just_created=False
+            )
+        )
 
     @router.post("/operasi-harian/{operation_id}/prediksi", response_class=HTMLResponse)
     def submit_prediction(operation_id: str, request: Request) -> Response:
@@ -268,10 +306,9 @@ def build_prediction_pages_router(
                 ),
                 status_code=status.HTTP_409_CONFLICT,
             )
+        operation = generate_fuel_prediction.operation_reader.get(operation_id)
         return HTMLResponse(
-            _render_estimate(
-                caller, prediction, generate_fuel_prediction.operation_reader.get(operation_id)
-            ),
+            _render_estimate(caller, prediction, operation, similar=_similar(operation)),
             status_code=status.HTTP_201_CREATED,
         )
 
@@ -298,6 +335,7 @@ def _render_estimate(
     prediction: FuelPrediction,
     operation: DailyOperation | None,
     *,
+    similar: tuple[SimilarOperation, ...] = (),
     just_created: bool = True,
 ) -> str:
     return render(
@@ -308,6 +346,9 @@ def _render_estimate(
         prediction=prediction,
         operation=operation,
         mode_label=_MODE_LABELS[operation.activity_mode.value] if operation else None,
+        similar=similar,
+        match_labels=_MATCH_LABELS,
+        mode_labels=_MODE_LABELS,
         just_created=just_created,
     )
 
