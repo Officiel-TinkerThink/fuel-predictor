@@ -11,6 +11,15 @@
 - **Recommended allocation**: a conservative fuel amount derived from the estimate and uncertainty, intended to reduce shortages.
 - **Location catalog**: the future source of stable location IDs, names, aliases, and coordinates.
 
+### The fleet
+
+- **Vehicle** (kendaraan): one physical unit the planner names on an operation — `VT 01`, `Truck Crane 01` — by its canonical name or any alias the sheets use. The only thing about the fleet a planner is ever asked for. _Avoid_: instance.
+- **Vehicle type** (tipe kendaraan): the owner's finer cut inside a group, such as "VT A" among the vacuum trucks. A group with a single type names its type after the group, which is every group today.
+- **Vehicle group** (grup kendaraan): the kind of machine — Vacuum Truck, Truck, Crane, Forklift.
+- **Vehicle lineage**: a unit's type and group as the catalog says them *right now*: vehicle → type → group → vehicle category (ANGBER). Derived from the catalog when a prediction, a training run or a history lookup needs it; recorded on a prediction only as a trace, never read back (ADR 0015).
+- **Vehicle catalog**: the fleet as the workbook's "Dim_Kendaraan" sheet lists it — name, type, group, aliases. The single place the lineage is defined; editing it is how the owner re-types the fleet.
+- **Fallback order**: same unit → same type → same group → same category. The one order the application uses wherever it looks for "the same kind of vehicle".
+
 ### Agents and their access
 
 - **Agent client**: any program that calls the MCP endpoint. Whatever token it presents, this is the principal that is authorized, rate-limited, and named in the audit trail.

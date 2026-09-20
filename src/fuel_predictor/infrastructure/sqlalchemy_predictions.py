@@ -193,6 +193,7 @@ class SqlAlchemyPredictionRepository(
                 lifecycle_status=model.lifecycle_status.value,
                 promoted_at=model.promoted_at,
                 retired_at=model.retired_at,
+                catalog_fingerprint=model.catalog_fingerprint,
             )
             session.add(row)
             session.flush()
@@ -255,4 +256,5 @@ def _to_model(row: ModelVersionRow) -> ModelVersion:
         lifecycle_status=ModelLifecycleStatus(row.lifecycle_status),
         promoted_at=row.promoted_at,
         retired_at=row.retired_at,
+        catalog_fingerprint=row.catalog_fingerprint,
     )

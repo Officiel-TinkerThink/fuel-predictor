@@ -18,6 +18,9 @@
 <section class="card">
   <dl class="detail-list">
     <dt>ID operasi</dt><dd>{{ prediction.operation_id }}</dd>
+    {% if prediction.input_snapshot.vehicle and prediction.input_snapshot.vehicle != 'tidak diketahui' %}
+    <dt>Kendaraan</dt><dd>{{ prediction.input_snapshot.vehicle }} · {{ prediction.input_snapshot.vehicle_type }} · {{ prediction.input_snapshot.vehicle_group }}</dd>
+    {% endif %}
     <dt>Sumber jarak rute</dt><dd>{{ prediction.route_distance_source.value }}</dd>
     <dt>Model</dt><dd>{{ prediction.model.model_version_id }} · {{ prediction.model.algorithm }}</dd>
     <dt>Versi dataset</dt><dd>{{ prediction.model.dataset_version_id }}</dd>

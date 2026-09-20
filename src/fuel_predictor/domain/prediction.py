@@ -25,6 +25,9 @@ class ModelVersion:
     lifecycle_status: ModelLifecycleStatus = ModelLifecycleStatus.CANDIDATE
     promoted_at: datetime | None = None
     retired_at: datetime | None = None
+    # The vehicle taxonomy this model was trained under (ADR 0015). None for a
+    # model or package that predates the field: unknown, never "mismatch".
+    catalog_fingerprint: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

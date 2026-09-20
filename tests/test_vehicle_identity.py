@@ -15,7 +15,7 @@ from urllib.parse import urlencode
 from fastapi.testclient import TestClient
 
 from fuel_predictor.application.prediction_features import FEATURE_VERSION, feature_values
-from fuel_predictor.application.vehicles import VehicleOption
+from fuel_predictor.application.vehicles import VehicleLineage, VehicleOption
 from fuel_predictor.domain.daily_operation import (
     ActivityMode,
     DailyOperation,
@@ -80,7 +80,7 @@ def test_the_feature_contract_carries_the_vehicle_and_names_a_new_version() -> N
         distance_source=DistanceSource.MANUAL,
     )
 
-    features = feature_values(operation)
+    features = feature_values(operation, PackagedVehicleCatalog().lineage_of(operation.vehicle))
 
     assert features["vehicle"] == "Truck Crane 01"
     # The contract changed, so the version has to move with it.
@@ -98,7 +98,7 @@ def test_an_operation_without_a_named_vehicle_is_its_own_category() -> None:
         distance_source=DistanceSource.MANUAL,
     )
 
-    assert feature_values(operation)["vehicle"] == "tidak diketahui"
+    assert feature_values(operation, VehicleLineage.unknown())["vehicle"] == "tidak diketahui"
 
 
 def test_a_prediction_comes_out_when_the_model_learned_the_vehicle(tmp_path: Path) -> None:

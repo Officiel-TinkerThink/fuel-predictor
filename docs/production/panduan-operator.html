@@ -95,6 +95,9 @@ menahan percobaan berikutnya sebentar. Tunggu, lalu coba lagi.</p>
 <li>Isi:
 <ul>
 <li><strong>Kategori kendaraan</strong> — pilih dari daftar.</li>
+<li><strong>Kendaraan</strong> — unit yang akan dipakai, misalnya <code>VT 01</code> atau <code>Truck Crane 01</code>. Hanya ini
+yang perlu Anda sebutkan; tipe dan grupnya (misalnya <em>Vacuum Truck</em>) dibaca aplikasi dari
+katalog armada dan ditampilkan di hasil sebagai keterangan.</li>
 <li><strong>Mode aktivitas</strong> — <code>transport</code>, <code>lifting</code>, atau <code>transport_and_lifting</code>.</li>
 <li><strong>Jam lifting</strong> — wajib diisi kalau mode mencakup lifting.</li>
 <li><strong>Jarak total (km)</strong> — jarak seluruh perjalanan.</li>
@@ -167,6 +170,10 @@ memburuk berbulan-bulan tanpa ada yang tahu.</p>
 <p>Menu <strong>Pemantauan</strong>. Bagian yang perlu Anda perhatikan:</p>
 <p><strong>Peringatan aktif.</strong> Setiap peringatan menyebutkan tindakan yang perlu diambil. Ikuti
 kalimat &quot;Tindakan:&quot; — kalimat itu memang ditulis untuk dibaca tanpa latar belakang teknis.</p>
+<p><strong>Penggolongan kendaraan berubah.</strong> Muncul bila katalog armada (tipe atau grup sebuah unit)
+diubah setelah model aktif dilatih, dan model itu memang memakai penggolongan tersebut. Prediksi
+tetap berjalan dengan penggolongan lama; tindakannya: latih kandidat baru dari data terbaru, lalu
+aktifkan (<a href="#6-mengganti-model">bagian 6</a>).</p>
 <p><strong>Pergeseran fitur (drift).</strong> Artinya pola operasi sekarang berbeda dari data yang dipakai
 melatih model. <strong>Ini belum tentu kesalahan.</strong> Rute baru atau musim yang berbeda memang membuat
 pergeseran. Yang perlu Anda tanyakan: <em>apakah memang ada yang berubah di lapangan?</em></p>

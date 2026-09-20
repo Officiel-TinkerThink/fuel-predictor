@@ -22,6 +22,7 @@ from fuel_predictor.domain.daily_operation import (
     VehicleCategory,
 )
 from fuel_predictor.domain.prediction import ModelLifecycleStatus, ModelVersion
+from fuel_predictor.infrastructure.packaged_vehicle_catalog import PackagedVehicleCatalog
 
 
 def _version(model_version_id: str) -> ModelVersion:
@@ -101,6 +102,7 @@ def _generator(holder: ActiveModelHolder | None, store: _Store, reader: _ModelRe
         model_store=store,
         prediction_writer=_Writer(),
         safety_margin_liters=5.0,
+        vehicle_catalog=PackagedVehicleCatalog(),
         holder=holder,
     )
 

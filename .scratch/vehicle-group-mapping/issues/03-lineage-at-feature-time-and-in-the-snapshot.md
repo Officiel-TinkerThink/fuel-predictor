@@ -4,9 +4,15 @@
 
 **Blocked by:** 02 — Add the type column to the catalog and a lineage resolver.
 
-**Status:** ready-for-agent
+**Status:** in-review
 
-- [ ] Training (`MlflowBaselineModelStore.train`) and scoring resolve the lineage from the *current* catalog at call time; nothing reads it back from a stored snapshot.
-- [ ] `feature_values` output is byte-for-byte what it was for the same operation (contract `baseline-v2` untouched).
-- [ ] Every new prediction's stored snapshot carries `vehicle_type` and `vehicle_group`; old snapshots without them still load.
-- [ ] `predict_fuel` / `find_similar_operations` results and the web result page show type and group in `details` as information; no input surface changes.
+- [x] Training (`MlflowBaselineModelStore.train`) and scoring resolve the lineage from the *current* catalog at call time; nothing reads it back from a stored snapshot.
+- [x] `feature_values` output is byte-for-byte what it was for the same operation (contract `baseline-v2` untouched).
+- [x] Every new prediction's stored snapshot carries `vehicle_type` and `vehicle_group`; old snapshots without them still load.
+- [x] `predict_fuel` / `find_similar_operations` results and the web result page show type and group in `details` as information; no input surface changes.
+
+## Comments
+
+- 2026-09-20: The REST API stores the vehicle name as written (only the MCP path canonicalises,
+  ADR 0013); the lineage still resolves through aliases, so type and group are right either
+  way. Canonicalising at `CreateDailyOperation` was left alone as out of scope.

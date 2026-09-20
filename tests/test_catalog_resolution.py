@@ -15,7 +15,7 @@ from fuel_predictor.application.catalog_resolution import (
     search_locations,
 )
 from fuel_predictor.application.locations import LocationOption
-from fuel_predictor.application.vehicles import VehicleOption
+from fuel_predictor.application.vehicles import VehicleLineage, VehicleOption, lineage_from
 
 
 class _Vehicles:
@@ -32,6 +32,9 @@ class _Vehicles:
             if wanted in {spelling.casefold().replace(" ", "") for spelling in spellings}:
                 return option
         return None
+
+    def lineage_of(self, name: str | None) -> VehicleLineage:
+        return lineage_from(self.find(name) if name else None)
 
 
 class _Locations:

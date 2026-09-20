@@ -2,7 +2,7 @@ import csv
 from importlib import resources
 from pathlib import Path
 
-from fuel_predictor.application.vehicles import VehicleOption
+from fuel_predictor.application.vehicles import VehicleLineage, VehicleOption, lineage_from
 
 # Package data, for the same reason as the location catalog and the model
 # schemas: resolving it by walking up from __file__ works from a checkout and
@@ -32,11 +32,14 @@ class PackagedVehicleCatalog:
                 aliases = tuple(
                     alias.strip() for alias in (row.get("alias") or "").split(";") if alias.strip()
                 )
+                # A sheet without a `tipe` column, or with a blank cell, means
+                # the group has one type: it is named after the group.
                 options.append(
                     VehicleOption(
                         name=row["nama_kendaraan"].strip(),
                         group=(row.get("grup") or "").strip(),
                         aliases=aliases,
+                        type=(row.get("tipe") or "").strip(),
                     )
                 )
         self._options = tuple(options)
@@ -47,3 +50,6 @@ class PackagedVehicleCatalog:
 
     def find(self, name: str) -> VehicleOption | None:
         return self._by_key.get(name.strip().casefold().replace(" ", ""))
+
+    def lineage_of(self, name: str | None) -> VehicleLineage:
+        return lineage_from(self.find(name) if name else None)

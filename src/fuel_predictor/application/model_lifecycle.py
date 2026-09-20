@@ -11,6 +11,7 @@ from fuel_predictor.application.actual_fuel import (
 )
 from fuel_predictor.application.baseline_predictions import BaselineModelStore
 from fuel_predictor.application.prediction_features import feature_values
+from fuel_predictor.application.vehicles import VehicleCatalog
 from fuel_predictor.domain.daily_operation import VehicleCategory
 from fuel_predictor.domain.prediction import ModelLifecycleStatus, ModelVersion
 
@@ -89,6 +90,7 @@ class GetCandidateModelComparison:
     model_reader: ModelVersionReader
     evaluation_reader: ModelEvaluationCaseReader
     model_store: BaselineModelStore
+    vehicle_catalog: VehicleCatalog
 
     def execute(self, candidate_model_version_id: str) -> ModelComparison:
         candidate = self.model_reader.get(candidate_model_version_id)
@@ -96,8 +98,14 @@ class GetCandidateModelComparison:
             raise CandidateModelNotFoundError(candidate_model_version_id)
         active = self.model_reader.get_active()
         cases = tuple(self.evaluation_reader.get_model_evaluation_cases())
-        candidate_outcomes = _outcomes_for_model(candidate, cases, self.model_store)
-        active_outcomes = _outcomes_for_model(active, cases, self.model_store) if active else None
+        candidate_outcomes = _outcomes_for_model(
+            candidate, cases, self.model_store, self.vehicle_catalog
+        )
+        active_outcomes = (
+            _outcomes_for_model(active, cases, self.model_store, self.vehicle_catalog)
+            if active
+            else None
+        )
         categories = tuple(sorted({case.operation.vehicle_category for case in cases}, key=str))
         return ModelComparison(
             candidate=candidate,
@@ -141,6 +149,7 @@ class GetModelGovernanceDashboard:
     evaluation_reader: ModelEvaluationCaseReader
     model_store: BaselineModelStore
     max_active_model_mae_liters: float
+    vehicle_catalog: VehicleCatalog
 
     def execute(self) -> ModelGovernanceDashboard:
         active = self.model_reader.get_active()
@@ -152,6 +161,7 @@ class GetModelGovernanceDashboard:
                     active,
                     tuple(self.evaluation_reader.get_model_evaluation_cases()),
                     self.model_store,
+                    self.vehicle_catalog,
                 )
             )
         retraining_recommended = bool(
@@ -189,10 +199,14 @@ def _outcomes_for_model(
     model: ModelVersion,
     cases: Sequence[ModelEvaluationCase],
     model_store: BaselineModelStore,
+    vehicle_catalog: VehicleCatalog,
 ) -> tuple[PredictionOutcome, ...]:
     outcomes = []
     for case in cases:
-        estimate = max(0.0, model_store.predict(model.artifact_uri, feature_values(case.operation)))
+        features = feature_values(
+            case.operation, vehicle_catalog.lineage_of(case.operation.vehicle)
+        )
+        estimate = max(0.0, model_store.predict(model.artifact_uri, features))
         outcomes.append(
             PredictionOutcome(
                 vehicle_category=case.operation.vehicle_category,

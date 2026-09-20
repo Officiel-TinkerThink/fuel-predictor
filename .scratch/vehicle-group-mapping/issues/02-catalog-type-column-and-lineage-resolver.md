@@ -4,10 +4,10 @@
 
 **Blocked by:** None — can start immediately (01 in parallel).
 
-**Status:** ready-for-agent
+**Status:** in-review
 
-- [ ] `kendaraan-angber.csv` gains `tipe`, filled with each row's group name; a CSV without the column, or with a blank cell, still imports with the type named after the group.
-- [ ] `python -m fuel_predictor import-vehicles` round-trips the column into the table and back out through `options()`.
-- [ ] `lineage_of` resolves canonical names and aliases, and returns `tidak diketahui` at every level for an unknown or empty name without raising.
-- [ ] A migration on a populated database leaves every existing row with `vehicle_type == vehicle_group`.
-- [ ] No form, template, or MCP tool input changes.
+- [x] `kendaraan-angber.csv` gains `tipe`, filled with each row's group name; a CSV without the column, or with a blank cell, still imports with the type named after the group.
+- [x] `python -m fuel_predictor import-vehicles` round-trips the column into the table and back out through `options()`.
+- [x] `lineage_of` resolves canonical names and aliases, and returns `tidak diketahui` at every level for an unknown or empty name without raising.
+- [x] A migration on a populated database leaves every existing row with `vehicle_type == vehicle_group`.
+- [x] No form, template, or MCP tool input changes.

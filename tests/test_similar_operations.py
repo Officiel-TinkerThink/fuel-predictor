@@ -16,7 +16,7 @@ from fuel_predictor.application.similar_operations import (
     SimilarOperationsQuery,
     VehicleMatch,
 )
-from fuel_predictor.application.vehicles import VehicleOption
+from fuel_predictor.application.vehicles import VehicleLineage, VehicleOption, lineage_from
 from fuel_predictor.domain.daily_operation import ActivityMode, DistanceSource, VehicleCategory
 
 
@@ -34,6 +34,9 @@ class _Fleet:
             if wanted in {spelling.casefold().replace(" ", "") for spelling in spellings}:
                 return option
         return None
+
+    def lineage_of(self, name: str | None) -> VehicleLineage:
+        return lineage_from(self.find(name) if name else None)
 
 
 class _History:

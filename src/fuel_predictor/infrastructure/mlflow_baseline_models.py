@@ -11,28 +11,42 @@ from sklearn.pipeline import Pipeline
 
 from fuel_predictor.application.baseline_predictions import BaselineModelStore
 from fuel_predictor.application.prediction_features import FEATURE_VERSION, feature_values
+from fuel_predictor.application.vehicles import VehicleCatalog, catalog_fingerprint
 from fuel_predictor.domain.historical_dataset import HistoricalDailyOperation
 
 
 class MlflowBaselineModelStore(BaselineModelStore):
     """Local MLflow-backed artifacts; model DB records remain the serving lineage."""
 
-    def __init__(self, tracking_uri: str, artifact_location: str | None = None) -> None:
+    def __init__(
+        self,
+        tracking_uri: str,
+        vehicle_catalog: VehicleCatalog,
+        artifact_location: str | None = None,
+    ) -> None:
         self._tracking_uri = tracking_uri
         self._artifact_location = artifact_location
+        # Training reads each row's type and group from the catalog as it is
+        # at training time, the same lens scoring will use (ADR 0015).
+        self._vehicle_catalog = vehicle_catalog
 
     @classmethod
-    def local(cls, tracking_directory: Path) -> "MlflowBaselineModelStore":
+    def local(
+        cls, tracking_directory: Path, vehicle_catalog: VehicleCatalog
+    ) -> "MlflowBaselineModelStore":
         """Local file-backed store for single-process/non-Docker development."""
         root = tracking_directory.resolve()
         tracking_uri = f"sqlite:///{(root / 'mlflow.db').as_posix()}"
         artifact_location = (root / "artifacts").as_uri()
-        return cls(tracking_uri, artifact_location)
+        return cls(tracking_uri, vehicle_catalog, artifact_location)
 
     def train(
         self, model_version_id: str, operations: Sequence[HistoricalDailyOperation]
     ) -> tuple[str, float]:
-        features = [feature_values(item.operation) for item in operations]
+        features = [
+            feature_values(item.operation, self._vehicle_catalog.lineage_of(item.operation.vehicle))
+            for item in operations
+        ]
         labels = np.asarray([item.prepared_fuel_liters for item in operations])
         pipeline = Pipeline(
             [("features", DictVectorizer(sparse=False)), ("regression", LinearRegression())]
@@ -56,6 +70,7 @@ class MlflowBaselineModelStore(BaselineModelStore):
                     "algorithm": "linear_regression",
                     "feature_version": FEATURE_VERSION,
                     "training_row_count": len(operations),
+                    "catalog_fingerprint": catalog_fingerprint(self._vehicle_catalog.options()),
                 }
             )
             mlflow.log_metric("training_residual_p90_liters", uncertainty)

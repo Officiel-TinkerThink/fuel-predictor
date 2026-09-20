@@ -17,6 +17,7 @@ from fuel_predictor.application.prediction_features import (
     feature_values,
     input_snapshot,
 )
+from fuel_predictor.application.vehicles import VehicleCatalog, catalog_fingerprint
 from fuel_predictor.domain.historical_dataset import HistoricalDailyOperation
 from fuel_predictor.domain.prediction import FuelPrediction, ModelLifecycleStatus, ModelVersion
 
@@ -68,6 +69,7 @@ class TrainBaselineCandidate:
     dataset_reader: HistoricalDatasetReader
     model_store: BaselineModelStore
     model_writer: ModelVersionWriter
+    vehicle_catalog: VehicleCatalog
     now: Callable[[], datetime] = lambda: datetime.now(UTC)
 
     def execute(self, dataset_version_id: str) -> ModelVersion:
@@ -91,6 +93,7 @@ class TrainBaselineCandidate:
             training_row_count=len(operations),
             uncertainty_liters=uncertainty_liters,
             lifecycle_status=ModelLifecycleStatus.CANDIDATE,
+            catalog_fingerprint=catalog_fingerprint(self.vehicle_catalog.options()),
         )
         return self.model_writer.create(model)
 
@@ -102,6 +105,9 @@ class GenerateFuelPrediction:
     model_store: BaselineModelStore
     prediction_writer: PredictionWriter
     safety_margin_liters: float
+    # Where the vehicle's type and group come from, resolved fresh for every
+    # prediction (ADR 0015): the catalog is the lens, never a stored copy.
+    vehicle_catalog: VehicleCatalog
     now: Callable[[], datetime] = lambda: datetime.now(UTC)
     # Set once an externally-ingested package has been activated (ADR 0010).
     # While it is empty, prediction keeps using the MLflow-backed store, which
@@ -116,7 +122,8 @@ class GenerateFuelPrediction:
         operation = self.operation_reader.get(operation_id)
         if operation is None:
             raise DailyOperationNotFoundError(operation_id)
-        features = feature_values(operation)
+        lineage = self.vehicle_catalog.lineage_of(operation.vehicle)
+        features = feature_values(operation, lineage)
 
         # Read the holder exactly once and keep that reference for the rest of
         # the request (ADR 0010): an activation swapping mid-request must not
@@ -150,7 +157,7 @@ class GenerateFuelPrediction:
                 f"{self.safety_margin_liters:g} L atau batas atas ketidakpastian. Ini bukan "
                 "jaminan 99% dan belum dikalibrasi dengan bahan bakar aktual."
             ),
-            input_snapshot=input_snapshot(operation),
+            input_snapshot=input_snapshot(operation, lineage),
             feature_values=features,
             created_at=self.now(),
         )

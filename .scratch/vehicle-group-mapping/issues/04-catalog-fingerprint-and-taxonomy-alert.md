@@ -4,10 +4,10 @@
 
 **Blocked by:** 02 — Add the type column to the catalog and a lineage resolver.
 
-**Status:** ready-for-agent
+**Status:** in-review
 
-- [ ] The fingerprint is identical across row order and alias order, and changes when a single row's type changes.
-- [ ] A model trained now carries the fingerprint; an older model or package without one is handled as "unknown", never as a mismatch.
-- [ ] Manifest schema accepts the new optional field; every existing valid package still validates.
-- [ ] The alert is raised on mismatch for a lineage-aware model, silent on match, and silent for `baseline-v2` even on mismatch; the lineage-aware list is empty in this ticket.
-- [ ] The dashboard shows the alert with its remediation text like the existing alert kinds; the operator guide names it.
+- [x] The fingerprint is identical across row order and alias order, and changes when a single row's type changes.
+- [x] A model trained now carries the fingerprint; an older model or package without one is handled as "unknown", never as a mismatch.
+- [x] Manifest schema accepts the new optional field; every existing valid package still validates.
+- [x] The alert is raised on mismatch for a lineage-aware model, silent on match, and silent for `baseline-v2` even on mismatch; the lineage-aware list is empty in this ticket.
+- [x] The dashboard shows the alert with its remediation text like the existing alert kinds; the operator guide names it.

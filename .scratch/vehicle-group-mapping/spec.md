@@ -1,6 +1,6 @@
 # Vehicle instance → type → group: lineage ownership and resolution
 
-Status: ready-for-agent
+Status: in-review
 
 Handoff written 2026-09-19, revised 2026-09-20, after a design conversation with the product
 owner. It covers the **application side only**: where the instance → type → group lineage lives,

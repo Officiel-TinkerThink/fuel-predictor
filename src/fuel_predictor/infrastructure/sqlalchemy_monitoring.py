@@ -6,6 +6,7 @@ from sqlalchemy import select
 
 from fuel_predictor.application.monitoring import MonitoringAlertStore, MonitoringDataReader
 from fuel_predictor.application.prediction_features import feature_values
+from fuel_predictor.application.vehicles import VehicleLineage
 from fuel_predictor.domain.daily_operation import (
     ActivityMode,
     DailyOperation,
@@ -233,6 +234,8 @@ class SqlAlchemyMonitoringRepository(MonitoringDataReader, MonitoringAlertStore)
 
 
 def _feature_values_from_historical(row: HistoricalDailyOperationRow) -> dict[str, str | float]:
+    # Drift reference rows carry no vehicle and no lineage: the drift check
+    # compares category, activity mode and distance source only.
     return feature_values(
         DailyOperation(
             operation_id=row.operation_id,
@@ -241,7 +244,8 @@ def _feature_values_from_historical(row: HistoricalDailyOperationRow) -> dict[st
             lifting_hours=row.lifting_hours,
             total_distance_km=row.total_distance_km,
             distance_source=DistanceSource(row.distance_source),
-        )
+        ),
+        VehicleLineage.unknown(),
     )
 
 

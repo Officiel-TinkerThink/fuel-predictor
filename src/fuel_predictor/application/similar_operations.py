@@ -10,9 +10,10 @@ places the system keeps history:
   the estimate given at the time and, once entered, the actual fuel.
 
 They are merged and ranked, not modelled: nothing here adjusts the estimate.
-The ranking is deliberately explainable — same vehicle before same kind of
-machine before same category, then same activity, then nearest distance — so
-the agent can say *why* a row is shown rather than only that it is.
+The ranking is deliberately explainable — same unit, then same type, then same
+group, then same category (the fallback order ADR 0015 fixes for the whole
+application), then same activity, then nearest distance — so the agent can say
+*why* a row is shown rather than only that it is.
 """
 
 from collections.abc import Sequence
@@ -21,7 +22,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Protocol
 
-from fuel_predictor.application.vehicles import VehicleCatalog
+from fuel_predictor.application.vehicles import VehicleCatalog, VehicleLineage
 from fuel_predictor.domain.daily_operation import ActivityMode, DistanceSource, VehicleCategory
 
 
@@ -32,6 +33,7 @@ class HistorySource(StrEnum):
 
 class VehicleMatch(StrEnum):
     SAME = "same"
+    SAME_TYPE = "same_type"
     SAME_GROUP = "same_group"
     SAME_CATEGORY = "same_category"
 
@@ -105,6 +107,7 @@ class SimilarityMatch:
 @dataclass(frozen=True, slots=True)
 class SimilarOperation:
     record: HistoricalOperationRecord
+    vehicle_type: str | None
     vehicle_group: str | None
     match: SimilarityMatch
 
@@ -119,11 +122,11 @@ class FindSimilarOperations:
             return ()
         wanted = self.vehicle_catalog.find(query.vehicle)
         wanted_name = wanted.name if wanted is not None else query.vehicle.strip()
-        wanted_group = wanted.group if wanted is not None and wanted.group else None
+        wanted_lineage = wanted.lineage if wanted is not None else None
 
         # One pass over the catalog, not one lookup per row: a catalog backed
         # by a table would otherwise be queried once for every historical row.
-        groups = _groups_by_written_name(self.vehicle_catalog)
+        lineages = _lineages_by_written_name(self.vehicle_catalog)
 
         candidates = [
             record
@@ -134,20 +137,24 @@ class FindSimilarOperations:
             if record.operation_id != query.exclude_operation_id
         ]
         ranked = sorted(
-            (_score(record, query, wanted_name, wanted_group, groups) for record in candidates),
+            (_score(record, query, wanted_name, wanted_lineage, lineages) for record in candidates),
             key=_rank_key,
         )
         return tuple(ranked[: query.limit])
 
 
-def _groups_by_written_name(catalog: VehicleCatalog) -> dict[str, str]:
-    groups: dict[str, str] = {}
+def _lineages_by_written_name(catalog: VehicleCatalog) -> dict[str, VehicleLineage]:
+    lineages: dict[str, VehicleLineage] = {}
     for option in catalog.options():
         if not option.group:
             continue
         for name in (option.name, *option.aliases):
-            groups.setdefault(_vehicle_key(name), option.group)
-    return groups
+            lineages.setdefault(_vehicle_key(name), option.lineage)
+    return lineages
+
+
+def _refines(lineage: VehicleLineage) -> bool:
+    return lineage.type != lineage.group
 
 
 def _vehicle_key(name: str) -> str:
@@ -159,13 +166,23 @@ def _score(
     record: HistoricalOperationRecord,
     query: SimilarOperationsQuery,
     wanted_name: str,
-    wanted_group: str | None,
-    groups: dict[str, str],
+    wanted_lineage: VehicleLineage | None,
+    lineages: dict[str, VehicleLineage],
 ) -> SimilarOperation:
-    group = groups.get(_vehicle_key(record.vehicle)) if record.vehicle else None
+    lineage = lineages.get(_vehicle_key(record.vehicle)) if record.vehicle else None
+    same_group = same_type = False
+    if wanted_lineage is not None and lineage is not None:
+        same_group = lineage.group == wanted_lineage.group
+        # Same type is only meaningful inside the same group (two groups may
+        # name a type alike), and only when the type is a real refinement: a
+        # group with a single type would otherwise label every group match a
+        # type match and tell the planner nothing new.
+        same_type = same_group and _refines(wanted_lineage) and lineage.type == wanted_lineage.type
     if record.vehicle is not None and record.vehicle == wanted_name:
         vehicle_match = VehicleMatch.SAME
-    elif wanted_group is not None and group == wanted_group:
+    elif same_type:
+        vehicle_match = VehicleMatch.SAME_TYPE
+    elif same_group:
         vehicle_match = VehicleMatch.SAME_GROUP
     else:
         # Includes rows with no vehicle recorded: an unnamed row can be the
@@ -189,7 +206,8 @@ def _score(
         score += abs(lifting_delta) / max(query.lifting_hours or 0.0, 1.0)
     return SimilarOperation(
         record=record,
-        vehicle_group=group,
+        vehicle_type=lineage.type if lineage is not None else None,
+        vehicle_group=lineage.group if lineage is not None else None,
         match=SimilarityMatch(
             vehicle=vehicle_match,
             activity_mode=same_mode,
@@ -202,8 +220,9 @@ def _score(
 
 _VEHICLE_TIER = {
     VehicleMatch.SAME: 0,
-    VehicleMatch.SAME_GROUP: 1,
-    VehicleMatch.SAME_CATEGORY: 2,
+    VehicleMatch.SAME_TYPE: 1,
+    VehicleMatch.SAME_GROUP: 2,
+    VehicleMatch.SAME_CATEGORY: 3,
 }
 
 

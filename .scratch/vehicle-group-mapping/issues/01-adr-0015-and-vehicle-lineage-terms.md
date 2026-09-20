@@ -4,9 +4,9 @@
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** in-review
 
-- [ ] The ADR states the three fixed levels, that a single-type group names its type after itself, that the lineage is derived at feature time and never snapshotted as a source, and that the planner-facing contract is unchanged.
-- [ ] The ADR's consequences name the practical win (a new unit is predictable once catalogued, no retrain) and the deliberate deferrals (feature contract, admin page, per-instance terms, generic hierarchy).
-- [ ] The ADR does not contradict ADR 0001, 0004, 0009 or 0013; where it touches them it says so.
-- [ ] `CONTEXT.md` defines the terms and the fallback order same unit → same type → same group → same category.
+- [x] The ADR states the three fixed levels, that a single-type group names its type after itself, that the lineage is derived at feature time and never snapshotted as a source, and that the planner-facing contract is unchanged.
+- [x] The ADR's consequences name the practical win (a new unit is predictable once catalogued, no retrain) and the deliberate deferrals (feature contract, admin page, per-instance terms, generic hierarchy).
+- [x] The ADR does not contradict ADR 0001, 0004, 0009 or 0013; where it touches them it says so.
+- [x] `CONTEXT.md` defines the terms and the fallback order same unit → same type → same group → same category.

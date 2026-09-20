@@ -378,6 +378,7 @@ def build_registry(
             # said "truck crane 01" and "SP II"; this is what that became.
             "details": {
                 "vehicle": vehicle.name,
+                "vehicle_type": vehicle.type or None,
                 "vehicle_group": vehicle.group or None,
                 "vehicle_category": operation.vehicle_category.value,
                 "activity_mode": operation.activity_mode.value,
@@ -418,6 +419,7 @@ def build_registry(
         limit = min(max(int(arguments.get("limit", _DEFAULT_SIMILAR)), 0), _MAX_SIMILAR)
         return {
             "vehicle": vehicle.name,
+            "vehicle_type": vehicle.type or None,
             "vehicle_group": vehicle.group or None,
             "similar_operations": _similar(
                 vehicle.name,
@@ -752,6 +754,7 @@ def _similar_operation_payload(item: SimilarOperation) -> dict[str, Any]:
         "source": record.source.value,
         "operation_id": record.operation_id,
         "vehicle": record.vehicle,
+        "vehicle_type": item.vehicle_type,
         "vehicle_group": item.vehicle_group,
         "activity_mode": record.activity_mode.value,
         "lifting_hours": record.lifting_hours,

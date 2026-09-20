@@ -87,6 +87,14 @@ class ApplicationSettings(BaseSettings):
     alert_email_sender: str = ""
     alert_email_recipients: str = ""
 
+    @field_validator("mlflow_tracking_uri")
+    @classmethod
+    def blank_tracking_uri_means_unset(cls, value: str | None) -> str | None:
+        # Same rule as the Maps key: a blanked-out setting is no setting, so a
+        # local override can fall back to the file-backed store rather than
+        # handing MLflow "" and getting its deprecated filesystem backend.
+        return value.strip() or None if value is not None else None
+
     @field_validator("public_url")
     @classmethod
     def validate_public_url(cls, value: str | None) -> str | None:

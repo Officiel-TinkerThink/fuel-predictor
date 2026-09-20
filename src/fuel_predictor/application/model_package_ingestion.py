@@ -313,6 +313,7 @@ def _build_manifest(raw: Mapping[str, Any]) -> ModelPackageManifest:
         ),
         test_set_size=raw["test_set_size"],
         training_row_count=raw.get("training_row_count"),
+        catalog_fingerprint=raw.get("catalog_fingerprint"),
         model_size_bytes=raw["model_size_bytes"],
         expected_memory_bytes=raw["expected_memory_bytes"],
         package_checksums=dict(raw["package_checksums"]),

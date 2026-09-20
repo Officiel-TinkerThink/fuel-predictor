@@ -147,6 +147,7 @@ class ModelVersionRow(Base):
     lifecycle_status: Mapped[str] = mapped_column(String(16), nullable=False, default="candidate")
     promoted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    catalog_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class PredictionRow(Base):
@@ -443,6 +444,9 @@ class VehicleRow(Base):
 
     name: Mapped[str] = mapped_column(String(128), primary_key=True)
     vehicle_group: Mapped[str] = mapped_column(String(64), nullable=False)
+    # The finer cut inside a group (ADR 0015); equals the group until the
+    # owner splits one.
+    vehicle_type: Mapped[str] = mapped_column(String(64), nullable=False)
     aliases: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
 
 

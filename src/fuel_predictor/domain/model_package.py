@@ -65,6 +65,10 @@ class ModelPackageManifest:
     # field existed remain valid; `test_set_size` counts the held-out rows the
     # metrics came from and is not a substitute for it.
     training_row_count: int | None = None
+    # The vehicle taxonomy the model was fitted under (ADR 0015), as
+    # `catalog_fingerprint` computes it. Optional: a package built elsewhere,
+    # or before the field existed, is simply of unknown taxonomy.
+    catalog_fingerprint: str | None = None
 
     def feature_names_in_order(self) -> tuple[str, ...]:
         return tuple(entry.name for entry in self.feature_schema)

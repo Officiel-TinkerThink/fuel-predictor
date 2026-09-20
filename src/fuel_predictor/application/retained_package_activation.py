@@ -93,6 +93,7 @@ class RegisterIngestedPackage:
                 # the interval shown alongside a prediction.
                 uncertainty_liters=manifest.overall_metrics.mae,
                 lifecycle_status=ModelLifecycleStatus.CANDIDATE,
+                catalog_fingerprint=manifest.catalog_fingerprint,
             )
         )
 

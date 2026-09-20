@@ -211,10 +211,12 @@ def _seed_demo(force: bool) -> int:
         # The tracking URI wins when set, exactly as the application resolves
         # it, so the seeded model lands in the store the app will read from.
         if settings.mlflow_tracking_uri is not None:
-            model_store = MlflowBaselineModelStore(settings.mlflow_tracking_uri)
+            model_store = MlflowBaselineModelStore(settings.mlflow_tracking_uri, vehicles)
         else:
-            model_store = MlflowBaselineModelStore.local(settings.mlflow_tracking_directory)
-        candidate = TrainBaselineCandidate(historical, model_store, predictions).execute(
+            model_store = MlflowBaselineModelStore.local(
+                settings.mlflow_tracking_directory, vehicles
+            )
+        candidate = TrainBaselineCandidate(historical, model_store, predictions, vehicles).execute(
             dataset.dataset_version_id
         )
         print(f"  Kandidat {candidate.model_version_id} dilatih.")
@@ -229,7 +231,8 @@ def _seed_demo(force: bool) -> int:
         # are wired up wrongly the training step still reports success and the
         # first prediction is what fails -- in front of whoever we handed the
         # demo to.
-        sample = feature_values(imported.valid_operations[0].operation)
+        first = imported.valid_operations[0].operation
+        sample = feature_values(first, vehicles.lineage_of(first.vehicle))
         litres = model_store.predict(promoted.artifact_uri, sample)
     except Exception as error:  # noqa: BLE001 - the operator needs a readable message
         print(f"Pengisian data awal gagal: {error}", file=sys.stderr)
@@ -324,12 +327,14 @@ def _record_backup(
 
 def _run_monitoring(trigger: str) -> int:
     from fuel_predictor.application.monitoring import GetMonitoringDashboard
+    from fuel_predictor.infrastructure.sqlalchemy_vehicles import SqlAlchemyVehicleRepository
 
     settings = ApplicationSettings()
     try:
         session_factory = build_session_factory(build_engine(settings.database_url))
         monitoring_repository = SqlAlchemyMonitoringRepository(session_factory)
         prediction_repository = SqlAlchemyPredictionRepository(session_factory)
+        vehicle_repository = SqlAlchemyVehicleRepository(session_factory)
     except Exception as error:  # noqa: BLE001 - the operator needs a readable message
         # A database that cannot be reached cannot record its own failure, so
         # this is the one case where the only report is what is printed here.
@@ -353,6 +358,7 @@ def _run_monitoring(trigger: str) -> int:
             settings.monitoring_rolling_error_window,
             settings.max_active_model_mae_liters,
             settings.monitoring_min_matched_outcomes,
+            vehicle_repository,
         ),
         runs=SqlAlchemyMonitoringRunRepository(session_factory),
     ).execute(trigger=trigger)

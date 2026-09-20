@@ -1,6 +1,6 @@
 from sqlalchemy import select
 
-from fuel_predictor.application.vehicles import VehicleOption
+from fuel_predictor.application.vehicles import VehicleLineage, VehicleOption, lineage_from
 from fuel_predictor.infrastructure.database import SessionFactory, VehicleRow
 
 
@@ -23,6 +23,7 @@ class SqlAlchemyVehicleRepository:
                 name=row.name,
                 group=row.vehicle_group,
                 aliases=tuple(row.aliases or ()),
+                type=row.vehicle_type,
             )
             for row in rows
         )
@@ -39,6 +40,9 @@ class SqlAlchemyVehicleRepository:
                 return option
         return None
 
+    def lineage_of(self, name: str | None) -> VehicleLineage:
+        return lineage_from(self.find(name) if name else None)
+
     def replace_all(self, vehicles: tuple[VehicleOption, ...]) -> int:
         """Reload from the sheet export, in one transaction.
 
@@ -51,6 +55,7 @@ class SqlAlchemyVehicleRepository:
                 VehicleRow(
                     name=vehicle.name,
                     vehicle_group=vehicle.group,
+                    vehicle_type=vehicle.type,
                     aliases=list(vehicle.aliases),
                 )
                 for vehicle in vehicles

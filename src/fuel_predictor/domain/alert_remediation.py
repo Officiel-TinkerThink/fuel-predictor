@@ -36,6 +36,12 @@ _REMEDIATION: dict[MonitoringAlertKind, str] = {
         "lebih baik, kembalikan ke versi model sebelumnya yang hasilnya masih baik, lalu "
         "siapkan pelatihan ulang. Sementara itu, tambahkan margin pada alokasi bahan bakar."
     ),
+    MonitoringAlertKind.VEHICLE_TAXONOMY: (
+        "Penggolongan kendaraan (tipe atau grup) di katalog berubah sejak model aktif "
+        "dilatih, sedangkan model ini memakai penggolongan itu sebagai fitur. Latih kandidat "
+        "baru dari data terbaru, bandingkan, lalu aktifkan. Sampai saat itu prediksi masih "
+        "memakai penggolongan lama."
+    ),
 }
 
 _URGENCY: dict[MonitoringAlertSeverity, str] = {

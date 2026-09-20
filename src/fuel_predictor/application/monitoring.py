@@ -4,6 +4,8 @@ from datetime import UTC, datetime, timedelta
 from typing import Protocol
 
 from fuel_predictor.application.baseline_predictions import ActiveModelVersionReader
+from fuel_predictor.application.prediction_features import LINEAGE_AWARE_FEATURE_VERSIONS
+from fuel_predictor.application.vehicles import VehicleCatalog, catalog_fingerprint
 from fuel_predictor.domain.monitoring import (
     CategoryDegradation,
     DatasetValidationSummary,
@@ -88,6 +90,7 @@ class GetMonitoringDashboard:
     rolling_error_window: int
     degradation_mae_threshold_liters: float
     minimum_matched_outcomes: int
+    vehicle_catalog: VehicleCatalog
     now: Callable[[], datetime] = lambda: datetime.now(UTC)
 
     def execute(self) -> MonitoringDashboard:
@@ -109,7 +112,8 @@ class GetMonitoringDashboard:
             self.degradation_mae_threshold_liters,
             self.minimum_matched_outcomes,
         )
-        alerts = _alerts_for(issues, missing, drift, degradation, observed_at)
+        taxonomy = _taxonomy_changed(active_model, self.vehicle_catalog)
+        alerts = _alerts_for(issues, missing, drift, degradation, taxonomy, observed_at)
         reconciled = tuple(self.alert_store.reconcile(alerts, observed_at))
         active_alerts = tuple(alert for alert in reconciled if alert.resolved_at is None)
         return MonitoringDashboard(
@@ -187,14 +191,50 @@ def _mae(outcomes: Sequence[TimedPredictionOutcome]) -> float:
     ) / len(outcomes)
 
 
+def _taxonomy_changed(
+    active_model: ModelVersion | None, vehicle_catalog: VehicleCatalog
+) -> ModelVersion | None:
+    """The active model, when the owner has re-typed or re-grouped the fleet
+    since it was trained *and* its features depend on that (ADR 0015).
+
+    baseline-v2 reads the unit alone, so a catalog edit cannot change what it
+    predicts; warning about it would be noise. A model with no fingerprint is
+    of unknown taxonomy, which is not a mismatch either.
+    """
+    if (
+        active_model is None
+        or active_model.feature_version not in LINEAGE_AWARE_FEATURE_VERSIONS
+        or active_model.catalog_fingerprint is None
+    ):
+        return None
+    if active_model.catalog_fingerprint == catalog_fingerprint(vehicle_catalog.options()):
+        return None
+    return active_model
+
+
 def _alerts_for(
     issues: Sequence[UnresolvedDataQualityIssue],
     missing: Sequence[MissingActualPrediction],
     drift: FeatureDriftSummary,
     degradation: Sequence[CategoryDegradation],
+    taxonomy_changed_for: ModelVersion | None,
     observed_at: datetime,
 ) -> tuple[MonitoringAlert, ...]:
     alerts: list[MonitoringAlert] = []
+    if taxonomy_changed_for is not None:
+        alerts.append(
+            _alert(
+                "vehicle_taxonomy:active_model",
+                MonitoringAlertKind.VEHICLE_TAXONOMY,
+                MonitoringAlertSeverity.WARNING,
+                "Penggolongan kendaraan berubah sejak model dilatih; latih ulang kandidat.",
+                {
+                    "model_version_id": taxonomy_changed_for.model_version_id,
+                    "feature_version": taxonomy_changed_for.feature_version,
+                },
+                observed_at,
+            )
+        )
     for issue in issues:
         alerts.append(
             _alert(

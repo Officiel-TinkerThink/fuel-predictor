@@ -4,9 +4,15 @@
 
 **Blocked by:** 02 — Add the type column to the catalog and a lineage resolver.
 
-**Status:** ready-for-agent
+**Status:** in-review
 
-- [ ] With two types in one group, a same-type operation outranks a same-group one at equal distance and lifting hours; with one type per group, ranking is unchanged from today.
-- [ ] `match.vehicle` values are `same`, `same_type`, `same_group`, `same_category`; existing clients that only know three values still receive valid output.
-- [ ] Tool input schemas and the web form are unchanged.
-- [ ] Docs describe the four-level lineage, state that the planner only ever names the unit, and list the new alert.
+- [x] With two types in one group, a same-type operation outranks a same-group one at equal distance and lifting hours; with one type per group, ranking is unchanged from today.
+- [x] `match.vehicle` values are `same`, `same_type`, `same_group`, `same_category`; existing clients that only know three values still receive valid output.
+- [x] Tool input schemas and the web form are unchanged.
+- [x] Docs describe the four-level lineage, state that the planner only ever names the unit, and list the new alert.
+
+## Comments
+
+- 2026-09-20: `same_type` is emitted only when the type is a real refinement (type differs from
+  group). With one type per group a type match would say nothing a group match does not, so
+  existing clients keep seeing `same_group` for today's fleet.

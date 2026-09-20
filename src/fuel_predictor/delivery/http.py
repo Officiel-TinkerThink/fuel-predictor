@@ -175,6 +175,7 @@ class ModelVersionResponse(BaseModel):
     lifecycle_status: ModelLifecycleStatus
     promoted_at: datetime | None
     retired_at: datetime | None
+    catalog_fingerprint: str | None = None
 
 
 class UncertaintyIntervalResponse(BaseModel):
@@ -587,6 +588,7 @@ def _model_response(model: ModelVersion) -> ModelVersionResponse:
         lifecycle_status=model.lifecycle_status,
         promoted_at=model.promoted_at,
         retired_at=model.retired_at,
+        catalog_fingerprint=model.catalog_fingerprint,
     )
 
 

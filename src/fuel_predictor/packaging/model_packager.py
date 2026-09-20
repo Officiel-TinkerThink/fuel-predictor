@@ -58,6 +58,10 @@ class ModelPackageBuilder:
     test_set_size: int
     training_row_count: int
     expected_memory_bytes: int
+    # The fleet taxonomy the model was fitted under (ADR 0015), from
+    # `catalog_fingerprint`. Optional: a package that omits it is of unknown
+    # taxonomy and is never flagged as mismatched.
+    catalog_fingerprint: str | None = None
 
     def build(
         self,
@@ -86,6 +90,11 @@ class ModelPackageBuilder:
             "training_row_count": self.training_row_count,
             "model_size_bytes": len(model_bytes),
             "expected_memory_bytes": self.expected_memory_bytes,
+            **(
+                {"catalog_fingerprint": self.catalog_fingerprint}
+                if self.catalog_fingerprint is not None
+                else {}
+            ),
             # manifest.json is absent by design: it cannot carry a checksum of
             # the bytes that contain that checksum.
             "package_checksums": {

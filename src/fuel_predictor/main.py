@@ -251,15 +251,17 @@ def create_app(
     )
     get_dataset_valid_operations = GetDatasetValidOperations(historical_dataset_repository)
     if settings.mlflow_tracking_uri is not None:
-        model_store = MlflowBaselineModelStore(settings.mlflow_tracking_uri)
+        model_store = MlflowBaselineModelStore(
+            settings.mlflow_tracking_uri, resolved_vehicle_catalog
+        )
     else:
         if database_path is None:
             tracking_directory = settings.mlflow_tracking_directory
         else:
             tracking_directory = database_path.parent / "mlruns"
-        model_store = MlflowBaselineModelStore.local(tracking_directory)
+        model_store = MlflowBaselineModelStore.local(tracking_directory, resolved_vehicle_catalog)
     train_baseline_candidate = TrainBaselineCandidate(
-        historical_dataset_repository, model_store, prediction_repository
+        historical_dataset_repository, model_store, prediction_repository, resolved_vehicle_catalog
     )
     # One holder, shared by the serving path and the activation path. Until a
     # package is activated it stays empty and prediction falls back to the
@@ -271,6 +273,7 @@ def create_app(
         model_store,
         prediction_repository,
         settings.initial_safety_margin_liters,
+        resolved_vehicle_catalog,
         holder=active_model_holder,
     )
     bulk_operation_prediction = BulkOperationPrediction(
@@ -286,13 +289,14 @@ def create_app(
     get_prediction_performance = GetPredictionPerformance(actual_fuel_repository)
     promote_candidate_model = PromoteCandidateModel(prediction_repository, prediction_repository)
     get_candidate_model_comparison = GetCandidateModelComparison(
-        prediction_repository, actual_fuel_repository, model_store
+        prediction_repository, actual_fuel_repository, model_store, resolved_vehicle_catalog
     )
     get_model_governance_dashboard = GetModelGovernanceDashboard(
         prediction_repository,
         actual_fuel_repository,
         model_store,
         settings.max_active_model_mae_liters,
+        resolved_vehicle_catalog,
     )
     get_monitoring_dashboard = GetMonitoringDashboard(
         monitoring_repository,
@@ -304,6 +308,7 @@ def create_app(
         settings.monitoring_rolling_error_window,
         settings.max_active_model_mae_liters,
         settings.monitoring_min_matched_outcomes,
+        resolved_vehicle_catalog,
     )
     password_hasher = ScryptPasswordHasher()
     record_audit = RecordAuditEvent(audit_repository)

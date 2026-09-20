@@ -10,6 +10,7 @@ class MonitoringAlertKind(StrEnum):
     MISSING_ACTUAL = "missing_actual"
     FEATURE_DRIFT = "feature_drift"
     MODEL_DEGRADATION = "model_degradation"
+    VEHICLE_TAXONOMY = "vehicle_taxonomy"
 
 
 class MonitoringAlertSeverity(StrEnum):

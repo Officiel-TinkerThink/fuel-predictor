@@ -94,6 +94,11 @@
       "minimum": 1,
       "description": "Rows the model was fitted on. Distinct from test_set_size, which counts the held-out rows the metrics came from. Optional so packages built before this field still validate; the packager in this repository always emits it."
     },
+    "catalog_fingerprint": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 over the sorted (vehicle, type, group) triples of the fleet catalog the model was fitted under (ADR 0015). Optional: a package without it is of unknown taxonomy and never flagged as mismatched."
+    },
     "model_size_bytes": { "type": "integer", "minimum": 1 },
     "expected_memory_bytes": {
       "type": "integer",

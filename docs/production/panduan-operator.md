@@ -44,6 +44,9 @@ menahan percobaan berikutnya sebentar. Tunggu, lalu coba lagi.
 1. Menu **Buat Prediksi**.
 2. Isi:
    - **Kategori kendaraan** — pilih dari daftar.
+   - **Kendaraan** — unit yang akan dipakai, misalnya `VT 01` atau `Truck Crane 01`. Hanya ini
+     yang perlu Anda sebutkan; tipe dan grupnya (misalnya *Vacuum Truck*) dibaca aplikasi dari
+     katalog armada dan ditampilkan di hasil sebagai keterangan.
    - **Mode aktivitas** — `transport`, `lifting`, atau `transport_and_lifting`.
    - **Jam lifting** — wajib diisi kalau mode mencakup lifting.
    - **Jarak total (km)** — jarak seluruh perjalanan.
@@ -112,6 +115,11 @@ Menu **Pemantauan**. Bagian yang perlu Anda perhatikan:
 
 **Peringatan aktif.** Setiap peringatan menyebutkan tindakan yang perlu diambil. Ikuti
 kalimat "Tindakan:" — kalimat itu memang ditulis untuk dibaca tanpa latar belakang teknis.
+
+**Penggolongan kendaraan berubah.** Muncul bila katalog armada (tipe atau grup sebuah unit)
+diubah setelah model aktif dilatih, dan model itu memang memakai penggolongan tersebut. Prediksi
+tetap berjalan dengan penggolongan lama; tindakannya: latih kandidat baru dari data terbaru, lalu
+aktifkan ([bagian 6](#6-mengganti-model)).
 
 **Pergeseran fitur (drift).** Artinya pola operasi sekarang berbeda dari data yang dipakai
 melatih model. **Ini belum tentu kesalahan.** Rute baru atau musim yang berbeda memang membuat
