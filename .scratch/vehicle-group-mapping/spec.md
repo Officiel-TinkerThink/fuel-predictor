@@ -72,13 +72,20 @@ trained model.
    group-level estimate. This is the practical win and should be stated in the ADR's
    consequences.
 
-7. **Fallback order is fixed and shared.** Wherever the application looks for "the same kind of
+7. **The planner-facing contract does not change.** In: the unit, by name or alias, exactly as
+   today (web form select, `predict_fuel {"vehicle": ...}`). Out: the recommendation. Which level
+   of the lineage the model uses is invisible to the planner and never asked of them: no type or
+   group field on any form, no new MCP tool argument, no change to the tool's input schema.
+   The lineage is recorded on the prediction snapshot for traceability and shown in the details
+   block as information, nothing more.
+
+8. **Fallback order is fixed and shared.** Wherever the application looks for "the same kind of
    vehicle" — similar-operations ranking today, the model's pooling later — the order is
    same unit → same type → same group → same category. One place defines it.
 
 ## What to build
 
-- **ADR 0015** in `docs/adr/` recording decisions 1–6 (status Proposed → Accepted once merged).
+- **ADR 0015** in `docs/adr/` recording decisions 1–8 (status Proposed → Accepted once merged).
   Read ADR 0001, 0004, 0009, 0013 first; do not contradict them. Update `CONTEXT.md` with the
   terms *vehicle type* (tipe kendaraan) and *vehicle group* (grup kendaraan) and the four-level
   lineage down to *vehicle category*.
