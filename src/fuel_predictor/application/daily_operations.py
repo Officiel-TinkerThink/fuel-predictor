@@ -75,7 +75,7 @@ class CreateDailyOperation:
         if total_distance_km is None:
             raise DailyOperationValidationError(
                 "total_distance_km",
-                "Rute tidak dapat dihitung. Isi jarak total untuk melanjutkan.",
+                "Rute tidak dapat dihitung. Masukkan jarak tempuh manual untuk melanjutkan.",
             )
         operation = DailyOperation(
             operation_id=self._operation_id_factory(),

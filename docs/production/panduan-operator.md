@@ -55,10 +55,11 @@ dulu, lalu masuk lagi dengan yang baru.
      Nama yang tidak ada di katalog ditolak beserta usulan nama yang mirip.
    - **Mode aktivitas** — `transport`, `lifting`, atau `transport_and_lifting`.
    - **Jam lifting** — wajib diisi kalau mode mencakup lifting.
-   - **Jarak total (km)** — dihitung otomatis dari rute, jadi biasanya tidak ada yang perlu
-     diisi. Bila penyedia rute gagal menghitung, penyimpanan ditolak dan kolom jarak muncul
-     untuk diisi sendiri; estimasinya lalu ditandai memakai jarak manual. Pada instalasi tanpa
-     penyedia rute, kolom ini selalu ada dan wajib diisi.
+   - **Jarak tempuh** — dihitung otomatis dari rute, jadi biasanya tidak ada yang perlu diisi.
+     Bila penyedia rute gagal menghitung, penyimpanan ditolak dan kolom **Jarak tempuh manual**
+     muncul untuk diisi sendiri (seluruh perjalanan, termasuk kembali); estimasinya lalu
+     ditandai memakai jarak manual. Pada instalasi tanpa penyedia rute, kolom ini selalu ada
+     dan wajib diisi.
 3. Tekan **Simpan & buat estimasi**. Operasi tersimpan lebih dulu, jadi angkanya bisa
    ditelusuri kembali nanti, lalu estimasinya langsung ditampilkan.
 

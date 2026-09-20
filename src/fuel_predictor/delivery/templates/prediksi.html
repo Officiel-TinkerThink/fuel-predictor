@@ -34,10 +34,10 @@
          value was already typed), and the error summary points straight at it. #}
       {% set route_failed = (errors or []) | selectattr('field', 'equalto', 'total_distance_km') | list %}
       {% if route_failed or values.get('total_distance_km') %}
-      {{ ui.number_field('total_distance_km', 'Jarak total', 'km', values.get('total_distance_km', ''), hint='Rute tidak dapat dihitung oleh penyedia rute. Isi jarak total agar operasi tetap tersimpan; estimasi akan mencatat bahwa jaraknya dimasukkan manual.', errors=errors, required=true, min=0.01) }}
+      {{ ui.number_field('total_distance_km', 'Jarak tempuh manual', 'km', values.get('total_distance_km', ''), hint='Penyedia rute tidak dapat menghitung rute ini. Masukkan jarak tempuh seluruh perjalanan (termasuk kembali) agar operasi tetap tersimpan; estimasinya akan ditandai memakai jarak manual.', errors=errors, required=true, min=0.01) }}
       {% endif %}
       {% else %}
-      {{ ui.number_field('total_distance_km', 'Jarak total', 'km', values.get('total_distance_km', ''), hint='Penyedia rute belum dikonfigurasi pada instalasi ini, jadi jarak total wajib diisi secara manual.', errors=errors, required=true, min=0.01) }}
+      {{ ui.number_field('total_distance_km', 'Jarak tempuh', 'km', values.get('total_distance_km', ''), hint='Penyedia rute belum dikonfigurasi pada instalasi ini, jadi jarak tempuh seluruh perjalanan (termasuk kembali) wajib diisi sendiri.', errors=errors, required=true, min=0.01) }}
       {% endif %}
     </fieldset>
     <button type="submit">Simpan &amp; buat estimasi</button>
