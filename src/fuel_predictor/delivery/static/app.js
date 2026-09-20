@@ -216,6 +216,7 @@
       }
       var row = template.cloneNode(true);
       row.classList.remove("stop-row--dragging");
+      row.removeAttribute("style");
       Array.prototype.slice.call(row.querySelectorAll("select")).forEach(function (select) {
         select.selectedIndex = 0;
       });
@@ -256,12 +257,17 @@
 
     // Drag to reorder. Only the stops after the departure point move, so the
     // route always starts where the planner said it starts.
-    var dragged = null;
+    //
+    // The dragged row follows the pointer; the rows it passes slide out of the
+    // way. Markers are renumbered as it goes, but the map is redrawn once,
+    // when the row is dropped: reloading the embed on every pointer move is
+    // what made the old drag stutter.
+    var drag = null;
 
-    var playFlip = function (before) {
+    var slideRows = function (before) {
       rows().forEach(function (row) {
         var oldTop = before.get(row);
-        if (oldTop === undefined) {
+        if (row === drag.row || oldTop === undefined) {
           return;
         }
         var delta = oldTop - row.getBoundingClientRect().top;
@@ -270,66 +276,121 @@
           row.style.transform = "translateY(" + delta + "px)";
           requestAnimationFrame(function () {
             requestAnimationFrame(function () {
-              row.style.transition = "transform 550ms cubic-bezier(.4,0,.2,1)";
+              row.style.transition = "transform 160ms ease-out";
               row.style.transform = "";
+              window.setTimeout(function () {
+                row.style.transition = "";
+              }, 180);
             });
           });
         }
       });
     };
 
+    var renumber = function () {
+      rows().forEach(function (row, index) {
+        var marker = row.querySelector(".stop-marker");
+        if (marker) {
+          marker.textContent = index === 0 ? "A" : String(index);
+        }
+      });
+    };
+
     var moveTo = function (target) {
-      if (!dragged || target === dragged || target === sequence.firstElementChild) {
-        return;
-      }
       var before = new Map();
       rows().forEach(function (row) {
         before.set(row, row.getBoundingClientRect().top);
       });
-      var draggedIndex = rows().indexOf(dragged);
+      var draggedTop = before.get(drag.row);
+      var draggedIndex = rows().indexOf(drag.row);
       var targetIndex = rows().indexOf(target);
       if (targetIndex < draggedIndex) {
-        sequence.insertBefore(dragged, target);
+        sequence.insertBefore(drag.row, target);
       } else {
-        sequence.insertBefore(dragged, target.nextElementSibling);
+        sequence.insertBefore(drag.row, target.nextElementSibling);
       }
-      refreshStops();
-      playFlip(before);
+      // The row's slot moved under it; shift the origin so the row stays
+      // exactly where the pointer holds it, without a jump.
+      drag.originY += drag.row.getBoundingClientRect().top - draggedTop;
+      drag.row.style.transform = "translateY(" + (drag.lastY - drag.originY) + "px)";
+      renumber();
+      slideRows(before);
+      drag.moved = true;
     };
 
     var onPointerMove = function (event) {
-      if (!dragged) {
+      if (!drag) {
         return;
       }
+      drag.lastY = event.clientY;
+      drag.row.style.transform = "translateY(" + (event.clientY - drag.originY) + "px)";
+      // Swap only once the pointer has crossed the middle of a neighbour, so
+      // rows of different heights cannot flip back and forth on the boundary.
       var candidates = rows().slice(1);
       for (var index = 0; index < candidates.length; index += 1) {
-        var box = candidates[index].getBoundingClientRect();
-        if (event.clientY >= box.top && event.clientY <= box.bottom) {
-          moveTo(candidates[index]);
+        var candidate = candidates[index];
+        if (candidate === drag.row) {
+          continue;
+        }
+        var box = candidate.getBoundingClientRect();
+        var middle = box.top + box.height / 2;
+        var above = candidates.indexOf(candidate) < candidates.indexOf(drag.row);
+        if ((above && event.clientY < middle) || (!above && event.clientY > middle)) {
+          moveTo(candidate);
           return;
         }
       }
     };
 
     var endDrag = function () {
-      if (dragged) {
-        dragged.classList.remove("stop-row--dragging");
-        dragged = null;
-      }
       document.removeEventListener("pointermove", onPointerMove);
       document.removeEventListener("pointerup", endDrag);
+      document.removeEventListener("pointercancel", endDrag);
+      window.removeEventListener("blur", endDrag);
+      if (!drag) {
+        return;
+      }
+      var row = drag.row;
+      var moved = drag.moved;
+      drag = null;
+      row.classList.remove("stop-row--dragging");
+      // Settle into the slot, then clear the inline styles so the row is
+      // plain again for the next drag or a clone.
+      row.style.transition = "transform 120ms ease-out";
+      row.style.transform = "";
+      window.setTimeout(function () {
+        row.style.transition = "";
+      }, 140);
+      if (moved) {
+        refreshStops();
+      }
     };
 
     sequence.addEventListener("pointerdown", function (event) {
       var handle = event.target.closest('[data-action="drag"]');
-      if (!handle) {
+      if (!handle || event.button !== 0) {
         return;
       }
       event.preventDefault();
-      dragged = handle.closest(".stop-row");
-      dragged.classList.add("stop-row--dragging");
+      var row = handle.closest(".stop-row");
+      drag = { row: row, originY: event.clientY, lastY: event.clientY, moved: false };
+      row.classList.add("stop-row--dragging");
+      row.style.transition = "none";
+      // Capture the pointer so the release reaches us even when the button
+      // comes up outside the window; a drag that never ends left the row
+      // faded and reordering on every later mouse move.
+      if (handle.setPointerCapture) {
+        try {
+          handle.setPointerCapture(event.pointerId);
+        } catch (error) {
+          // Not capturable (synthetic event, unsupported browser): the
+          // document listeners below still end an ordinary drag.
+        }
+      }
       document.addEventListener("pointermove", onPointerMove);
       document.addEventListener("pointerup", endDrag);
+      document.addEventListener("pointercancel", endDrag);
+      window.addEventListener("blur", endDrag);
     });
 
     refreshStops();
