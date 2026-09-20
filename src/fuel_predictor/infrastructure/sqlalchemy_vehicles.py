@@ -1,12 +1,7 @@
 from sqlalchemy import select
 
-from fuel_predictor.application.vehicles import VehicleLineage, VehicleOption, lineage_from
+from fuel_predictor.application.vehicles import LineageIndex, VehicleLineage, VehicleOption
 from fuel_predictor.infrastructure.database import SessionFactory, VehicleRow
-
-
-def _keys(option: VehicleOption) -> tuple[str, ...]:
-    written = (option.name, *option.aliases)
-    return tuple(name.casefold().replace(" ", "") for name in written if name)
 
 
 class SqlAlchemyVehicleRepository:
@@ -34,14 +29,10 @@ class SqlAlchemyVehicleRepository:
     def find(self, name: str) -> VehicleOption | None:
         """Matched on any spelling the sheets use, so imported history resolves
         to one vehicle rather than fragmenting across its aliases."""
-        wanted = name.strip().casefold().replace(" ", "")
-        for option in self._all():
-            if wanted in _keys(option):
-                return option
-        return None
+        return LineageIndex(self._all()).find(name)
 
     def lineage_of(self, name: str | None) -> VehicleLineage:
-        return lineage_from(self.find(name) if name else None)
+        return LineageIndex(self._all()).lineage_of(name)
 
     def replace_all(self, vehicles: tuple[VehicleOption, ...]) -> int:
         """Reload from the sheet export, in one transaction.

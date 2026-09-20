@@ -89,3 +89,31 @@ def lineage_from(option: VehicleOption | None) -> VehicleLineage:
     unknown at every level. Never raises, because feature time is not the
     place to discover a catalog gap."""
     return option.lineage if option is not None else VehicleLineage.unknown()
+
+
+def written_name_key(name: str) -> str:
+    """How every spelling of a unit is matched: case folded, spaces dropped,
+    because the sheets write "VT 01", "VT01" and "vt 01" interchangeably."""
+    return name.strip().casefold().replace(" ", "")
+
+
+class LineageIndex:
+    """The catalog read once and answered from memory.
+
+    A trainer walks thousands of rows and an evaluation walks every case; a
+    catalog backed by a table must not be queried for each of them. Build
+    this from `catalog.options()` at the start of the batch and ask it instead.
+    """
+
+    def __init__(self, options: Iterable[VehicleOption]) -> None:
+        self._by_key: dict[str, VehicleOption] = {}
+        for option in options:
+            for written in (option.name, *option.aliases):
+                if written:
+                    self._by_key.setdefault(written_name_key(written), option)
+
+    def find(self, name: str) -> VehicleOption | None:
+        return self._by_key.get(written_name_key(name))
+
+    def lineage_of(self, name: str | None) -> VehicleLineage:
+        return lineage_from(self.find(name) if name else None)

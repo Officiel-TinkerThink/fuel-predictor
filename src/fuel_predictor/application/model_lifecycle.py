@@ -11,7 +11,7 @@ from fuel_predictor.application.actual_fuel import (
 )
 from fuel_predictor.application.baseline_predictions import BaselineModelStore
 from fuel_predictor.application.prediction_features import feature_values
-from fuel_predictor.application.vehicles import VehicleCatalog
+from fuel_predictor.application.vehicles import LineageIndex, VehicleCatalog
 from fuel_predictor.domain.daily_operation import VehicleCategory
 from fuel_predictor.domain.prediction import ModelLifecycleStatus, ModelVersion
 
@@ -202,10 +202,9 @@ def _outcomes_for_model(
     vehicle_catalog: VehicleCatalog,
 ) -> tuple[PredictionOutcome, ...]:
     outcomes = []
+    lineages = LineageIndex(vehicle_catalog.options())
     for case in cases:
-        features = feature_values(
-            case.operation, vehicle_catalog.lineage_of(case.operation.vehicle)
-        )
+        features = feature_values(case.operation, lineages.lineage_of(case.operation.vehicle))
         estimate = max(0.0, model_store.predict(model.artifact_uri, features))
         outcomes.append(
             PredictionOutcome(

@@ -11,7 +11,7 @@ from sklearn.pipeline import Pipeline
 
 from fuel_predictor.application.baseline_predictions import BaselineModelStore
 from fuel_predictor.application.prediction_features import FEATURE_VERSION, feature_values
-from fuel_predictor.application.vehicles import VehicleCatalog, catalog_fingerprint
+from fuel_predictor.application.vehicles import LineageIndex, VehicleCatalog, catalog_fingerprint
 from fuel_predictor.domain.historical_dataset import HistoricalDailyOperation
 
 
@@ -43,8 +43,12 @@ class MlflowBaselineModelStore(BaselineModelStore):
     def train(
         self, model_version_id: str, operations: Sequence[HistoricalDailyOperation]
     ) -> tuple[str, float]:
+        # The catalog once, not once per row: behind a table each lineage_of
+        # would be a query of its own.
+        options = self._vehicle_catalog.options()
+        lineages = LineageIndex(options)
         features = [
-            feature_values(item.operation, self._vehicle_catalog.lineage_of(item.operation.vehicle))
+            feature_values(item.operation, lineages.lineage_of(item.operation.vehicle))
             for item in operations
         ]
         labels = np.asarray([item.prepared_fuel_liters for item in operations])
@@ -70,7 +74,7 @@ class MlflowBaselineModelStore(BaselineModelStore):
                     "algorithm": "linear_regression",
                     "feature_version": FEATURE_VERSION,
                     "training_row_count": len(operations),
-                    "catalog_fingerprint": catalog_fingerprint(self._vehicle_catalog.options()),
+                    "catalog_fingerprint": catalog_fingerprint(options),
                 }
             )
             mlflow.log_metric("training_residual_p90_liters", uncertainty)

@@ -405,7 +405,8 @@ def _trained_app_with(fleet: _EditableFleet, tmp_path: Path) -> TestClient:
     candidate = client.post(
         f"/api/v1/dataset-versions/{dataset['dataset_version_id']}/baseline-candidates"
     ).json()
-    assert client.post(f"/api/v1/model-candidates/{candidate['model_version_id']}/promote")
+    promoted = client.post(f"/api/v1/model-candidates/{candidate['model_version_id']}/promote")
+    assert promoted.status_code == 200, promoted.text
     return client
 
 
