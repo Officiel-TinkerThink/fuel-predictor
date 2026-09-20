@@ -52,9 +52,9 @@
 <div class="field">
   <label for="field-{{ name }}">{{ label }}{% if required %} <span aria-hidden="true">*</span><span class="visually-hidden">wajib diisi</span>{% endif %}</label>
   <input id="field-{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value }}"
-    {% if required %}required{% endif %}
+    {% if required %} required{% endif %}
     {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
-    {% if message %}aria-invalid="true" aria-describedby="error-{{ name }}"{% elif hint %}aria-describedby="hint-{{ name }}"{% endif %}>
+    {% if message %} aria-invalid="true" aria-describedby="error-{{ name }}"{% elif hint %} aria-describedby="hint-{{ name }}"{% endif %}>
   {% if hint %}<span class="hint" id="hint-{{ name }}">{{ hint }}</span>{% endif %}
   {% if message %}<span class="field-error" id="error-{{ name }}">{{ message }}</span>{% endif %}
 </div>
@@ -67,8 +67,8 @@
   <div class="unit-input">
     <input id="field-{{ name }}" name="{{ name }}" type="number" inputmode="decimal" value="{{ value }}"
       step="{{ step }}"{% if min is not none %} min="{{ min }}"{% endif %}
-      {% if required %}required{% endif %}
-      {% if message %}aria-invalid="true" aria-describedby="error-{{ name }}"{% elif hint %}aria-describedby="hint-{{ name }}"{% endif %}>
+      {% if required %} required{% endif %}
+      {% if message %} aria-invalid="true" aria-describedby="error-{{ name }}"{% elif hint %} aria-describedby="hint-{{ name }}"{% endif %}>
     <span class="unit" aria-hidden="true">{{ unit }}</span>
   </div>
   <span class="visually-hidden">Satuan: {{ unit }}</span>
@@ -90,8 +90,8 @@
 <div class="field">
   <label for="field-{{ name }}">{{ label }}{% if required %} <span aria-hidden="true">*</span><span class="visually-hidden">wajib diisi</span>{% endif %}</label>
   <select id="field-{{ name }}" name="{{ name }}"
-    {% if required %}required{% endif %}
-    {% if message %}aria-invalid="true" aria-describedby="error-{{ name }}"{% elif hint %}aria-describedby="hint-{{ name }}"{% endif %}>
+    {% if required %} required{% endif %}
+    {% if message %} aria-invalid="true" aria-describedby="error-{{ name }}"{% elif hint %} aria-describedby="hint-{{ name }}"{% endif %}>
     {{ _options(options, value) }}
     {% for heading, grouped in (groups or []) %}
     <optgroup label="{{ heading }}">
@@ -109,8 +109,8 @@
 <div class="field">
   <label for="field-{{ name }}">{{ label }}</label>
   <input id="field-{{ name }}" name="{{ name }}" type="file" accept="{{ accept }}"
-    {% if required %}required{% endif %}
-    {% if message %}aria-invalid="true" aria-describedby="error-{{ name }}"{% elif hint %}aria-describedby="hint-{{ name }}"{% endif %}>
+    {% if required %} required{% endif %}
+    {% if message %} aria-invalid="true" aria-describedby="error-{{ name }}"{% elif hint %} aria-describedby="hint-{{ name }}"{% endif %}>
   {% if hint %}<span class="hint" id="hint-{{ name }}">{{ hint }}</span>{% endif %}
   {% if message %}<span class="field-error" id="error-{{ name }}">{{ message }}</span>{% endif %}
 </div>
