@@ -269,35 +269,84 @@ a:hover {
   font-weight: 600;
 }
 
+/* Who is signed in: initial, name and role, and a single sign-out glyph on
+   the right - no button, no label; the row reads as one line. */
 .app__account {
   margin-top: auto;
   border-top: 1px solid rgba(255, 255, 255, 0.2);
   padding-top: var(--space-4);
   font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.app__avatar {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--color-text-inverse);
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app__account-text {
+  flex: 1;
+  min-width: 0;
 }
 
 .app__account strong {
   display: block;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .app__account .role {
+  display: block;
   opacity: 0.75;
   font-size: 0.8rem;
 }
 
 .app__account-link {
-  display: block;
-  margin-top: var(--space-2);
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 0.84rem;
+  display: inline-block;
+  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
 }
 
 .app__account-link:hover {
   color: var(--color-text-inverse);
 }
 
-.app__account form {
-  margin-top: var(--space-3);
+.app__signout {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.app__signout-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+}
+
+.app__signout-button:hover,
+.app__signout-button:focus-visible {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--color-text-inverse);
+  outline: none;
 }
 
 /* Actions inside a table cell sit close together and never push the row apart. */
