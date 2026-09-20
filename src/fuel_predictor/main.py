@@ -84,7 +84,11 @@ from fuel_predictor.application.retained_package_activation import (
     ActivateRetainedModelPackage,
     RegisterIngestedPackage,
 )
-from fuel_predictor.application.routing import RoutingProvider, UnavailableRoutingProvider
+from fuel_predictor.application.routing import (
+    RoutePreviewProvider,
+    RoutingProvider,
+    UnavailableRoutingProvider,
+)
 from fuel_predictor.application.similar_operations import FindSimilarOperations
 from fuel_predictor.application.vehicles import VehicleCatalog
 from fuel_predictor.configuration import ApplicationSettings
@@ -217,6 +221,9 @@ def create_app(
     database_path: Path | None = None,
     database_url: str | None = None,
     routing_provider: RoutingProvider | None = None,
+    # A test seam like `routing_provider`: lets a test put the form in its
+    # routing-provider shape (a map, no up-front distance) without a Maps key.
+    route_preview: RoutePreviewProvider | None = None,
     location_catalog: LocationCatalog | None = None,
     vehicle_catalog: VehicleCatalog | None = None,
     bootstrap_administrator: tuple[str, str] | None = None,
@@ -256,6 +263,7 @@ def create_app(
         else None
     )
     resolved_routing_provider = routing_provider or maps_provider or UnavailableRoutingProvider()
+    resolved_route_preview = route_preview or maps_provider
     create_daily_operation = CreateDailyOperation(repository, resolved_routing_provider)
     get_daily_operation = GetDailyOperation(repository)
     prediction_history = SqlAlchemyPredictionHistoryRepository(session_factory)
@@ -433,7 +441,7 @@ def create_app(
         find_similar_operations=find_similar_operations,
         # The same provider the planner's page previews with, so an agent and
         # a human asking about the same stops get the same kilometres.
-        route_preview=maps_provider,
+        route_preview=resolved_route_preview,
     )
     if settings.mcp_privileged_tools_enabled:
         # Off by default. The plan gates validate/activate/rollback on the
@@ -528,7 +536,7 @@ def create_app(
             guard,
             resolved_location_catalog,
             resolved_vehicle_catalog,
-            maps_provider,
+            resolved_route_preview,
             find_similar_operations,
         )
     )

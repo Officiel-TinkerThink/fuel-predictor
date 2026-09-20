@@ -20,6 +20,11 @@ from fastapi.testclient import TestClient
 from httpx import Response
 
 from fuel_predictor.application.locations import LocationOption
+from fuel_predictor.application.routing import (
+    RoutePreview,
+    RoutingProviderUnavailable,
+    UnavailableRoutingProvider,
+)
 from fuel_predictor.main import create_app
 from tests.test_actual_fuel_outcomes import _train_baseline
 from tests.test_ordered_route_calculation import FakeLocationCatalog, RecordingRoutingProvider
@@ -119,3 +124,47 @@ def test_saving_without_an_active_model_still_records_the_operation_and_says_why
     text = response.text
     assert "Operasi harian tersimpan" in text
     assert "belum ada model aktif" in text.lower()
+
+
+class _PreviewOnly:
+    """A route preview exists (the map draws), so the form is in its
+    routing-provider shape; whether the distance call succeeds is separate."""
+
+    def preview_route(self, stop_sequence: tuple[str, ...]) -> RoutePreview:
+        raise RoutingProviderUnavailable("no preview in tests")
+
+
+def test_the_distance_is_asked_for_only_after_the_route_fails(tmp_path: Path) -> None:
+    """Nobody can know in advance that the route call will fail, so the form
+    does not ask for a fallback up front; the rejected save brings the field."""
+    app = create_app(
+        database_path=tmp_path / "operations.sqlite3",
+        routing_provider=UnavailableRoutingProvider(),
+        route_preview=_PreviewOnly(),
+        location_catalog=_CATALOG,
+    )
+    with TestClient(app) as client:
+        form = client.get("/prediksi")
+        assert form.status_code == 200
+        assert 'name="total_distance_km"' not in form.text
+
+        rejected = client.post(
+            "/operasi-harian",
+            content=urlencode(
+                [
+                    ("vehicle_category", "ANGBER"),
+                    ("activity_mode", "transport"),
+                    ("distance_source", "routing_provider"),
+                    ("stop_sequence", "POOL LIMAU"),
+                    ("stop_sequence", "KM-001"),
+                ]
+            ),
+            headers=_FORM,
+        )
+
+    assert rejected.status_code == 422, rejected.text
+    assert "Rute tidak dapat dihitung" in rejected.text
+    assert 'name="total_distance_km"' in rejected.text
+    assert 'href="#field-total_distance_km"' in rejected.text
+    # The stops typed so far survive the round trip.
+    assert 'value="POOL LIMAU"' in rejected.text and 'value="KM-001"' in rejected.text
