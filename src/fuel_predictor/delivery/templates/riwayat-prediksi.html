@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+<section class="card">
+  {% if entries %}
+  <div class="table-toolbar">
+    <div class="field">
+      <label for="saring-riwayat">Cari</label>
+      <input id="saring-riwayat" type="search" data-table-filter="daftar-riwayat"
+             aria-describedby="saring-riwayat-status" placeholder="Kendaraan, lokasi, atau ID">
+      <span class="hint" id="saring-riwayat-status" aria-live="polite"></span>
+    </div>
+  </div>
+  <ul class="row-list" id="daftar-riwayat">
+    {% for item in entries %}
+    <li>
+      <div class="row-list__main">
+        <strong><a href="/operasi-harian/{{ item.operation_id }}">{{ item.vehicle or item.vehicle_category.value }}{% if item.departure %} · {{ item.departure }} → {{ item.destination }}{% endif %}</a></strong>
+        <span class="row-list__meta">{{ item.predicted_at | waktu }} · {{ item.total_distance_km | angka }} km{% if item.stop_count > 2 %} · {{ item.stop_count - 2 }} pemberhentian di antaranya{% endif %}
+          · <code>{{ item.operation_id }}</code></span>
+      </div>
+      <span class="row-list__figure">{{ item.recommended_allocation_liters | angka }} L <span class="hint">dialokasikan</span></span>
+      {% if item.actual_fuel_liters is not none %}
+      <span class="row-list__figure">{{ ui.badge('Aktual ' ~ (item.actual_fuel_liters | angka) ~ ' L', 'success') }}</span>
+      {% else %}
+      <a class="button button--secondary button--small row-list__action" href="/bahan-bakar-aktual?operation_id={{ item.operation_id }}">Catat aktual</a>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% if more_limit and more_limit > limit %}
+  <div class="button-row"><a class="button button--secondary" href="/riwayat-prediksi?jumlah={{ more_limit }}">Tampilkan {{ more_limit }} terbaru</a>
+    <span class="hint">Sedang menampilkan {{ limit }} prediksi terbaru.</span></div>
+  {% elif entries | length >= limit %}
+  <p class="hint">Menampilkan {{ limit }} prediksi terbaru — batas maksimum halaman ini.</p>
+  {% endif %}
+  {% else %}
+  {{ ui.empty_state('Belum ada prediksi. Estimasi yang dibuat akan muncul di sini.', 'Buat prediksi', '/prediksi') }}
+  {% endif %}
+</section>
+
+{% endblock %}

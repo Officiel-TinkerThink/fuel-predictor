@@ -7,7 +7,11 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from fuel_predictor.application.actual_fuel import GetPredictionPerformance, RecordActualFuel
+from fuel_predictor.application.actual_fuel import (
+    GetPredictionPerformance,
+    ListOperationsAwaitingActualFuel,
+    RecordActualFuel,
+)
 from fuel_predictor.application.agent_credentials import (
     IssueAgentCredential,
     ListAgentClients,
@@ -38,12 +42,15 @@ from fuel_predictor.application.historical_datasets import (
     ImportHistoricalDataset,
 )
 from fuel_predictor.application.identity import (
+    ChangeOwnPassword,
+    ChangePassword,
     CreateUser,
     EnsureBootstrapAdministrator,
     ListAuditRecords,
     ListUsers,
     RecordAuditEvent,
     ResolveSession,
+    SetUserActivation,
     SignIn,
     SignOut,
 )
@@ -69,6 +76,10 @@ from fuel_predictor.application.model_promotion_policy import (
     PromotionPolicy,
 )
 from fuel_predictor.application.monitoring import GetMonitoringDashboard
+from fuel_predictor.application.prediction_history import (
+    GetLatestPrediction,
+    ListRecentPredictions,
+)
 from fuel_predictor.application.retained_package_activation import (
     ActivateRetainedModelPackage,
     RegisterIngestedPackage,
@@ -157,6 +168,9 @@ from fuel_predictor.infrastructure.sqlalchemy_monitoring_runs import (
     SqlAlchemyBackupRunRepository,
     SqlAlchemyMonitoringRunRepository,
 )
+from fuel_predictor.infrastructure.sqlalchemy_prediction_history import (
+    SqlAlchemyPredictionHistoryRepository,
+)
 from fuel_predictor.infrastructure.sqlalchemy_predictions import SqlAlchemyPredictionRepository
 from fuel_predictor.infrastructure.sqlalchemy_similar_operations import (
     SqlAlchemyHistoricalOperationSource,
@@ -244,6 +258,7 @@ def create_app(
     resolved_routing_provider = routing_provider or maps_provider or UnavailableRoutingProvider()
     create_daily_operation = CreateDailyOperation(repository, resolved_routing_provider)
     get_daily_operation = GetDailyOperation(repository)
+    prediction_history = SqlAlchemyPredictionHistoryRepository(session_factory)
     import_historical_dataset = ImportHistoricalDataset(
         SpreadsheetHistoricalDatasetSourceReader(),
         historical_dataset_repository,
@@ -287,6 +302,7 @@ def create_app(
         SpreadsheetHistoricalDatasetSourceReader(), record_actual_fuel
     )
     get_prediction_performance = GetPredictionPerformance(actual_fuel_repository)
+    list_awaiting_actual = ListOperationsAwaitingActualFuel(actual_fuel_repository)
     promote_candidate_model = PromoteCandidateModel(prediction_repository, prediction_repository)
     get_candidate_model_comparison = GetCandidateModelComparison(
         prediction_repository, actual_fuel_repository, model_store, resolved_vehicle_catalog
@@ -325,6 +341,11 @@ def create_app(
     )
     create_user = CreateUser(user_repository, password_hasher, record_audit)
     list_users = ListUsers(user_repository)
+    set_user_activation = SetUserActivation(user_repository, session_repository, record_audit)
+    change_password = ChangePassword(
+        user_repository, session_repository, password_hasher, record_audit
+    )
+    change_own_password = ChangeOwnPassword(user_repository, password_hasher, change_password)
     list_audit_records = ListAuditRecords(audit_repository)
     ensure_bootstrap_administrator = EnsureBootstrapAdministrator(user_repository, create_user)
     resolved_bootstrap_administrator = bootstrap_administrator or (
@@ -487,6 +508,9 @@ def create_app(
             get_model_governance_dashboard,
             create_user,
             list_users,
+            set_user_activation,
+            change_password,
+            change_own_password,
             list_audit_records,
             guard,
             monitoring_run_repository,
@@ -498,6 +522,9 @@ def create_app(
         build_prediction_pages_router(
             create_daily_operation,
             generate_fuel_prediction,
+            get_daily_operation,
+            ListRecentPredictions(prediction_history),
+            GetLatestPrediction(prediction_history),
             guard,
             resolved_location_catalog,
             resolved_vehicle_catalog,
@@ -514,6 +541,7 @@ def create_app(
         build_actual_fuel_pages_router(
             record_actual_fuel,
             bulk_actual_fuel,
+            list_awaiting_actual,
             guard,
         )
     )

@@ -8,15 +8,20 @@
 {% endif %}
 
 <section class="card">
-  <p><a href="/api/v1/bulk-actual-fuel/template?format=xlsx">Unduh template Excel</a> ·
-    <a href="/api/v1/bulk-actual-fuel/template?format=csv">Unduh template CSV</a></p>
+  {{ ui.steps(['Unduh template', 'Isi ID operasi dan liter aktual', 'Unggah'], 3) }}
+  <div class="button-row" style="margin-top: 0">
+    <a class="button button--secondary" href="/api/v1/bulk-actual-fuel/template?format=xlsx">Unduh template Excel</a>
+    <a class="button button--secondary" href="/api/v1/bulk-actual-fuel/template?format=csv">Unduh template CSV</a>
+  </div>
+  <p class="hint">Kolom wajib: ID operasi dan bahan bakar aktual (L). Sumber pengukuran opsional.
+    ID operasi ada di Riwayat Prediksi atau di berkas hasil prediksi massal.</p>
   <form method="post" action="/bahan-bakar-aktual-massal" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    {{ ui.file_field('file', 'Berkas bahan bakar aktual', '.csv,.xlsx', hint='Kolom wajib: ID operasi dan bahan bakar aktual (L). Sumber pengukuran opsional.') }}
+    {{ ui.file_field('file', 'Berkas bahan bakar aktual', '.csv,.xlsx', hint='CSV atau Excel .xlsx yang diisi dari template di atas.') }}
     <button type="submit">Validasi dan simpan aktual</button>
   </form>
 </section>
 
-<p><a href="/bahan-bakar-aktual">Catat satu operasi</a></p>
+<div class="button-row"><a class="button button--secondary" href="/bahan-bakar-aktual">Catat satu operasi saja</a></div>
 
 {% endblock %}

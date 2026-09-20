@@ -165,6 +165,26 @@ a:hover {
   opacity: 0.75;
 }
 
+.app__masthead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* Only a phone needs a menu button; the sidebar is always open on a desk.
+   Scoped under .app__nav so it outranks the button[type="button"] rule. */
+.app__nav .nav-toggle {
+  display: none;
+}
+
+.app__drawer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  flex: 1;
+}
+
 .nav-group {
   margin-bottom: var(--space-4);
 }
@@ -176,6 +196,48 @@ a:hover {
   opacity: 0.7;
   margin: 0 0 var(--space-2);
   padding-left: var(--space-3);
+}
+
+/* Folding groups: the title doubles as the control, with a chevron that
+   turns when open. The chevron replaces the browser's default triangle. */
+.nav-group--folding > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: var(--space-3);
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-1);
+  border-radius: var(--radius-md);
+  opacity: 0.85;
+}
+
+.nav-group--folding > summary::-webkit-details-marker {
+  display: none;
+}
+
+.nav-group--folding > summary::after {
+  content: "";
+  width: 0.45em;
+  height: 0.45em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+
+.nav-group--folding[open] > summary::after {
+  transform: rotate(45deg);
+}
+
+.nav-group--folding > summary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  opacity: 1;
+}
+
+.nav-group--folding > summary:focus-visible {
+  outline-color: var(--color-text-inverse);
 }
 
 .nav-list {
@@ -223,8 +285,25 @@ a:hover {
   font-size: 0.8rem;
 }
 
+.app__account-link {
+  display: block;
+  margin-top: var(--space-2);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.84rem;
+}
+
+.app__account-link:hover {
+  color: var(--color-text-inverse);
+}
+
 .app__account form {
   margin-top: var(--space-3);
+}
+
+/* Actions inside a table cell sit close together and never push the row apart. */
+.button-row--tight {
+  margin-top: 0;
+  gap: var(--space-2);
 }
 
 .app__main {
@@ -303,6 +382,12 @@ a:hover {
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
 }
 
+/* Inside a card the tiles share the card's width, so they may sit tighter
+   than on the page - four fit in a row instead of wrapping three and one. */
+.card .grid--metrics {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
 .grid--two {
   grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
 }
@@ -315,6 +400,24 @@ a:hover {
   border-radius: var(--radius-lg);
   padding: var(--space-4);
   box-shadow: var(--shadow-sm);
+}
+
+.metric--link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.metric--link:hover {
+  color: inherit;
+  border-color: var(--color-brand);
+  box-shadow: var(--shadow-md);
+}
+
+.metric--link .metric__label::after {
+  content: " \203A";
+  color: var(--color-brand);
 }
 
 .metric__label {
@@ -483,22 +586,51 @@ legend {
   margin-bottom: var(--space-1);
 }
 
+/* Secondary explanation anywhere on a page; under a field it hugs the control. */
+.hint {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+/* A checkbox reads as one line: box, then its meaning, then the code. */
+.field--checkbox label {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  font-weight: 500;
+}
+
+.field--checkbox label code {
+  color: var(--color-text-muted);
+  margin-left: var(--space-1);
+}
+
 .field .hint {
   display: block;
   font-size: 0.84rem;
-  color: var(--color-text-muted);
   margin-top: var(--space-1);
 }
 
-.field .field-error {
+.field-error {
   display: block;
   font-size: 0.86rem;
   color: var(--color-danger);
   font-weight: 600;
+}
+
+.field .field-error {
   margin-top: var(--space-1);
 }
 
+/* A fieldset that carries an error (the stop list) shows it the way a single
+   control does: a red edge, not just red text somewhere inside. */
+.stops-field:has(> .field-error) {
+  border-color: var(--color-danger);
+  border-style: solid;
+}
+
 input[type="text"],
+input[type="search"],
 input[type="number"],
 input[type="password"],
 input[type="date"],
@@ -571,28 +703,43 @@ button[type="submit"]:hover {
 /* Repeated with the element selector so a <button type="submit"> can be
    secondary too; the attribute selector above would otherwise outrank it. */
 .button--secondary,
-button[type="submit"].button--secondary {
+button[type="submit"].button--secondary,
+button[type="button"].button--secondary {
   background: var(--color-surface);
   color: var(--color-brand-strong);
   border-color: var(--color-border-strong);
 }
 
 .button--secondary:hover,
-button[type="submit"].button--secondary:hover {
+button[type="submit"].button--secondary:hover,
+button[type="button"].button--secondary:hover {
   background: var(--color-surface-sunken);
   color: var(--color-brand-strong);
 }
 
+/* tone='primary' on the confirm macro: the ordinary brand button. */
+.button--primary {
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+}
+
 .button--danger,
-button[type="submit"].button--danger {
+button[type="submit"].button--danger,
+button[type="button"].button--danger {
   background: var(--color-danger);
   border-color: var(--color-danger);
 }
 
 .button--danger:hover,
-button[type="submit"].button--danger:hover {
+button[type="submit"].button--danger:hover,
+button[type="button"].button--danger:hover {
   background: #7d1c19;
   border-color: #7d1c19;
+}
+
+.button--small {
+  padding: 0.3rem var(--space-3);
+  font-size: 0.86rem;
 }
 
 .button-row {
@@ -632,6 +779,9 @@ button[type="submit"].button--danger:hover {
 /* ---------- Tables ---------- */
 
 .table-wrap {
+  /* Anchors absolutely-positioned children (visually-hidden header text) so
+     they scroll with the table instead of widening the page. */
+  position: relative;
   overflow-x: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -672,10 +822,46 @@ tbody tr:last-child td {
   border-bottom: 0;
 }
 
+/* The row whose id is already in the form, so the eye lands on the right one. */
+tbody tr.is-selected td {
+  background: var(--color-brand-soft);
+}
+
+.mono-id {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* In a table the wrapper scrolls sideways, so an id stays on one line rather
+   than breaking into three; in a row list it must wrap for the phone. */
+table .mono-id {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
 td.numeric,
 th.numeric {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+/* Recorded details under an audit row: small, muted, one item per line. */
+.detail-inline {
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  font-size: 0.84rem;
+  overflow-wrap: anywhere;
+}
+
+/* Numbered setup walkthrough on the overview. */
+.setup-steps {
+  margin: 0;
+  padding-left: 1.4rem;
+  display: grid;
+  gap: var(--space-2);
+  max-width: var(--measure);
 }
 
 .table-toolbar {
@@ -691,8 +877,20 @@ th.numeric {
   max-width: 20rem;
 }
 
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.quick-actions .button {
+  flex: 1 1 14rem;
+  padding-block: var(--space-4);
+  font-size: 1.02rem;
+}
+
 .empty-state {
-  padding: var(--space-6);
+  padding: var(--space-4);
   text-align: center;
   color: var(--color-text-muted);
 }
@@ -700,6 +898,114 @@ th.numeric {
 .empty-state p {
   margin-left: auto;
   margin-right: auto;
+}
+
+/* One card per kind of alert, with the action once underneath. */
+.alert-group {
+  border-left: 5px solid var(--color-warning);
+}
+
+.alert-group--critical {
+  border-left-color: var(--color-danger);
+}
+
+.alert-group__items {
+  margin: 0 0 var(--space-3);
+  padding-left: 1.2rem;
+  max-width: var(--measure);
+}
+
+.alert-group__items li {
+  margin-bottom: var(--space-1);
+  overflow-wrap: anywhere;
+}
+
+.alert-group__action {
+  max-width: var(--measure);
+}
+
+/* All-clear checklist: each line carries a tick so it reads as "done", not
+   as a list of things to do. */
+.check-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.check-list li {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.check-list li::before {
+  content: "\2713";
+  flex: 0 0 auto;
+  color: var(--color-success);
+  font-weight: 700;
+}
+
+/* ---------- Row list ----------
+   A list of things to act on, one per row: a few facts and a button. Unlike
+   a table it wraps on a phone instead of scrolling sideways. */
+.row-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+}
+
+.row-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.row-list li:last-child {
+  border-bottom: 0;
+}
+
+/* display:flex above would otherwise outrank the browser's [hidden] rule and
+   keep filtered-out rows on screen. */
+.row-list li[hidden] {
+  display: none;
+}
+
+.row-list li.is-selected {
+  background: var(--color-brand-soft);
+}
+
+.row-list__main {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.row-list__main strong {
+  display: block;
+}
+
+.row-list__meta {
+  font-size: 0.86rem;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.row-list__figure {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.row-list__action {
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 /* ---------- Step indicator ---------- */
@@ -776,6 +1082,11 @@ th.numeric {
   margin: 0;
   font-weight: 550;
   overflow-wrap: anywhere;
+}
+
+.detail-list dd .button--small {
+  margin-left: var(--space-2);
+  vertical-align: middle;
 }
 
 details.technical {
@@ -1034,6 +1345,29 @@ dialog::backdrop {
   }
 }
 
+/* On a phone the location picker needs the width more than "Hapus" does, so
+   the button drops under the picker instead of squeezing it to a few letters. */
+@media (max-width: 40rem) {
+  .stop-row {
+    display: grid;
+    grid-template-columns: 18px 24px minmax(0, 1fr);
+    column-gap: 10px;
+    row-gap: 6px;
+  }
+
+  .stop-row .stop-controls {
+    grid-column: 3;
+    width: auto;
+    margin-top: 0;
+    justify-self: end;
+  }
+
+  .stop-row .stop-controls button {
+    width: auto;
+    height: 34px;
+  }
+}
+
 .stop-controls {
   display: flex;
   gap: var(--space-1);
@@ -1096,28 +1430,54 @@ dialog::backdrop {
   width: 100%;
 }
 
-/* ---------- Chart with table equivalent ---------- */
+/* ---------- Trend chart (table equivalent sits beside it) ---------- */
 
-.sparkline {
+.trend-chart {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 12rem;
+  max-height: 16rem;
+  margin-bottom: var(--space-4);
 }
 
-.sparkline .axis {
+.trend-chart__axis {
   stroke: var(--color-border-strong);
   stroke-width: 1;
 }
 
-.sparkline .series {
+.trend-chart__threshold {
+  stroke: var(--color-warning);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+}
+
+.trend-chart__series {
   fill: none;
   stroke: var(--color-brand);
   stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
 }
 
-.sparkline .point {
-  fill: var(--color-brand-strong);
+.trend-chart__point {
+  fill: var(--color-brand);
+  stroke: var(--color-surface-raised);
+  stroke-width: 2;
+}
+
+.trend-chart__point--alert {
+  fill: var(--color-danger);
+}
+
+.trend-chart__text {
+  font-size: 11px;
+  fill: var(--color-text-muted);
+}
+
+.trend-chart__value {
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--color-text);
 }
 
 /* ---------- Responsive ---------- */
@@ -1132,18 +1492,38 @@ dialog::backdrop {
     gap: var(--space-4);
   }
 
-  .app__nav nav {
+  .app__nav .nav-toggle {
+    display: inline-flex;
+    padding: 0.4rem var(--space-4);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+
+  .nav-toggle[aria-expanded="true"] {
+    background: var(--color-surface);
+    color: var(--color-brand-strong);
+  }
+
+  /* Folded behind the Menu button, but only when the script that unfolds it
+     is present (html.js); otherwise every link stays visible. */
+  html.js .app__drawer {
+    display: none;
+  }
+
+  html.js .app__nav--open .app__drawer {
     display: flex;
-    flex-wrap: wrap;
+  }
+
+  .app__drawer {
     gap: var(--space-4);
   }
 
   .nav-group {
-    margin-bottom: 0;
+    margin-bottom: var(--space-3);
   }
 
   .app__account {
-    margin-top: var(--space-3);
+    margin-top: var(--space-2);
   }
 
   .app__main {

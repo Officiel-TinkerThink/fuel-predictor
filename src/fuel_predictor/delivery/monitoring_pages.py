@@ -7,6 +7,7 @@ only names one "Kinerja Model" item and the two features serve the same
 question (is the model performing well) at different time horizons.
 """
 
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Request
@@ -19,8 +20,15 @@ from fuel_predictor.application.monitoring_runs import (
     MonitoringFreshness,
     MonitoringRunRepository,
 )
-from fuel_predictor.delivery.rendering import render
+from fuel_predictor.delivery.rendering import format_datetime, format_decimal, render
 from fuel_predictor.delivery.security import SecurityGuard
+from fuel_predictor.domain.alert_remediation import remediation_for, urgency_for
+from fuel_predictor.domain.monitoring import (
+    MonitoringAlert,
+    MonitoringAlertKind,
+    MonitoringAlertSeverity,
+    RollingErrorPoint,
+)
 
 
 def build_monitoring_pages_router(
@@ -58,6 +66,7 @@ def build_monitoring_pages_router(
                 eyebrow="PEMANTAUAN LOKAL",
                 page_lead="Status layanan, kualitas data, dan hal yang perlu perhatian.",
                 active_alerts=dashboard.active_alerts,
+                alert_groups=group_alerts(dashboard.active_alerts),
                 unresolved_data_quality_issue_count=dashboard.unresolved_data_quality_issue_count,
                 unresolved_data_quality_issues=dashboard.unresolved_data_quality_issues,
                 dataset_validation_summaries=dashboard.dataset_validation_summaries,
@@ -106,6 +115,9 @@ def build_monitoring_pages_router(
                 page_lead="Kinerja model aktif diukur dari bahan bakar aktual yang tercocokkan.",
                 performance=performance,
                 rolling_error_trend=dashboard.rolling_error_trend,
+                trend_chart=trend_chart(
+                    dashboard.rolling_error_trend, dashboard.degradation_mae_threshold_liters
+                ),
                 rolling_error_window=dashboard.rolling_error_window,
                 category_degradation=dashboard.category_degradation,
                 degradation_mae_threshold_liters=dashboard.degradation_mae_threshold_liters,
@@ -113,3 +125,101 @@ def build_monitoring_pages_router(
         )
 
     return router
+
+
+# The kinds in words. The code stays out of sight: nobody acts on "missing_actual".
+ALERT_KIND_LABELS: dict[MonitoringAlertKind, str] = {
+    MonitoringAlertKind.DATA_QUALITY: "Baris impor perlu diperbaiki",
+    MonitoringAlertKind.MISSING_ACTUAL: "Aktual belum dicatat",
+    MonitoringAlertKind.FEATURE_DRIFT: "Operasi berbeda dari data latih",
+    MonitoringAlertKind.MODEL_DEGRADATION: "Kinerja model menurun",
+}
+
+
+def alert_kind_label(kind: MonitoringAlertKind) -> str:
+    return ALERT_KIND_LABELS.get(kind, kind.value)
+
+
+def group_alerts(alerts: Sequence[MonitoringAlert]) -> list[dict[str, object]]:
+    """One group per kind, worst severity first, carrying the remediation
+    once - three overdue operations are one thing to do, not three."""
+    groups: dict[MonitoringAlertKind, list[MonitoringAlert]] = {}
+    for alert in alerts:
+        groups.setdefault(alert.kind, []).append(alert)
+    ordered = sorted(
+        groups.items(),
+        key=lambda item: (
+            0 if any(a.severity.value == "critical" for a in item[1]) else 1,
+            ALERT_KIND_LABELS.get(item[0], item[0].value),
+        ),
+    )
+    result: list[dict[str, object]] = []
+    for kind, members in ordered:
+        critical = any(a.severity.value == "critical" for a in members)
+        worst = MonitoringAlertSeverity.CRITICAL if critical else MonitoringAlertSeverity.WARNING
+        result.append(
+            {
+                "label": alert_kind_label(kind),
+                "critical": critical,
+                "urgency": urgency_for(worst),
+                "remediation": remediation_for(kind),
+                "messages": [a.message for a in members],
+            }
+        )
+    return result
+
+
+# Plot geometry for the rolling-error line: a fixed viewBox the CSS scales,
+# with room on the left for the value labels and below for the dates.
+_CHART_WIDTH = 640
+_CHART_HEIGHT = 200
+_PAD_LEFT, _PAD_RIGHT, _PAD_TOP, _PAD_BOTTOM = 48, 16, 12, 28
+
+
+def trend_chart(
+    points: Sequence[RollingErrorPoint], threshold_liters: float
+) -> dict[str, object] | None:
+    """Coordinates for the rolling-MAE line, or None when there is nothing to draw.
+
+    The y range always includes zero and the degradation threshold, so the line
+    sits against the level that matters rather than filling the box whatever
+    its values; the page's table remains the exact reading of the same points.
+    """
+    if not points:
+        return None
+    top = max(max(point.mae_liters for point in points), threshold_liters) * 1.15 or 1.0
+    plot_width = _CHART_WIDTH - _PAD_LEFT - _PAD_RIGHT
+    plot_height = _CHART_HEIGHT - _PAD_TOP - _PAD_BOTTOM
+    step = plot_width / (len(points) - 1) if len(points) > 1 else 0
+
+    def y_of(value: float) -> float:
+        return round(_PAD_TOP + plot_height - (value / top) * plot_height, 1)
+
+    plotted = [
+        {
+            "x": round(_PAD_LEFT + index * step, 1) if step else _PAD_LEFT + plot_width / 2,
+            "y": y_of(point.mae_liters),
+            "label": (
+                f"{format_datetime(point.observed_at)}: MAE {format_decimal(point.mae_liters)} L "
+                f"({point.matched_record_count} data cocok)"
+            ),
+            "value": format_decimal(point.mae_liters),
+        }
+        for index, point in enumerate(points)
+    ]
+    return {
+        "width": _CHART_WIDTH,
+        "height": _CHART_HEIGHT,
+        "points": plotted,
+        "path": " ".join(f"{p['x']},{p['y']}" for p in plotted),
+        "baseline_y": y_of(0),
+        "threshold_y": y_of(threshold_liters),
+        "threshold_label": f"Ambang {format_decimal(threshold_liters)} L",
+        "top_label": f"{format_decimal(round(top, 1))} L",
+        "first_date": format_datetime(points[0].observed_at)[:10],
+        "last_date": format_datetime(points[-1].observed_at)[:10],
+        "left": _PAD_LEFT,
+        "right": _CHART_WIDTH - _PAD_RIGHT,
+        "bottom": _CHART_HEIGHT - _PAD_BOTTOM,
+        "above_threshold": points[-1].mae_liters > threshold_liters,
+    }

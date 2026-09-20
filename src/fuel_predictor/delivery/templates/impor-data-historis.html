@@ -8,14 +8,18 @@
 {% endif %}
 
 <section class="card">
-  {{ ui.banner('info', 'Untuk demo', 'Unduh data contoh yang siap diimpor.', 'Unduh data contoh', '/contoh-data-riwayat.csv') }}
+  {{ ui.steps(['Siapkan riwayat', 'Unggah', 'Latih kandidat', 'Promosikan'], 2) }}
+  <p class="hint">Satu baris per operasi yang sudah terjadi, beserta BBM yang disiapkan untuknya.
+    Kolom wajib: kategori ANGBER, mode aktivitas, jarak total, bahan bakar disiapkan, dan
+    sumber jarak. Kolom jam lifting diterima dengan variasi header.
+    Belum punya berkasnya? <a href="/contoh-data-riwayat.csv">Unduh data contoh</a> yang siap diimpor.</p>
   <form method="post" action="/impor-data-historis" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    {{ ui.file_field('file', 'Berkas historis', '.csv,.xlsx', hint='Kolom wajib: kategori ANGBER, mode aktivitas, jarak total, bahan bakar disiapkan, dan sumber jarak. Kolom jam lifting diterima dengan variasi header.') }}
+    {{ ui.file_field('file', 'Berkas historis', '.csv,.xlsx', hint='CSV atau Excel .xlsx.') }}
     <button type="submit">Validasi dan buat versi dataset</button>
   </form>
 </section>
 
-<p><a href="/prediksi-operasi-massal">Prediksi operasi massal</a> · <a href="/prediksi">Kembali ke operasi harian</a></p>
+<div class="button-row"><a class="button button--secondary" href="/pengelolaan-model">Ke Pengelolaan Model</a></div>
 
 {% endblock %}

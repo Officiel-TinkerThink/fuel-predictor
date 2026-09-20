@@ -10,6 +10,75 @@
     summary.focus();
   }
 
+  // Phone-width menu. The <html class="js"> hook in base.html is what hides
+  // the drawer, so a browser with no script never loses its navigation.
+  var navToggle = document.querySelector(".nav-toggle");
+  var navHeader = document.querySelector(".app__nav");
+  if (navToggle && navHeader) {
+    navToggle.addEventListener("click", function () {
+      var open = navHeader.classList.toggle("app__nav--open");
+      navToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+  }
+
+  // Folding sidebar groups. The server opens the group that holds the current
+  // page; this remembers the ones the person unfolded themselves so they stay
+  // open on the next page. Storage can be missing or refused, hence the guards.
+  var NAV_STATE = "nav-groups-open";
+  var readOpenGroups = function () {
+    try {
+      return JSON.parse(window.localStorage.getItem(NAV_STATE) || "[]");
+    } catch (error) {
+      return [];
+    }
+  };
+  var openGroups = readOpenGroups();
+  document.querySelectorAll("details[data-nav-group]").forEach(function (group) {
+    var name = group.getAttribute("data-nav-group");
+    if (openGroups.indexOf(name) !== -1) {
+      group.open = true;
+    }
+    group.addEventListener("toggle", function () {
+      var remembered = readOpenGroups().filter(function (item) {
+        return item !== name;
+      });
+      if (group.open) {
+        remembered.push(name);
+      }
+      try {
+        window.localStorage.setItem(NAV_STATE, JSON.stringify(remembered));
+      } catch (error) {
+        // Private mode or storage disabled: the menu still works, it just forgets.
+      }
+    });
+  });
+
+  // Arriving with the operation already chosen (a "Catat" link), the only
+  // thing left to type is the litres, so start there.
+  var chosenOperation = document.querySelector("#field-operation_id");
+  var actualLitres = document.querySelector("#field-actual_fuel_liters");
+  if (chosenOperation && actualLitres && chosenOperation.value && !actualLitres.value && !summary) {
+    actualLitres.focus();
+  }
+
+  // Copy buttons stay hidden until the script runs, since without it they
+  // could not do anything. The label confirms briefly, then returns.
+  document.querySelectorAll("[data-copy]").forEach(function (button) {
+    if (!navigator.clipboard) {
+      return;
+    }
+    button.hidden = false;
+    var label = button.textContent;
+    button.addEventListener("click", function () {
+      navigator.clipboard.writeText(button.getAttribute("data-copy")).then(function () {
+        button.textContent = "Tersalin";
+        window.setTimeout(function () {
+          button.textContent = label;
+        }, 1500);
+      });
+    });
+  });
+
   // Confirmation dialogs. Without JavaScript the dialog stays in the page and its
   // form still submits, so the destructive action remains reachable.
   document.addEventListener("click", function (event) {
@@ -38,26 +107,51 @@
     }
   });
 
-  // Client-side table filtering. The server already returns the full table.
-  document.querySelectorAll("[data-table-filter]").forEach(function (input) {
-    var table = document.getElementById(input.getAttribute("data-table-filter"));
-    if (!table) {
+  // Client-side filtering of a table or a row list. The server already
+  // returns everything; every control naming the same target narrows it
+  // together: a text input matches the row's text, a control with
+  // data-filter-attribute matches that attribute on the row exactly.
+  var filterTargets = {};
+  document.querySelectorAll("[data-table-filter]").forEach(function (control) {
+    var id = control.getAttribute("data-table-filter");
+    (filterTargets[id] = filterTargets[id] || []).push(control);
+  });
+  Object.keys(filterTargets).forEach(function (id) {
+    var target = document.getElementById(id);
+    if (!target) {
       return;
     }
-    var status = document.getElementById(input.getAttribute("aria-describedby"));
-    input.addEventListener("input", function () {
-      var needle = input.value.trim().toLowerCase();
+    var controls = filterTargets[id];
+    var status = document.getElementById(controls[0].getAttribute("aria-describedby"));
+    var rowSelector = target.tagName === "UL" ? "li" : "tbody tr";
+    var apply = function () {
+      var active = false;
       var shown = 0;
-      table.querySelectorAll("tbody tr").forEach(function (row) {
-        var match = needle === "" || row.textContent.toLowerCase().indexOf(needle) !== -1;
+      target.querySelectorAll(rowSelector).forEach(function (row) {
+        var match = controls.every(function (control) {
+          var value = control.value.trim();
+          if (value === "") {
+            return true;
+          }
+          active = true;
+          var attribute = control.getAttribute("data-filter-attribute");
+          if (attribute) {
+            return row.getAttribute(attribute) === value;
+          }
+          return row.textContent.toLowerCase().indexOf(value.toLowerCase()) !== -1;
+        });
         row.hidden = !match;
         if (match) {
           shown += 1;
         }
       });
       if (status) {
-        status.textContent = needle === "" ? "" : shown + " baris cocok.";
+        status.textContent = active ? shown + " baris cocok." : "";
       }
+    };
+    controls.forEach(function (control) {
+      control.addEventListener("input", apply);
+      control.addEventListener("change", apply);
     });
   });
 
@@ -95,6 +189,44 @@
     syncLifting();
   }
 
+  // The same unit leaves the same pool most days. Remember the last vehicle
+  // and departure point in this browser and offer them when the form is
+  // otherwise empty; a value the server sent back (a rejected submission)
+  // always wins. Storage can be missing or refused, hence the guards.
+  var operationForm = document.querySelector('form[action="/operasi-harian"]');
+  if (operationForm) {
+    var LAST_PLAN = "last-operation-plan";
+    var vehicleSelect = operationForm.querySelector("#field-vehicle");
+    var departureInput = operationForm.querySelector('input[name="stop_sequence"]');
+    try {
+      var remembered = JSON.parse(window.localStorage.getItem(LAST_PLAN) || "null");
+      if (remembered) {
+        if (vehicleSelect && !vehicleSelect.value && remembered.vehicle) {
+          vehicleSelect.value = remembered.vehicle;
+        }
+        if (departureInput && !departureInput.value && remembered.departure) {
+          departureInput.value = remembered.departure;
+          departureInput.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      }
+    } catch (error) {
+      // Nothing remembered; the form simply starts empty.
+    }
+    operationForm.addEventListener("submit", function () {
+      try {
+        window.localStorage.setItem(
+          LAST_PLAN,
+          JSON.stringify({
+            vehicle: vehicleSelect ? vehicleSelect.value : "",
+            departure: departureInput ? departureInput.value.trim() : "",
+          })
+        );
+      } catch (error) {
+        // Private mode or storage disabled: next time starts empty again.
+      }
+    });
+  }
+
   // Ordered stop-sequence rows: add, remove, and drag to reorder.
   // Without JS the rows the server rendered are still submittable as-is; the
   // departure point is always the first row and never moves.
@@ -130,33 +262,50 @@
     // this panel any more: a second, differently-sourced number next to the
     // map's own badge read as a discrepancy, not extra information.
     var mapImage = document.querySelector("#route-map");
+    var mapCanvas = document.querySelector("#route-canvas");
     var statusLine = document.querySelector("#route-status");
 
-    var chosenStops = function () {
+    // Stops are typed into inputs backed by one shared <datalist>; the
+    // coordinates live on its options, read once into a map keyed the same
+    // way the server matches names (trimmed, case-insensitive).
+    var coordinates = {};
+    var catalog = document.querySelector("#katalog-lokasi");
+    if (catalog) {
+      Array.prototype.slice.call(catalog.options).forEach(function (option) {
+        var lat = parseFloat(option.dataset.lat);
+        var lon = parseFloat(option.dataset.lon);
+        if (isFinite(lat) && isFinite(lon)) {
+          coordinates[option.value.trim().toLowerCase()] = [lat, lon];
+        }
+      });
+    }
+
+    var stopInputs = function () {
       return rows()
         .map(function (row) {
-          return row.querySelector('select[name="stop_sequence"]');
+          return row.querySelector('input[name="stop_sequence"]');
         })
-        .filter(function (select) {
-          return select && select.value;
+        .filter(function (input) {
+          return input;
+        });
+    };
+
+    var chosenStops = function () {
+      return stopInputs()
+        .map(function (input) {
+          return input.value.trim();
         })
-        .map(function (select) {
-          return select.value;
+        .filter(function (value) {
+          return value;
         });
     };
 
     var chosenPoints = function () {
       var points = [];
-      rows().forEach(function (row) {
-        var select = row.querySelector('select[name="stop_sequence"]');
-        var option = select && select.selectedOptions ? select.selectedOptions[0] : null;
-        if (!option || !option.dataset || option.dataset.lat === undefined) {
-          return;
-        }
-        var lat = parseFloat(option.dataset.lat);
-        var lon = parseFloat(option.dataset.lon);
-        if (isFinite(lat) && isFinite(lon)) {
-          points.push([lat, lon]);
+      chosenStops().forEach(function (name) {
+        var point = coordinates[name.toLowerCase()];
+        if (point) {
+          points.push(point);
         }
       });
       return points;
@@ -183,6 +332,9 @@
         mapImage.hidden = true;
         mapImage.removeAttribute("src");
       }
+      if (mapCanvas) {
+        mapCanvas.hidden = true;
+      }
       if (statusLine) {
         statusLine.textContent = message;
       }
@@ -198,6 +350,9 @@
 
       // The map itself needs no API key: Google's embed draws the route from
       // the coordinates the location catalog already gave us.
+      if (mapCanvas) {
+        mapCanvas.hidden = false;
+      }
       if (mapImage) {
         mapImage.src = embedUrl(points);
         mapImage.hidden = false;
@@ -217,8 +372,8 @@
       var row = template.cloneNode(true);
       row.classList.remove("stop-row--dragging");
       row.removeAttribute("style");
-      Array.prototype.slice.call(row.querySelectorAll("select")).forEach(function (select) {
-        select.selectedIndex = 0;
+      Array.prototype.slice.call(row.querySelectorAll("input")).forEach(function (input) {
+        input.value = "";
       });
       return row;
     };
@@ -230,9 +385,9 @@
       }
       sequence.appendChild(row);
       refreshStops();
-      var select = row.querySelector('select[name="stop_sequence"]');
-      if (select) {
-        select.focus();
+      var input = row.querySelector('input[name="stop_sequence"]');
+      if (input) {
+        input.focus();
       }
     });
 
@@ -249,7 +404,9 @@
       refreshStops();
     });
 
-    sequence.addEventListener("change", function (event) {
+    // "input" rather than "change": picking from the datalist and typing a
+    // full name both fire it, so the map follows without waiting for blur.
+    sequence.addEventListener("input", function (event) {
       if (event.target.name === "stop_sequence") {
         updateRouteDistance();
       }
@@ -396,20 +553,4 @@
     refreshStops();
   }
 
-  // The fallback distance only applies when the planner is entering it by
-  // hand; a route-sourced distance is computed from the stops instead.
-  var distanceSource = document.querySelector("#field-distance_source");
-  var manualDistance = document.querySelector("#manual-distance");
-  if (distanceSource && manualDistance) {
-    var syncDistanceSource = function () {
-      var manual = distanceSource.value === "manual";
-      manualDistance.hidden = !manual;
-      var input = manualDistance.querySelector("input");
-      if (input) {
-        input.required = manual;
-      }
-    };
-    distanceSource.addEventListener("change", syncDistanceSource);
-    syncDistanceSource();
-  }
 })();

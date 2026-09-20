@@ -3,6 +3,29 @@
 
 {% block content %}
 
+{% if setup_needed %}
+<section class="card">
+  <h2>Siapkan model pertama</h2>
+  <p>Belum ada model yang bisa membuat estimasi. Tiga langkah, semuanya manual:</p>
+  <ol class="setup-steps">
+    <li><a href="/impor-data-historis">Impor data historis</a> — riwayat operasi beserta BBM yang disiapkan.</li>
+    <li>Latih kandidat baseline dari dataset itu (tombolnya muncul setelah impor).</li>
+    <li>{% if candidate_count %}<a href="/pengelolaan-model">Promosikan kandidat</a> — {{ candidate_count }} kandidat sudah menunggu.{% else %}Promosikan kandidat di <a href="/pengelolaan-model">Pengelolaan Model</a>.{% endif %}</li>
+  </ol>
+</section>
+{% endif %}
+
+{% if quick_actions %}
+<section class="card">
+  <h2>Mulai dari sini</h2>
+  <div class="quick-actions">
+    {% for action in quick_actions %}
+    <a class="button{% if not loop.first %} button--secondary{% endif %}" href="{{ action.href }}">{{ action.label }}</a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
 {% if is_healthy %}
 {{ ui.banner('success', 'Layanan berjalan normal', 'Tidak ada peringatan kritis saat ini.') }}
 {% else %}
@@ -11,28 +34,28 @@
 
 <div class="grid grid--metrics">
   {% if governance.active_model %}
-  {{ ui.metric('Model aktif', 'v' ~ governance.active_model.version, context=governance.active_model.algorithm) }}
+  {{ ui.metric('Model aktif', 'v' ~ governance.active_model.version, context=governance.active_model.algorithm, href='/pengelolaan-model') }}
   {% else %}
-  {{ ui.metric('Model aktif', 'Belum ada', unavailable=true, context='Latih dan promosikan kandidat baseline.') }}
+  {{ ui.metric('Model aktif', 'Belum ada', unavailable=true, context='Latih dan promosikan kandidat baseline.', href='/pengelolaan-model') }}
   {% endif %}
 
   {% if governance.active_performance and governance.active_performance.mae_liters is not none %}
-  {{ ui.metric('MAE model aktif', governance.active_performance.mae_liters | angka, unit='L', context=governance.active_performance.matched_record_count ~ ' pasangan tercocokkan') }}
+  {{ ui.metric('Selisih rata-rata prediksi', governance.active_performance.mae_liters | angka, unit='L', context='MAE dari ' ~ governance.active_performance.matched_record_count ~ ' operasi dengan aktual', href='/pemantauan/kinerja-model') }}
   {% else %}
-  {{ ui.metric('MAE model aktif', 'Belum cukup data', unavailable=true, context='Perlu hasil aktual yang tercocokkan dengan prediksi.') }}
+  {{ ui.metric('Selisih rata-rata prediksi', 'Belum cukup data', unavailable=true, context='Perlu hasil aktual yang tercocokkan dengan prediksi.', href='/pemantauan/kinerja-model') }}
   {% endif %}
 
   {% if monitoring.feature_drift.status == 'ready' %}
     {% if monitoring.feature_drift.drift_share is not none and monitoring.feature_drift.drift_share >= monitoring.feature_drift.threshold %}
-    {{ ui.metric('Pergeseran data', (monitoring.feature_drift.drift_share * 100) | angka(0) ~ '%', context='Melewati ambang ' ~ (monitoring.feature_drift.threshold * 100) | angka(0) ~ '%') }}
+    {{ ui.metric('Pergeseran data', (monitoring.feature_drift.drift_share * 100) | angka(0) ~ '%', context='Melewati ambang ' ~ (monitoring.feature_drift.threshold * 100) | angka(0) ~ '%', href='/pemantauan/pergeseran-data') }}
     {% else %}
-    {{ ui.metric('Pergeseran data', 'Stabil', context='Di bawah ambang pemantauan') }}
+    {{ ui.metric('Pergeseran data', 'Stabil', context='Di bawah ambang pemantauan', href='/pemantauan/pergeseran-data') }}
     {% endif %}
   {% else %}
-  {{ ui.metric('Pergeseran data', 'Belum tersedia', unavailable=true, context='Menunggu data referensi dan data terkini.') }}
+  {{ ui.metric('Pergeseran data', 'Belum tersedia', unavailable=true, context='Menunggu data referensi dan data terkini.', href='/pemantauan/pergeseran-data') }}
   {% endif %}
 
-  {{ ui.metric('Aktual BBM belum tercatat', monitoring.missing_actual_prediction_count, context='Lebih dari ' ~ monitoring.missing_actual_after_days ~ ' hari sejak prediksi') }}
+  {{ ui.metric('Aktual BBM belum tercatat', monitoring.missing_actual_prediction_count, context='Lebih dari ' ~ monitoring.missing_actual_after_days ~ ' hari sejak prediksi', href='/bahan-bakar-aktual') }}
 </div>
 
 <div class="grid grid--two">
@@ -45,7 +68,7 @@
         <tbody>
           {% for alert in monitoring.active_alerts %}
           <tr>
-            <td>{{ alert.kind.value }}</td>
+            <td>{{ alert_kind_labels.get(alert.kind, alert.kind.value) }}</td>
             <td>{{ alert.message }}</td>
             <td>{{ ui.badge('Kritis' if alert.severity.value == 'critical' else 'Peringatan', 'danger' if alert.severity.value == 'critical' else 'warning') }}</td>
           </tr>

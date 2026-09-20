@@ -87,7 +87,7 @@ def test_indonesian_form_creates_daily_operation_with_same_behavior(tmp_path: Pa
     assert form.status_code == 200
     assert "Buat Operasi Harian" in form.text
     assert response.status_code == 201
-    assert "Operasi harian berhasil dibuat" in response.text
+    assert "Operasi harian tersimpan" in response.text
     assert "ANGBER" in response.text
     assert "Angkut dan lifting" in response.text
     assert "43,2 km" in response.text

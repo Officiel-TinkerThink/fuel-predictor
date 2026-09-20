@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from fuel_predictor.application.actual_fuel import (
     ActualFuelAlreadyRecordedError,
     ModelEvaluationCase,
+    OperationAwaitingActualFuel,
     PredictionOutcome,
 )
 from fuel_predictor.domain.actual_fuel import (
@@ -21,6 +22,7 @@ from fuel_predictor.infrastructure.database import (
     PredictionRow,
     SessionFactory,
 )
+from fuel_predictor.infrastructure.sqlalchemy_daily_operations import stops_for
 
 
 class SqlAlchemyActualFuelRepository:
@@ -44,6 +46,51 @@ class SqlAlchemyActualFuelRepository:
                 )
         except IntegrityError as error:
             raise ActualFuelAlreadyRecordedError() from error
+
+    def get_operations_awaiting_actual(self, limit: int) -> tuple[OperationAwaitingActualFuel, ...]:
+        latest_prediction_id = (
+            select(PredictionRow.prediction_id)
+            .where(PredictionRow.operation_id == DailyOperationRow.operation_id)
+            .order_by(PredictionRow.created_at.desc(), PredictionRow.prediction_id.desc())
+            .limit(1)
+            .correlate(DailyOperationRow)
+            .scalar_subquery()
+        )
+        with self._session_factory() as session:
+            rows = session.execute(
+                select(
+                    DailyOperationRow.operation_id,
+                    DailyOperationRow.vehicle,
+                    DailyOperationRow.vehicle_category,
+                    PredictionRow.created_at,
+                    PredictionRow.estimated_fuel_requirement_liters,
+                    PredictionRow.recommended_allocation_liters,
+                )
+                .select_from(DailyOperationRow)
+                .join(PredictionRow, PredictionRow.prediction_id == latest_prediction_id)
+                .outerjoin(
+                    ActualFuelRecordRow,
+                    ActualFuelRecordRow.operation_id == DailyOperationRow.operation_id,
+                )
+                .where(ActualFuelRecordRow.operation_id.is_(None))
+                .order_by(PredictionRow.created_at.desc(), PredictionRow.prediction_id.desc())
+                .limit(limit)
+            ).all()
+            stops = stops_for(session, [row.operation_id for row in rows])
+        return tuple(
+            OperationAwaitingActualFuel(
+                operation_id=row.operation_id,
+                predicted_at=row.created_at,
+                vehicle=row.vehicle,
+                vehicle_category=VehicleCategory(row.vehicle_category),
+                departure=stops[row.operation_id][0] if stops[row.operation_id] else None,
+                destination=stops[row.operation_id][-1] if stops[row.operation_id] else None,
+                stop_count=len(stops[row.operation_id]),
+                estimated_fuel_requirement_liters=row.estimated_fuel_requirement_liters,
+                recommended_allocation_liters=row.recommended_allocation_liters,
+            )
+            for row in rows
+        )
 
     def get_prediction_outcomes(self) -> tuple[PredictionOutcome, ...]:
         latest_prediction_id = (
@@ -87,6 +134,7 @@ class SqlAlchemyActualFuelRepository:
                 select(
                     DailyOperationRow.operation_id,
                     DailyOperationRow.vehicle_category,
+                    DailyOperationRow.vehicle,
                     DailyOperationRow.activity_mode,
                     DailyOperationRow.lifting_hours,
                     DailyOperationRow.total_distance_km,
@@ -100,16 +148,22 @@ class SqlAlchemyActualFuelRepository:
                     DailyOperationRow.operation_id == ActualFuelRecordRow.operation_id,
                 )
             ).all()
+            # The stops come along because DailyOperation's own invariant
+            # requires them for a manual-fallback route: without them every
+            # such operation failed to rebuild and took the overview down.
+            stops = stops_for(session, [row.operation_id for row in rows])
         return tuple(
             ModelEvaluationCase(
                 operation=DailyOperation(
                     operation_id=row.operation_id,
                     vehicle_category=VehicleCategory(row.vehicle_category),
+                    vehicle=row.vehicle,
                     activity_mode=ActivityMode(row.activity_mode),
                     lifting_hours=row.lifting_hours,
                     total_distance_km=row.total_distance_km,
                     distance_source=DistanceSource(row.distance_source),
                     route_distance_manual_fallback=row.route_distance_manual_fallback,
+                    stop_sequence=tuple(stops[row.operation_id]),
                 ),
                 actual_fuel_liters=row.actual_fuel_liters,
             )

@@ -5,8 +5,9 @@
 <span class="badge badge--{{ tone }}">{{ text }}</span>
 {%- endmacro %}
 
-{% macro metric(label, value, unit=none, context=none, unavailable=false) -%}
-<div class="metric">
+{% macro metric(label, value, unit=none, context=none, unavailable=false, href=none) -%}
+{# With href the whole tile is the link to the page that explains the number. #}
+<{{ 'a' if href else 'div' }} class="metric{% if href %} metric--link{% endif %}"{% if href %} href="{{ href }}"{% endif %}>
   <p class="metric__label">{{ label }}</p>
   {% if unavailable %}
   <p class="metric__value metric__value--unavailable">{{ value }}</p>
@@ -14,7 +15,7 @@
   <p class="metric__value">{{ value }}{% if unit %}<span class="metric__unit">{{ unit }}</span>{% endif %}</p>
   {% endif %}
   {% if context %}<p class="metric__context">{{ context }}</p>{% endif %}
-</div>
+</{{ 'a' if href else 'div' }}>
 {%- endmacro %}
 
 {% macro banner(tone, title, body, action=none, action_href=none) -%}
@@ -76,15 +77,26 @@
 </div>
 {%- endmacro %}
 
-{% macro select_field(name, label, options, value='', hint=none, errors=none, required=false) -%}
+{% macro _options(options, value) -%}
+{% for option_value, option_label in options %}
+    <option value="{{ option_value }}"{% if option_value == value %} selected{% endif %}>{{ option_label }}</option>
+{% endfor %}
+{%- endmacro %}
+
+{# `groups`: optional list of (heading, options) rendered as <optgroup>s after
+   the flat `options`, so a placeholder can come first. #}
+{% macro select_field(name, label, options, value='', hint=none, errors=none, required=false, groups=none) -%}
 {% set message = _error_for(errors, name) | trim %}
 <div class="field">
   <label for="field-{{ name }}">{{ label }}{% if required %} <span aria-hidden="true">*</span><span class="visually-hidden">wajib diisi</span>{% endif %}</label>
   <select id="field-{{ name }}" name="{{ name }}"
     {% if required %}required{% endif %}
     {% if message %}aria-invalid="true" aria-describedby="error-{{ name }}"{% elif hint %}aria-describedby="hint-{{ name }}"{% endif %}>
-    {% for option_value, option_label in options %}
-    <option value="{{ option_value }}"{% if option_value == value %} selected{% endif %}>{{ option_label }}</option>
+    {{ _options(options, value) }}
+    {% for heading, grouped in (groups or []) %}
+    <optgroup label="{{ heading }}">
+    {{ _options(grouped, value) }}
+    </optgroup>
     {% endfor %}
   </select>
   {% if hint %}<span class="hint" id="hint-{{ name }}">{{ hint }}</span>{% endif %}
@@ -104,18 +116,29 @@
 </div>
 {%- endmacro %}
 
-{% macro stop_sequence_field(values, location_options, route_preview_available=false) -%}
-{% set known_names = location_options | map(attribute='name') | list %}
+{% macro stop_sequence_field(values, location_options, route_preview_available=false, errors=none) -%}
 {% set stop_values = values or ['', ''] %}
-<fieldset class="stops-field" aria-describedby="stops-help">
+{% set message = _error_for(errors, 'stop_sequence') | trim %}
+{# An empty map is just a large grey box, so the canvas stays hidden until
+   there is a route to draw; app.js shows it once two stops are chosen. #}
+{% set has_route = (stop_values | select | list | length) >= 2 %}
+<fieldset class="stops-field" id="field-stop_sequence" tabindex="-1"
+          aria-describedby="stops-help{% if message %} error-stop_sequence{% endif %}">
   <legend>Rute &amp; pemberhentian</legend>
-  <p id="stops-help" class="hint">Masukkan titik keberangkatan dan pemberhentian setelahnya.
+  <p id="stops-help" class="hint">Ketik nama lokasi; daftar akan menyaring sambil Anda mengetik.
     Urutan terakhir adalah tujuan akhir.</p>
+  {% if message %}<p class="field-error" id="error-stop_sequence">{{ message }}</p>{% endif %}
+  {# One catalogue for every stop row, instead of a thousand <option>s per row. #}
+  <datalist id="katalog-lokasi">
+    {% for option in location_options %}
+    <option value="{{ option.name }}" data-lat="{{ option.latitude }}" data-lon="{{ option.longitude }}"></option>
+    {% endfor %}
+  </datalist>
   <div class="stops-layout">
     <aside class="route-preview" aria-label="Pratinjau rute"
            {% if route_preview_available %}data-route-preview="on"{% endif %}>
       <p class="route-preview__title">PETA RUTE — PRATINJAU</p>
-      <div class="route-preview__canvas">
+      <div class="route-preview__canvas" id="route-canvas"{% if not has_route %} hidden{% endif %}>
         <iframe id="route-map" title="Rute Google Maps melalui pemberhentian yang dipilih"
                 loading="lazy" referrerpolicy="no-referrer-when-downgrade" hidden></iframe>
       </div>
@@ -134,15 +157,9 @@
           <div class="stop-fields">
             <div class="field">
               <label>{% if loop.first %}Titik keberangkatan{% else %}Pemberhentian{% endif %}
-                <select name="stop_sequence" autocomplete="off">
-                  <option value="">{% if loop.first %}Lokasi keberangkatan{% else %}Lokasi pemberhentian{% endif %}</option>
-                  {% for option in location_options %}
-                  <option value="{{ option.name }}" data-lat="{{ option.latitude }}" data-lon="{{ option.longitude }}"{% if option.name == value %} selected{% endif %}>{{ option.name }}</option>
-                  {% endfor %}
-                  {% if value and value not in known_names %}
-                  <option value="{{ value }}" selected>{{ value }}</option>
-                  {% endif %}
-                </select>
+                <input type="text" name="stop_sequence" list="katalog-lokasi" value="{{ value }}"
+                       autocomplete="off" spellcheck="false"
+                       placeholder="{% if loop.first %}Ketik lokasi keberangkatan{% else %}Ketik lokasi pemberhentian{% endif %}">
               </label>
             </div>
           </div>
@@ -202,14 +219,25 @@
 </dialog>
 {%- endmacro %}
 
-{% macro sparkline(points, label) -%}
-{% if points %}
-<svg class="sparkline" viewBox="0 0 320 110" role="img" aria-label="{{ label }}" preserveAspectRatio="none">
-  <line class="axis" x1="0" y1="100" x2="320" y2="100"></line>
-  <polyline class="series" points="{{ points | map(attribute='svg_point') | join(' ') }}"></polyline>
-  {% for point in points %}
-  <circle class="point" cx="{{ point.x }}" cy="{{ point.y }}" r="2.5"></circle>
+{% macro trend_chart(chart, label) -%}
+{# One series over time, drawn against its threshold. Text uses the text
+   tokens; only the line and the markers carry the series colour. Each point
+   has a <title>, so hovering reads the exact value; the table next to it is
+   the accessible equivalent. #}
+<svg class="trend-chart" viewBox="0 0 {{ chart.width }} {{ chart.height }}" role="img" aria-label="{{ label }}">
+  <line class="trend-chart__axis" x1="{{ chart.left }}" y1="{{ chart.baseline_y }}" x2="{{ chart.right }}" y2="{{ chart.baseline_y }}"></line>
+  <line class="trend-chart__threshold" x1="{{ chart.left }}" y1="{{ chart.threshold_y }}" x2="{{ chart.right }}" y2="{{ chart.threshold_y }}"></line>
+  <text class="trend-chart__text" x="{{ chart.right }}" y="{{ chart.threshold_y - 5 }}" text-anchor="end">{{ chart.threshold_label }}</text>
+  <text class="trend-chart__text" x="{{ chart.left - 6 }}" y="{{ chart.baseline_y + 4 }}" text-anchor="end">0 L</text>
+  <text class="trend-chart__text" x="{{ chart.left - 6 }}" y="16" text-anchor="end">{{ chart.top_label }}</text>
+  <text class="trend-chart__text" x="{{ chart.left }}" y="{{ chart.height - 8 }}">{{ chart.first_date }}</text>
+  <text class="trend-chart__text" x="{{ chart.right }}" y="{{ chart.height - 8 }}" text-anchor="end">{{ chart.last_date }}</text>
+  <polyline class="trend-chart__series" points="{{ chart.path }}"></polyline>
+  {% for point in chart.points %}
+  <circle class="trend-chart__point{% if loop.last and chart.above_threshold %} trend-chart__point--alert{% endif %}" cx="{{ point.x }}" cy="{{ point.y }}" r="4"><title>{{ point.label }}</title></circle>
+  {% if loop.first or loop.last %}
+  <text class="trend-chart__value" x="{{ point.x + (8 if loop.first else -8) }}" y="{{ point.y - 10 }}" text-anchor="{{ 'start' if loop.first else 'end' }}">{{ point.value }} L</text>
+  {% endif %}
   {% endfor %}
 </svg>
-{% endif %}
 {%- endmacro %}

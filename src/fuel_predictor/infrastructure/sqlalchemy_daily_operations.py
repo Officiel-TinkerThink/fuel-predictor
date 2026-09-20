@@ -1,4 +1,8 @@
+from collections import defaultdict
+from collections.abc import Sequence
+
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from fuel_predictor.domain.daily_operation import (
     ActivityMode,
@@ -77,6 +81,24 @@ class SqlAlchemyDailyOperationRepository:
                     raw_values=source.raw_values,
                 )
             )
+
+
+def stops_for(session: Session, operation_ids: Sequence[str]) -> dict[str, list[str]]:
+    """Stop names per operation, in planner order, for a batch of operations.
+
+    Readers that rebuild a DailyOperation from a row need these: the domain
+    invariant for a manual-fallback route requires a stop sequence.
+    """
+    stops: dict[str, list[str]] = defaultdict(list)
+    if not operation_ids:
+        return stops
+    for stop in session.execute(
+        select(DailyOperationStopRow.operation_id, DailyOperationStopRow.location_name)
+        .where(DailyOperationStopRow.operation_id.in_(list(operation_ids)))
+        .order_by(DailyOperationStopRow.operation_id, DailyOperationStopRow.stop_position)
+    ):
+        stops[stop.operation_id].append(stop.location_name)
+    return stops
 
 
 def _to_domain(

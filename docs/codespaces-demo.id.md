@@ -99,17 +99,17 @@ dipakai di tempat lain.
 
 Buka **Buat Prediksi** pada menu samping, lalu isi satu operasi:
 
-1. **Kendaraan** — pilih `Prime Mover — Truck`. Daftarnya adalah armada
+1. **Kendaraan** — pilih `Prime Mover` (di bawah kelompok *Truck*). Daftarnya adalah armada
    sebenarnya: 23 unit dalam kelompok Crane, Truck, Forklift, dan Vacuum Truck.
 2. **Aktivitas** — pilih `Angkut dan lifting`. Kolom **Jam lifting** akan
    muncul; isi `3.5`.
-3. **Rute & pemberhentian** — pilih `POOL LIMAU` sebagai titik keberangkatan
+3. **Rute & pemberhentian** — ketik `POOL LIMAU` sebagai titik keberangkatan
    dan `KM-001` sebagai pemberhentian. Peta di atasnya menggambar rute di
    antara keduanya. Gunakan **+ Tambah pemberhentian** untuk menambah
    pemberhentian, dan seret pegangan ⠿ untuk mengubah urutannya.
-4. **Sumber jarak** — pilih `Input manual` lalu isi `64` km. (Alasan jarak
-   otomatis belum tersedia pada demo ini ada di bagian *Batasan* di bawah.)
-5. Tekan **Simpan operasi harian**, lalu **Buat estimasi kebutuhan BBM**.
+4. **Jarak total** — isi `64` km. (Alasan jarak otomatis belum tersedia pada
+   demo ini ada di bagian *Batasan* di bawah.)
+5. Tekan **Simpan & buat estimasi** — estimasinya langsung tampil.
 
 Hasilnya kira-kira **51 L estimasi** dengan **56 L alokasi rekomendasi** —
 rekomendasi menambahkan margin aman 5 L.
@@ -138,7 +138,7 @@ dilaporkan:
 
 - **Jarak jalan belum tersedia.** Peta rutenya tergambar, tetapi angka
   kilometernya membutuhkan kunci Google Maps API yang tidak ikut disertakan.
-  Pilih `Input manual` dan ketik jaraknya. Untuk mengaktifkannya, isi kunci di
+  Ketik jaraknya di kolom **Jarak total**. Untuk mengaktifkannya, isi kunci di
   `.env` sebagai `FUEL_PREDICTOR_GOOGLE_MAPS_API_KEY=…` lalu jalankan ulang
   dengan `docker compose up -d`.
 - **Pilihan kendaraan belum mengubah estimasi.** Sembilan perjalanan contoh

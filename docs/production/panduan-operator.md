@@ -35,6 +35,11 @@ suatu menu, berarti peran akun Anda memang tidak mencakupnya — itu bukan kerus
 **Kalau kata sandi ditolak:** periksa huruf besar/kecil. Setelah beberapa kali gagal, sistem
 menahan percobaan berikutnya sebentar. Tunggu, lalu coba lagi.
 
+**Lupa kata sandi:** minta administrator mengatur ulang — di menu **Pengguna**, tombol
+**Atur ulang kata sandi** pada baris akun Anda. **Mengganti kata sandi sendiri:** tautan
+**Ubah kata sandi** di bawah nama Anda pada menu samping; Anda diminta kata sandi yang lama
+dulu, lalu masuk lagi dengan yang baru.
+
 ![Halaman Masuk: kartu berisi kolom nama pengguna, kata sandi, dan tombol Masuk.](images/01-masuk.png)
 
 ---
@@ -43,18 +48,17 @@ menahan percobaan berikutnya sebentar. Tunggu, lalu coba lagi.
 
 1. Menu **Buat Prediksi**.
 2. Isi:
-   - **Kategori kendaraan** — pilih dari daftar.
-   - **Kendaraan** — unit yang akan dipakai, misalnya `VT 01` atau `Truck Crane 01`. Hanya ini
+   - **Kendaraan** — pilih unit dari daftar, misalnya `VT 01` atau `Truck Crane 01`. Hanya ini
      yang perlu Anda sebutkan; tipe dan grupnya (misalnya *Vacuum Truck*) dibaca aplikasi dari
      katalog armada dan ditampilkan di hasil sebagai keterangan.
+   - **Rute & pemberhentian** — ketik nama lokasi; daftar menyaring sambil Anda mengetik.
+     Nama yang tidak ada di katalog ditolak beserta usulan nama yang mirip.
    - **Mode aktivitas** — `transport`, `lifting`, atau `transport_and_lifting`.
    - **Jam lifting** — wajib diisi kalau mode mencakup lifting.
-   - **Jarak total (km)** — jarak seluruh perjalanan.
-   - **Sumber jarak** — `manual` kalau Anda mengetik sendiri.
-3. Tekan **Simpan operasi harian**. Operasi tersimpan lebih dulu, jadi angkanya bisa
-   ditelusuri kembali nanti.
-4. Di halaman berikutnya (*Operasi harian tersimpan*), tekan
-   **Buat estimasi kebutuhan BBM**.
+   - **Jarak total (km)** — jarak seluruh perjalanan. Dihitung otomatis dari rute bila
+     penyedia rute tersedia; kalau tidak, ketik sendiri.
+3. Tekan **Simpan & buat estimasi**. Operasi tersimpan lebih dulu, jadi angkanya bisa
+   ditelusuri kembali nanti, lalu estimasinya langsung ditampilkan.
 
 Hasilnya menampilkan:
 
@@ -65,9 +69,13 @@ Hasilnya menampilkan:
 | Rentang ketidakpastian | Batas bawah dan atas yang masuk akal. Rentang lebar = model kurang yakin. |
 | Model yang dipakai | Versi model yang menghitung. Berguna saat menelusuri angka lama. |
 
-![Hasil prediksi: estimasi kebutuhan BBM 26,28 L, alokasi rekomendasi 31,28 L, rentang ketidakpastian 24,97–27,59 L, beserta ID operasi, model, dan kalimat kebijakan keselamatan.](images/02-hasil-prediksi.png)
+![Hasil estimasi: tiga kotak angka — alokasi rekomendasi, estimasi kebutuhan BBM, rentang ketidakpastian — lalu ID operasi dengan tombol Salin ID, kendaraan, aktivitas, rute, jarak total, dan tombol Catat BBM aktual untuk operasi ini.](images/02-hasil-prediksi.png)
 
 Perhatikan kotak hijau di atas: nilai ini **estimasi bahan bakar disiapkan**, bukan konsumsi aktual yang telah diverifikasi. Kalimat itu selalu ikut ditampilkan.
+
+Estimasi yang sudah dibuat bisa dibuka lagi kapan saja dari menu **Riwayat Prediksi**:
+daftarnya terbaru di atas, ada kotak pencarian, dan tiap baris menunjukkan apakah BBM aktualnya
+sudah dicatat.
 
 **Kalau muncul "Belum ada kandidat baseline terlatih":** belum ada model yang aktif.
 Hubungi penanggung jawab model — lihat [bagian 6](#6-mengganti-model).
@@ -89,7 +97,7 @@ mencakup lifting`.
 Perbaiki baris tersebut di berkas asli, lalu unggah ulang. Baris yang sudah berhasil tidak
 terhitung dua kali.
 
-![Hasil unggah massal: 4 baris berhasil diprediksi, 3 baris dikarantina dengan alasan masing-masing — jam lifting kosong, jarak bukan angka, dan jarak bernilai negatif.](images/03-unggah-massal.png)
+![Hasil unggah massal: 4 baris berhasil diprediksi dengan tombol Unduh hasil (CSV), dan laporan koreksi berisi 3 baris dikarantina dengan alasan masing-masing — jam lifting kosong, jarak bukan angka, dan jarak bernilai negatif.](images/03-unggah-massal.png)
 
 Kolom **Alasan** pada Laporan koreksi menyebutkan persis apa yang salah pada tiap baris, sehingga Anda tahu apa yang perlu diperbaiki di berkas sumber.
 
@@ -102,7 +110,10 @@ Ini bagian yang paling sering terlewat, dan yang paling menentukan.
 **Tanpa angka aktual, aplikasi tidak bisa mengukur seberapa tepat prediksinya.** Model bisa
 memburuk berbulan-bulan tanpa ada yang tahu.
 
-- **Satu per satu:** menu **Catat Aktual**, pilih operasinya, isi jumlah liter sebenarnya.
+- **Satu per satu:** menu **Catat Aktual**. Daftar *Menunggu BBM aktual* di halaman itu
+  memuat operasi yang belum dilaporkan, terbaru di atas. Tekan **Catat** di baris operasinya —
+  ID-nya terisi sendiri — lalu isi jumlah liter sebenarnya. Halaman hasil estimasi juga punya
+  tombol **Catat BBM aktual untuk operasi ini** yang langsung ke formulir yang sama.
 - **Sekaligus:** menu **Impor Massal**, pakai templatnya, sama seperti prediksi massal.
 
 Lakukan ini rutin — mingguan sudah cukup.
@@ -132,13 +143,15 @@ kesimpulannya lemah — jangan mengambil keputusan besar dari situ.
 
 **Kinerja model.** Dihitung dari operasi yang sudah punya angka aktual. Kalau tertulis data
 belum cukup, itu jujur — bukan kerusakan. Isi lebih banyak angka aktual
-([bagian 4](#4-mencatat-bahan-bakar-aktual)).
+([bagian 4](#4-mencatat-bahan-bakar-aktual)). Grafik *Tren kesalahan bergulir* menunjukkan
+arahnya: garis yang naik melewati garis putus-putus berarti prediksi makin meleset; titik
+terakhir berwarna merah bila sudah melewati batas.
 
 **Kesehatan Sistem.** Menunjukkan kapan pemantauan terakhir berhasil dan kapan pencadangan
 terakhir berhasil. Kalau tertulis **Kedaluwarsa**, angka di halaman ini mungkin sudah lama —
 hubungi penanggung jawab teknis.
 
-![Kesehatan Sistem: 3 peringatan aktif berjenis missing_actual, 0 isu kualitas data, 3 aktual BBM tertunda, pemantauan terjadwal Terkini.](images/04-kesehatan-sistem.png)
+![Kesehatan Sistem: 4 peringatan aktif dikelompokkan menjadi Kinerja model menurun (kritis) dan Aktual belum dicatat (peringatan), masing-masing dengan kalimat Tindakan; 3 aktual BBM tertunda dengan tombol Catat aktual; pemantauan terjadwal Terkini.](images/04-kesehatan-sistem.png)
 
 Spanduk di atas juga memberi tahu apakah peringatan dikirim ke luar aplikasi. Bila tertulis *saluran pemberitahuan belum dikonfigurasi*, peringatan hanya terlihat di halaman ini — sampaikan ke penanggung jawab teknis.
 
@@ -148,25 +161,36 @@ Spanduk di atas juga memberi tahu apakah peringatan dikirim ke luar aplikasi. Bi
 
 Hanya untuk akun dengan peran pengelola model.
 
+**Model pertama, atau melatih ulang dari riwayat:** menu **Impor Data Historis**, unggah
+riwayat operasi beserta BBM yang disiapkan (templatnya ada di halaman itu). Setelah impor,
+tekan **Latih kandidat baseline secara manual**; kandidatnya lalu muncul di **Pengelolaan
+Model** untuk dibandingkan dan dipromosikan. Selama belum ada model aktif, halaman
+**Ringkasan** menampilkan ketiga langkah ini.
+
 **Mengunggah paket model baru:** menu **Unggah Kandidat**, pilih berkas `.zip` dari pembuat model.
 
 Aplikasi memeriksa paket itu lebih dulu. Kalau ada yang tidak beres, paket **ditolak** dan
 alasannya ditampilkan. Model yang sedang berjalan **tidak tersentuh** — mengunggah tidak pernah
 mengganti model secara diam-diam.
 
-**Mengaktifkan:** menu **Pengelolaan Model**, bandingkan kandidat, lalu tekan **Promosikan manual**
-pada yang Anda pilih.
+**Mengaktifkan:** menu **Pengelolaan Model**, tekan **Bandingkan** pada kandidatnya. Halaman
+perbandingan langsung menyebut kesimpulannya di kotak paling atas — *Kandidat lebih tepat*,
+*Kandidat kurang tepat*, atau *Belum bisa dibandingkan* kalau belum ada BBM aktual untuk
+mengujinya — lalu angka keduanya berdampingan. Kalau setuju, tekan **Promosikan kandidat ini**
+dan konfirmasi.
 
 Kalau aktivasi gagal, model lama **tetap melayani prediksi**. Anda akan melihat pesan yang
 menjelaskan sebabnya. Tidak ada yang perlu Anda pulihkan sendiri.
 
 Kalau setelah aktivasi muncul pesan bahwa **pemeriksaan gagal**, model baru sudah terlanjur
-melayani. Segera aktifkan kembali versi sebelumnya dari halaman yang sama, lalu hubungi
-penanggung jawab teknis.
+melayani. Segera kembalikan: di **Pengelolaan Model**, tabel *Semua versi*, tekan
+**Aktifkan kembali** pada versi sebelumnya (tersedia untuk versi yang paketnya masih
+tersimpan), lalu hubungi penanggung jawab teknis.
 
-![Pengelolaan Model: model aktif dengan MAE 0,58 L, dan dua kandidat menunggu keputusan, masing-masing dengan tautan Bandingkan dan tombol Promosikan manual.](images/05-pengelolaan-model.png)
+![Pengelolaan Model: model aktif beserta MAE-nya, satu kandidat menunggu keputusan dengan tombol Bandingkan dan Promosikan, dan tabel Semua versi yang menampilkan status tiap versi.](images/05-pengelolaan-model.png)
 
-Tombol **Promosikan manual** adalah satu-satunya cara model berganti. Tidak ada promosi otomatis.
+Tombol **Promosikan** — selalu dengan konfirmasi — adalah satu-satunya cara model berganti.
+Tidak ada promosi otomatis.
 
 ---
 

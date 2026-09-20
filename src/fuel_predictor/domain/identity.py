@@ -30,6 +30,9 @@ class Capability(StrEnum):
     # Connecting one's own coding agent and cutting it off again (ADR 0014).
     # Every role has it: the agent can never do more than the person could.
     MANAGE_OWN_AGENTS = "manage_own_agents"
+    # Changing one's own password. Every role has it; it is never delegated
+    # to an agent scope.
+    MANAGE_OWN_ACCOUNT = "manage_own_account"
 
 
 _OPERATOR_CAPABILITIES = frozenset(
@@ -40,6 +43,7 @@ _OPERATOR_CAPABILITIES = frozenset(
         Capability.VIEW_MONITORING,
         Capability.VIEW_MODELS,
         Capability.MANAGE_OWN_AGENTS,
+        Capability.MANAGE_OWN_ACCOUNT,
     }
 )
 

@@ -13,6 +13,9 @@
     <h1>Masuk</h1>
     <p class="lead">Gunakan akun yang diberikan administrator untuk membuka Perencana Operasi Harian.</p>
 
+    {% if notice %}
+    <div class="banner banner--success" role="status"><p>{{ notice }}</p></div>
+    {% endif %}
     {% if error %}
     <div class="error-summary" role="alert" tabindex="-1" id="ringkasan-kesalahan">
       <h2>Belum dapat masuk</h2>

@@ -16,8 +16,8 @@
 {% endif %}
 
 <div class="grid grid--metrics">
-  {{ ui.metric('Isu kualitas data', unresolved_data_quality_issue_count) }}
-  {{ ui.metric('Aktual BBM tertunda', missing_actual_prediction_count, context='Lebih dari ' ~ missing_actual_after_days ~ ' hari sejak prediksi') }}
+  {{ ui.metric('Isu kualitas data', unresolved_data_quality_issue_count, context='Baris impor yang dikarantina dan belum diperbaiki.') }}
+  {{ ui.metric('Aktual BBM tertunda', missing_actual_prediction_count, context='Lebih dari ' ~ missing_actual_after_days ~ ' hari sejak prediksi', href='/bahan-bakar-aktual') }}
   {% if freshness.last_success is none %}
   {{ ui.metric('Pemantauan terjadwal', 'Belum pernah berhasil', unavailable=true, context='Jalankan python -m fuel_predictor monitor.') }}
   {% elif freshness.is_stale %}
@@ -32,31 +32,58 @@
   {% endif %}
 </div>
 
+{# Only what needs a hand gets a card of its own. Everything that is clear
+   collapses into one checklist, so an all-clear page is one glance, not four
+   empty boxes. #}
+{% set all_clear = [] %}
+
+{% if active_alerts %}
+{% for group in alert_groups %}
+<section class="card alert-group{% if group.critical %} alert-group--critical{% endif %}">
+  <div class="card__title">
+    <h2>{{ group.label }}</h2>
+    {{ ui.badge('Kritis' if group.critical else 'Peringatan', 'danger' if group.critical else 'warning') }}
+  </div>
+  <ul class="alert-group__items">
+    {% for message in group.messages %}<li>{{ message }}</li>{% endfor %}
+  </ul>
+  <p class="alert-group__action"><strong>Tindakan:</strong> {{ group.remediation }}</p>
+  <p class="hint">{{ group.urgency }}</p>
+</section>
+{% endfor %}
+{% else %}
+{% set _ = all_clear.append('Tidak ada peringatan aktif.') %}
+{% endif %}
+
+{% if missing_actual_predictions %}
 <section class="card">
-  <h2>Alert aktif</h2>
-  {% if active_alerts %}
+  <h2>BBM aktual tertunda</h2>
+  <p class="hint">Prediksi yang lebih dari {{ missing_actual_after_days }} hari belum dilaporkan
+    hasilnya. Tanpa aktual, model tidak bisa belajar dari operasi ini.</p>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Jenis</th><th>Pesan</th><th>Tingkat</th></tr></thead>
+      <thead><tr><th>Diprediksi</th><th>ID operasi</th><th>Kategori</th><th><span class="visually-hidden">Tindakan</span></th></tr></thead>
       <tbody>
-        {% for alert in active_alerts %}
+        {% for item in missing_actual_predictions %}
         <tr>
-          <td>{{ alert.kind.value }}</td>
-          <td>{{ alert.message }}</td>
-          <td>{% if alert.severity.value == 'critical' %}{{ ui.badge('Kritis', 'danger') }}{% else %}{{ ui.badge('Peringatan', 'warning') }}{% endif %}</td>
+          <td>{{ item.created_at | waktu }}</td>
+          <td><code class="mono-id">{{ item.operation_id }}</code></td>
+          <td>{{ item.vehicle_category.value }}</td>
+          <td><a class="button button--secondary button--small" href="/bahan-bakar-aktual?operation_id={{ item.operation_id }}">Catat aktual</a></td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-  {% else %}
-  {{ ui.empty_state('Tidak ada alert aktif.') }}
-  {% endif %}
 </section>
+{% else %}
+{% set _ = all_clear.append('Tidak ada prediksi yang lewat batas waktu tanpa BBM aktual.') %}
+{% endif %}
 
+{% if unresolved_data_quality_issues %}
 <section class="card">
   <h2>Kualitas data</h2>
-  {% if unresolved_data_quality_issues %}
+  <p class="hint">Baris impor yang dikarantina dan belum diperbaiki.</p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Dataset</th><th>Baris</th><th>Pesan</th></tr></thead>
@@ -71,13 +98,24 @@
       </tbody>
     </table>
   </div>
-  {% else %}
-  {{ ui.empty_state('Tidak ada baris yang perlu diperbaiki.') }}
-  {% endif %}
 </section>
+{% else %}
+{% set _ = all_clear.append('Tidak ada baris impor yang perlu diperbaiki.') %}
+{% endif %}
 
+{% if all_clear %}
 <section class="card">
-  <h2>Versi dataset</h2>
+  <h2>Tidak perlu ditindak</h2>
+  <ul class="check-list">
+    {% for line in all_clear %}
+    <li>{{ line }}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<details class="technical">
+  <summary>Versi dataset yang pernah diimpor</summary>
   {% if dataset_validation_summaries %}
   <div class="table-wrap">
     <table>
@@ -97,30 +135,8 @@
   {% else %}
   {{ ui.empty_state('Belum ada dataset.') }}
   {% endif %}
-</section>
+</details>
 
-<section class="card">
-  <h2>BBM aktual tertunda</h2>
-  {% if missing_actual_predictions %}
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>ID operasi</th><th>ID prediksi</th><th>Kategori</th></tr></thead>
-      <tbody>
-        {% for item in missing_actual_predictions %}
-        <tr>
-          <td>{{ item.operation_id }}</td>
-          <td>{{ item.prediction_id }}</td>
-          <td>{{ item.vehicle_category.value }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  {{ ui.empty_state('Tidak ada prediksi yang lewat batas waktu.') }}
-  {% endif %}
-</section>
-
-<p><a href="/bahan-bakar-aktual">Catat bahan bakar aktual</a> · <a href="/pengelolaan-model">Kelola model</a></p>
+<div class="button-row"><a class="button button--secondary" href="/bahan-bakar-aktual">Catat bahan bakar aktual</a><a class="button button--secondary" href="/pengelolaan-model">Kelola model</a></div>
 
 {% endblock %}

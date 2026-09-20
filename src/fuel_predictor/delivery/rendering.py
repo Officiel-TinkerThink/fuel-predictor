@@ -36,6 +36,9 @@ class NavigationItem:
 class NavigationGroup:
     title: str | None
     items: tuple[NavigationItem, ...]
+    # Daily work stays in view; the groups a planner opens once a week fold
+    # away so the sidebar is not fifteen equally weighted links.
+    collapsible: bool = False
 
 
 NAVIGATION: tuple[NavigationGroup, ...] = (
@@ -50,8 +53,7 @@ NAVIGATION: tuple[NavigationGroup, ...] = (
             NavigationItem(
                 "Prediksi Massal", "/prediksi-operasi-massal", Capability.IMPORT_OPERATIONS
             ),
-            # "Riwayat Prediksi" is in the plan's nav but has no page yet; add it
-            # here once it exists rather than linking a 404.
+            NavigationItem("Riwayat Prediksi", "/riwayat-prediksi", Capability.CREATE_PREDICTION),
         ),
     ),
     NavigationGroup(
@@ -65,6 +67,7 @@ NAVIGATION: tuple[NavigationGroup, ...] = (
     ),
     NavigationGroup(
         title="Pemantauan",
+        collapsible=True,
         items=(
             NavigationItem(
                 "Kinerja Model", "/pemantauan/kinerja-model", Capability.VIEW_MONITORING
@@ -79,14 +82,19 @@ NAVIGATION: tuple[NavigationGroup, ...] = (
     ),
     NavigationGroup(
         title="Model",
+        collapsible=True,
         items=(
             NavigationItem("Pengelolaan Model", "/pengelolaan-model", Capability.VIEW_MODELS),
+            NavigationItem(
+                "Impor Data Historis", "/impor-data-historis", Capability.IMPORT_OPERATIONS
+            ),
             NavigationItem("Unggah Kandidat", "/model/unggah", Capability.MANAGE_MODELS),
             NavigationItem("Riwayat Paket", "/model/riwayat", Capability.VIEW_MODELS),
         ),
     ),
     NavigationGroup(
         title="Pengaturan",
+        collapsible=True,
         items=(
             NavigationItem("Agen Saya", "/agen-saya", Capability.MANAGE_OWN_AGENTS),
             NavigationItem("Integrasi Agen", "/integrasi-agen", Capability.MANAGE_USERS),
@@ -127,8 +135,18 @@ def navigation_for(caller: ActiveCaller | None) -> list[SimpleNamespace]:
             if caller.allows(item.capability)
         ]
         if entries:
-            groups.append(SimpleNamespace(title=group.title, items=entries))
+            groups.append(
+                SimpleNamespace(title=group.title, items=entries, collapsible=group.collapsible)
+            )
     return groups
+
+
+def group_title_for(path: str) -> str | None:
+    """The sidebar group a page belongs to, so the page header can echo it."""
+    for group in NAVIGATION:
+        if group.title and any(item.href == path for item in group.items):
+            return group.title
+    return None
 
 
 def render(
@@ -143,6 +161,10 @@ def render(
     **context: object,
 ) -> str:
     template = _ENVIRONMENT.get_template(template_name)
+    # The eyebrow repeats the sidebar group the page sits in, so the header
+    # and the highlighted menu entry say the same thing. Pages outside the
+    # navigation keep whatever eyebrow they passed.
+    eyebrow = group_title_for(active_path) or eyebrow
     return template.render(
         caller_user=caller.user if caller else None,
         role_label=_ROLE_LABELS[caller.user.role] if caller else None,

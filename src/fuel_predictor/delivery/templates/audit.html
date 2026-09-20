@@ -7,7 +7,16 @@
   <div class="table-toolbar">
     <div class="field">
       <label for="filter-audit">Cari catatan</label>
-      <input id="filter-audit" type="search" data-table-filter="tabel-audit" aria-describedby="filter-audit-status" placeholder="Cari pelaku, tindakan, atau subjek">
+      <input id="filter-audit" type="search" data-table-filter="tabel-audit" aria-describedby="filter-audit-status" placeholder="Pelaku, tindakan, atau subjek">
+    </div>
+    <div class="field">
+      <label for="filter-audit-outcome">Hasil</label>
+      <select id="filter-audit-outcome" data-table-filter="tabel-audit" data-filter-attribute="data-outcome" aria-describedby="filter-audit-status">
+        <option value="">Semua</option>
+        <option value="succeeded">Berhasil</option>
+        <option value="failed">Gagal</option>
+        <option value="denied">Ditolak</option>
+      </select>
     </div>
     <p id="filter-audit-status" role="status" class="hint"></p>
   </div>
@@ -18,14 +27,20 @@
       <thead><tr><th>Waktu</th><th>Pelaku</th><th>Tindakan</th><th>Subjek</th><th>Hasil</th></tr></thead>
       <tbody>
         {% for record in records %}
-        <tr>
+        <tr data-outcome="{{ record.outcome }}">
           <td>{{ record.occurred_at | waktu }}</td>
-          <td>{{ record.actor }}</td>
-          <td>{{ record.action }}</td>
+          <td>{{ record.actor }}<br><span class="hint">{{ record.actor_kind }}</span></td>
+          <td>{{ record.action_label }}<br><code class="mono-id">{{ record.action }}</code>
+            {% if record.details %}
+            <ul class="detail-inline">
+              {% for label, value in record.details %}<li><span class="hint">{{ label }}:</span> {{ value }}</li>{% endfor %}
+            </ul>
+            {% endif %}
+          </td>
           <td>{{ record.subject or '-' }}</td>
           <td>
-            {% if record.outcome.value == 'succeeded' %}{{ ui.badge('Berhasil', 'success') }}
-            {% elif record.outcome.value == 'denied' %}{{ ui.badge('Ditolak', 'warning') }}
+            {% if record.outcome == 'succeeded' %}{{ ui.badge('Berhasil', 'success') }}
+            {% elif record.outcome == 'denied' %}{{ ui.badge('Ditolak', 'warning') }}
             {% else %}{{ ui.badge('Gagal', 'danger') }}{% endif %}
           </td>
         </tr>
