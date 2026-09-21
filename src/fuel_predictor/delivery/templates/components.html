@@ -219,6 +219,38 @@
 </dialog>
 {%- endmacro %}
 
+{# The actions on one agent-grant row: name it, revoke it, and - once revoked
+   or expired - remove it from the list. `base` is the URL prefix the page's
+   routes hang off ("/agen-saya" or "/integrasi-agen/grant"). #}
+{% macro grant_actions(summary, base, csrf_token, index) -%}
+{% set grant = summary.grant %}
+<div class="button-row button-row--tight">
+  {% if summary.is_active %}
+  {{ confirm_button('cabut-grant-' ~ index, 'Cabut', 'Cabut sambungan ' ~ summary.display_name ~ '?', 'Agen ini langsung kehilangan akses; token yang dipegangnya tidak berlaku lagi. Sambungan bisa dibuat ulang lewat izin baru.', base ~ '/' ~ grant.grant_id ~ '/cabut', csrf_token, tone='danger') }}
+  {% else %}
+  {{ confirm_button('hapus-grant-' ~ index, 'Hapus', 'Hapus sambungan ' ~ summary.display_name ~ ' dari daftar?', 'Sambungan ini sudah dicabut, jadi tidak ada akses yang berubah. Catatan auditnya tetap tersimpan.', base ~ '/' ~ grant.grant_id ~ '/hapus', csrf_token, tone='secondary') }}
+  {% endif %}
+  <button type="button" class="button button--secondary button--small" data-dialog="nama-grant-{{ index }}">Beri nama</button>
+  <dialog id="nama-grant-{{ index }}" aria-labelledby="nama-grant-{{ index }}-title">
+    <form method="dialog"><button class="visually-hidden" value="batal">Tutup</button></form>
+    <h2 id="nama-grant-{{ index }}-title">Nama untuk sambungan ini</h2>
+    <p>Hanya untuk Anda membedakannya, misalnya "Laptop kantor". Agen tetap memakai nama,
+      id, dan tokennya sendiri. Kosongkan untuk kembali ke nama agen.</p>
+    <form method="post" action="{{ base }}/{{ grant.grant_id }}/nama">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field">
+        <label for="nama-grant-{{ index }}-label">Nama</label>
+        <input id="nama-grant-{{ index }}-label" name="label" type="text" maxlength="80" value="{{ grant.label or '' }}" autocomplete="off">
+      </div>
+      <div class="button-row">
+        <button type="submit">Simpan nama</button>
+        <button type="button" class="button button--secondary" data-dialog-close="nama-grant-{{ index }}">Batal</button>
+      </div>
+    </form>
+  </dialog>
+</div>
+{%- endmacro %}
+
 {% macro trend_chart(chart, label) -%}
 {# One series over time, drawn against its threshold. Text uses the text
    tokens; only the line and the markers carry the series colour. Each point

@@ -183,10 +183,24 @@ class AgentGrant:
     # The refresh token this one replaced. Presenting it again means someone
     # other than the client holds a copy, and the grant is revoked on sight.
     previous_refresh_token_hash: str | None = None
+    # What the person calls this connection ("Laptop kantor"). Purely for
+    # people: the client keeps its own name, id, tokens and scopes.
+    label: str | None = None
 
     @property
     def is_revoked(self) -> bool:
         return self.revoked_at is not None
+
+    def is_dead_at(self, moment: datetime) -> bool:
+        """Revoked, or past the point where any token could still be refreshed.
+
+        Only a dead grant may be deleted: removing a live one would end access
+        without the revocation that the audit trail expects to see first.
+        """
+        return self.is_revoked or moment >= self.refresh_token_expires_at
+
+    def labelled(self, label: str | None) -> "AgentGrant":
+        return replace(self, label=label)
 
     def access_token_is_valid_at(self, moment: datetime) -> bool:
         return not self.is_revoked and moment < self.access_token_expires_at

@@ -292,6 +292,8 @@ _ACTION_LABELS = {
     "agent_consent_granted": "Izin agen diberikan",
     "agent_grant_issued": "Akses agen diberikan",
     "agent_grant_revoked": "Akses agen dicabut",
+    "agent_grant_renamed": "Sambungan agen dinamai",
+    "agent_grant_deleted": "Sambungan agen dihapus dari daftar",
     "mcp_rate_limited": "Agen melebihi batas laju",
 }
 _ACTOR_KIND_LABELS = {"user": "Pengguna", "agent": "Agen", "system": "Sistem"}

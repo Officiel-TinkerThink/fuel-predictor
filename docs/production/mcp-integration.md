@@ -46,7 +46,10 @@ be changed (recovery runbook §3).
 The agent acts **as the user**, audited as `<username> via <client name>`, and can never hold a
 scope the user's own role does not. Access tokens last one hour, refresh tokens thirty days of
 disuse. The user sees and revokes their grants on **Agen Saya**; an administrator sees everyone's
-on **Integrasi Agen**. Revocation is immediate.
+on **Integrasi Agen**. Revocation is immediate. A grant can also be given a label of the user's
+own (display only - the client's id, name and tokens are untouched) and, once revoked or expired,
+deleted from the list; an active grant must be revoked first, so no access ever ends without a
+revocation in the audit trail.
 
 ### 1b. Static credentials: headless agents and CI
 

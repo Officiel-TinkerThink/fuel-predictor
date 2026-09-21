@@ -19,11 +19,13 @@ from fuel_predictor.application.agent_credentials import (
     RevokeAgentCredential,
 )
 from fuel_predictor.application.agent_grants import (
+    DeleteAgentGrant,
     IssueAuthorizationCode,
     ListAgentGrants,
     RedeemAuthorizationCode,
     RefreshGrant,
     RegisterAgentClient,
+    RenameAgentGrant,
     ResolveAgentBearer,
     ResolveGrantAccessToken,
     RevokeAgentGrant,
@@ -611,6 +613,8 @@ def create_app(
             // settings.mcp_rate_limit_window_seconds,
             list_grants=list_agent_grants,
             revoke_grant=revoke_agent_grant,
+            rename_grant=RenameAgentGrant(agent_grants, record_audit),
+            delete_grant=DeleteAgentGrant(agent_grants, record_audit),
         )
     )
     app.include_router(

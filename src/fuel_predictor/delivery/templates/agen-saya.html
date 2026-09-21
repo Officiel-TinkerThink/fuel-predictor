@@ -4,7 +4,7 @@
 {% block content %}
 
 {% if error %}
-{{ ui.banner('danger', 'Grant belum dapat dicabut', error) }}
+{{ ui.banner('danger', 'Perubahan belum dapat disimpan', error) }}
 {% endif %}
 
 <section class="card">
@@ -12,23 +12,17 @@
   {% if grants %}
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Agen</th><th>Cakupan</th><th>Disambungkan</th><th>Token berlaku sampai</th><th>Status</th><th>Tindakan</th></tr></thead>
+      <thead><tr><th>Agen</th><th>Cakupan</th><th>Disambungkan</th><th>Berlaku sampai</th><th>Status</th><th><span class="visually-hidden">Tindakan</span></th></tr></thead>
       <tbody>
         {% for summary in grants %}
         <tr>
-          <td>{{ summary.client_name }}<br><span class="hint">{{ summary.redirect_hosts | join(', ') }}</span></td>
+          <td><strong>{{ summary.display_name }}</strong><br>
+            <span class="hint">{% if summary.grant.label %}{{ summary.client_name }} · {% endif %}{{ summary.redirect_hosts | join(', ') }}</span></td>
           <td>{{ summary.grant.scopes | map('string') | sort | join(', ') }}</td>
           <td>{{ summary.grant.granted_at | waktu }}</td>
           <td>{{ summary.grant.refresh_token_expires_at | waktu }}</td>
           <td>{% if summary.is_active %}{{ ui.badge('Aktif', 'success') }}{% else %}{{ ui.badge('Dicabut', 'neutral') }}{% endif %}</td>
-          <td>
-            {% if summary.is_active %}
-            <form method="post" action="/agen-saya/{{ summary.grant_id }}/cabut">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-              <button type="submit" class="button button--danger">Cabut</button>
-            </form>
-            {% else %}—{% endif %}
-          </td>
+          <td>{{ ui.grant_actions(summary, '/agen-saya', csrf_token, loop.index) }}</td>
         </tr>
         {% endfor %}
       </tbody>

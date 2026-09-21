@@ -10,7 +10,7 @@ import json
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Request, status
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from fuel_predictor.application.agent_credentials import (
     IssueAgentCredential,
@@ -19,7 +19,9 @@ from fuel_predictor.application.agent_credentials import (
 )
 from fuel_predictor.application.agent_grants import (
     AgentGrantSummary,
+    DeleteAgentGrant,
     ListAgentGrants,
+    RenameAgentGrant,
     RevokeAgentGrant,
 )
 from fuel_predictor.delivery.oauth_routes import SCOPE_DESCRIPTIONS
@@ -44,6 +46,8 @@ def build_agent_pages_router(
     *,
     list_grants: ListAgentGrants,
     revoke_grant: RevokeAgentGrant,
+    rename_grant: RenameAgentGrant,
+    delete_grant: DeleteAgentGrant,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -119,6 +123,31 @@ def build_agent_pages_router(
             )
         return HTMLResponse(_admin_page(caller))
 
+    @router.post("/integrasi-agen/grant/{grant_id}/nama", response_class=HTMLResponse)
+    async def rename_any_grant(grant_id: str, request: Request) -> Response:
+        caller = guard.require_caller(request)
+        form = await request.form()
+        try:
+            rename_grant.execute(grant_id, str(form.get("label", "")), renamed_by=caller.user)
+        except IdentityValidationError as error:
+            return HTMLResponse(
+                _admin_page(caller, error=error.message),
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            )
+        return RedirectResponse("/integrasi-agen", status_code=status.HTTP_303_SEE_OTHER)
+
+    @router.post("/integrasi-agen/grant/{grant_id}/hapus", response_class=HTMLResponse)
+    async def delete_any_grant(grant_id: str, request: Request) -> Response:
+        caller = guard.require_caller(request)
+        try:
+            delete_grant.execute(grant_id, deleted_by=caller.user)
+        except IdentityValidationError as error:
+            return HTMLResponse(
+                _admin_page(caller, error=error.message),
+                status_code=status.HTTP_409_CONFLICT,
+            )
+        return RedirectResponse("/integrasi-agen", status_code=status.HTTP_303_SEE_OTHER)
+
     # --- Agen Saya: a user's own grants -------------------------------------
 
     def _own_page(request: Request, caller: "ActiveCaller", error: str | None = None) -> str:
@@ -155,6 +184,31 @@ def build_agent_pages_router(
                 _own_page(request, caller, error.message), status_code=status.HTTP_404_NOT_FOUND
             )
         return HTMLResponse(_own_page(request, caller))
+
+    @router.post("/agen-saya/{grant_id}/nama", response_class=HTMLResponse)
+    async def rename_own_grant(grant_id: str, request: Request) -> Response:
+        caller = guard.require_caller(request)
+        form = await request.form()
+        try:
+            rename_grant.execute(grant_id, str(form.get("label", "")), renamed_by=caller.user)
+        except IdentityValidationError as error:
+            return HTMLResponse(
+                _own_page(request, caller, error.message),
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            )
+        return RedirectResponse("/agen-saya", status_code=status.HTTP_303_SEE_OTHER)
+
+    @router.post("/agen-saya/{grant_id}/hapus", response_class=HTMLResponse)
+    async def delete_own_grant(grant_id: str, request: Request) -> Response:
+        caller = guard.require_caller(request)
+        try:
+            delete_grant.execute(grant_id, deleted_by=caller.user)
+        except IdentityValidationError as error:
+            return HTMLResponse(
+                _own_page(request, caller, error.message),
+                status_code=status.HTTP_409_CONFLICT,
+            )
+        return RedirectResponse("/agen-saya", status_code=status.HTTP_303_SEE_OTHER)
 
     return router
 

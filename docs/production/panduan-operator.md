@@ -232,11 +232,17 @@ kredensial dari administrator. Tambahkan alamat MCP yang tertera di halaman itu 
 dan alamat kembalinya, centang yang boleh dilakukannya, lalu tekan **Izinkan**.
 
 Agen itu bertindak atas nama akun Anda dan tidak pernah bisa melakukan lebih dari yang boleh
-Anda lakukan. Di **Agen Saya** Anda melihat setiap agen yang tersambung dan dapat menekan
-**Cabut** kapan saja; berlaku seketika. Sambungan yang tidak dipakai 30 hari berakhir sendiri.
+Anda lakukan. Di **Agen Saya** Anda melihat setiap agen yang tersambung, dengan tiga tombol:
 
-Administrator melihat sambungan semua pengguna di bagian bawah **Integrasi Agen** dan dapat
-mencabutnya juga.
+- **Beri nama** — nama Anda sendiri untuk sambungan itu, misalnya "Laptop kantor", supaya dua
+  sambungan dari program yang sama bisa dibedakan. Hanya tampilan; agen tidak terpengaruh.
+- **Cabut** — berlaku seketika; agen langsung kehilangan akses. Sambungan yang tidak dipakai
+  30 hari berakhir sendiri.
+- **Hapus** — muncul setelah sambungan dicabut atau berakhir, untuk mengeluarkannya dari
+  daftar. Catatan auditnya tetap ada.
+
+Administrator melihat sambungan semua pengguna di bagian bawah **Integrasi Agen** dengan
+tombol yang sama.
 
 ---
 

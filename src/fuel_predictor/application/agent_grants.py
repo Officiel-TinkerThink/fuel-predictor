@@ -83,6 +83,8 @@ class AgentGrantRepository(Protocol):
 
     def replace(self, grant: AgentGrant) -> None: ...
 
+    def delete(self, grant_id: str) -> None: ...
+
 
 class RedirectableAuthorizationError(AgentAuthorizationError):
     """An authorization request that failed *after* the client and redirect checked out.
@@ -546,6 +548,11 @@ class AgentGrantSummary:
     def is_active(self) -> bool:
         return not self.grant.is_revoked
 
+    @property
+    def display_name(self) -> str:
+        """The person's own label when they gave one, else the client's name."""
+        return self.grant.label or self.client_name
+
 
 @dataclass(frozen=True, slots=True)
 class ListAgentGrants:
@@ -583,13 +590,7 @@ class RevokeAgentGrant:
     now: Callable[[], datetime] = lambda: datetime.now(UTC)
 
     def execute(self, grant_id: str, *, revoked_by: User) -> AgentGrant:
-        grant = self.grants.get(grant_id)
-        may_revoke = grant is not None and (
-            grant.user_id == revoked_by.user_id or revoked_by.allows(Capability.MANAGE_USERS)
-        )
-        if grant is None or not may_revoke:
-            # Same answer whether it does not exist or is not theirs.
-            raise IdentityValidationError("grant_id", "Grant agen tidak ditemukan.")
+        grant = _owned_or_administered(self.grants, grant_id, revoked_by)
         if grant.is_revoked:
             return grant
         revoked = grant.revoked(self.now())
@@ -602,6 +603,82 @@ class RevokeAgentGrant:
             details={"registration_id": grant.registration_id, "user_id": grant.user_id},
         )
         return revoked
+
+
+GRANT_LABEL_MAX_LENGTH = 80
+
+
+def _owned_or_administered(grants: AgentGrantRepository, grant_id: str, by: User) -> AgentGrant:
+    """The grant, if it is this person's own or they administer users.
+
+    The same answer whether it does not exist or is not theirs, so the page
+    cannot be used to probe which grant ids exist.
+    """
+    grant = grants.get(grant_id)
+    if grant is None or not (grant.user_id == by.user_id or by.allows(Capability.MANAGE_USERS)):
+        raise IdentityValidationError("grant_id", "Grant agen tidak ditemukan.")
+    return grant
+
+
+@dataclass(frozen=True, slots=True)
+class RenameAgentGrant:
+    """Give a connection a name of one's own; an empty name clears it.
+
+    The label is for people telling two "Claude Code" connections apart.
+    Nothing the client holds - id, tokens, scopes - changes, which is why
+    this is safe to offer freely; the audit trail records the old and new
+    label so a renamed row can still be followed.
+    """
+
+    grants: AgentGrantRepository
+    record_audit: RecordAuditEvent
+
+    def execute(self, grant_id: str, label: str, *, renamed_by: User) -> AgentGrant:
+        grant = _owned_or_administered(self.grants, grant_id, renamed_by)
+        cleaned = " ".join(label.split())
+        if len(cleaned) > GRANT_LABEL_MAX_LENGTH:
+            raise IdentityValidationError(
+                "label", f"Nama maksimal {GRANT_LABEL_MAX_LENGTH} karakter."
+            )
+        renamed = grant.labelled(cleaned or None)
+        self.grants.replace(renamed)
+        self.record_audit.execute(
+            actor=renamed_by.username,
+            action="agent_grant_renamed",
+            outcome=AuditOutcome.SUCCEEDED,
+            subject=grant.grant_id,
+            details={"from": grant.label, "to": renamed.label},
+        )
+        return renamed
+
+
+@dataclass(frozen=True, slots=True)
+class DeleteAgentGrant:
+    """Take a dead grant off the list.
+
+    Only a revoked or expired grant may go: deleting a live one would end
+    access with no revocation on record. Afterwards its tokens are unknown
+    tokens, refused like any other.
+    """
+
+    grants: AgentGrantRepository
+    record_audit: RecordAuditEvent
+    now: Callable[[], datetime] = lambda: datetime.now(UTC)
+
+    def execute(self, grant_id: str, *, deleted_by: User) -> None:
+        grant = _owned_or_administered(self.grants, grant_id, deleted_by)
+        if not grant.is_dead_at(self.now()):
+            raise IdentityValidationError(
+                "grant_id", "Cabut sambungan ini dulu; yang masih aktif tidak bisa dihapus."
+            )
+        self.grants.delete(grant.grant_id)
+        self.record_audit.execute(
+            actor=deleted_by.username,
+            action="agent_grant_deleted",
+            outcome=AuditOutcome.SUCCEEDED,
+            subject=grant.grant_id,
+            details={"registration_id": grant.registration_id, "user_id": grant.user_id},
+        )
 
 
 @dataclass(frozen=True, slots=True)

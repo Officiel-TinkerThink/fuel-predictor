@@ -352,6 +352,7 @@ class AgentGrantRow(Base):
     previous_refresh_token_hash: Mapped[str | None] = mapped_column(
         String(64), nullable=True, index=True
     )
+    label: Mapped[str | None] = mapped_column(String(80), nullable=True)
 
 
 class MonitoringRunRow(Base):

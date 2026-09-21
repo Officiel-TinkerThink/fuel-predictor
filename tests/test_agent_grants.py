@@ -19,6 +19,7 @@ from fuel_predictor.application.agent_grants import (
     ACCESS_TOKEN_PREFIX,
     REFRESH_TOKEN_PREFIX,
     AuthorizationRequest,
+    DeleteAgentGrant,
     IssueAuthorizationCode,
     IssuedGrantTokens,
     ListAgentGrants,
@@ -26,6 +27,7 @@ from fuel_predictor.application.agent_grants import (
     RedirectableAuthorizationError,
     RefreshGrant,
     RegisterAgentClient,
+    RenameAgentGrant,
     ResolveAgentBearer,
     ResolveGrantAccessToken,
     RevokeAgentGrant,
@@ -111,6 +113,8 @@ class _Server:
         self.issue_credential = IssueAgentCredential(credentials, record_audit, now=self.clock)
         self.list_grants = ListAgentGrants(self.grants, registrations, self.users)
         self.revoke_grant = RevokeAgentGrant(self.grants, record_audit, now=self.clock)
+        self.rename_grant = RenameAgentGrant(self.grants, record_audit)
+        self.delete_grant = DeleteAgentGrant(self.grants, record_audit, now=self.clock)
         self.revoke_by_token = RevokeGrantByToken(self.grants, record_audit, now=self.clock)
 
     def add_user(self, username: str, role: UserRole, *, is_active: bool = True) -> User:
@@ -553,3 +557,71 @@ def test_registration_needs_a_name_and_at_least_one_safe_redirect(server: _Serve
             client_name="Cursor", redirect_uris=[_REDIRECT, "http://evil.example/cb"]
         )
     assert unsafe.value.error == "invalid_redirect_uri"
+
+
+def test_a_grant_can_be_given_a_label_by_its_owner_or_an_administrator(
+    server: _Server,
+) -> None:
+    andi = server.add_user("andi", UserRole.OPERATOR)
+    budi = server.add_user("budi", UserRole.OPERATOR)
+    admin = server.add_user("root", UserRole.ADMINISTRATOR)
+    client_id, code = server.authorize(user=andi)
+    tokens = _redeem(server, client_id, code)
+    (mine,) = server.list_grants.execute(user_id=andi.user_id)
+
+    with pytest.raises(IdentityValidationError):
+        server.rename_grant.execute(mine.grant_id, "Bukan punyaku", renamed_by=budi)
+
+    server.rename_grant.execute(mine.grant_id, "  Laptop kantor  ", renamed_by=andi)
+    (labelled,) = server.list_grants.execute(user_id=andi.user_id)
+    assert labelled.grant.label == "Laptop kantor"
+    assert labelled.display_name == "Laptop kantor"
+    assert labelled.client_name == "Claude Code"
+    # The label is for people; the tokens and the client are untouched.
+    assert server.resolve_grant.execute(tokens.access_token) is not None
+
+    server.rename_grant.execute(mine.grant_id, "", renamed_by=admin)
+    (cleared,) = server.list_grants.execute(user_id=andi.user_id)
+    assert cleared.grant.label is None
+    assert cleared.display_name == "Claude Code"
+
+    with pytest.raises(IdentityValidationError):
+        server.rename_grant.execute(mine.grant_id, "x" * 81, renamed_by=andi)
+    assert [r.action for r in server.audit.list_recent(3)].count("agent_grant_renamed") == 2
+
+
+def test_only_a_revoked_or_expired_grant_can_be_deleted(server: _Server) -> None:
+    andi = server.add_user("andi", UserRole.OPERATOR)
+    budi = server.add_user("budi", UserRole.OPERATOR)
+    client_id, code = server.authorize(user=andi)
+    tokens = _redeem(server, client_id, code)
+    (mine,) = server.list_grants.execute(user_id=andi.user_id)
+
+    # Active: deleting would end access with no revocation on record.
+    with pytest.raises(IdentityValidationError):
+        server.delete_grant.execute(mine.grant_id, deleted_by=andi)
+    assert server.resolve_grant.execute(tokens.access_token) is not None
+
+    server.revoke_grant.execute(mine.grant_id, revoked_by=andi)
+    with pytest.raises(IdentityValidationError):
+        server.delete_grant.execute(mine.grant_id, deleted_by=budi)
+    server.delete_grant.execute(mine.grant_id, deleted_by=andi)
+
+    assert server.list_grants.execute(user_id=andi.user_id) == ()
+    assert server.resolve_grant.execute(tokens.access_token) is None
+    # Presenting the old refresh token afterwards is refused, as for any unknown token.
+    with pytest.raises(AgentAuthorizationError):
+        server.refresh.execute(refresh_token=tokens.refresh_token, client_id=client_id, scope=None)
+    assert "agent_grant_deleted" in {r.action for r in server.audit.list_recent(10)}
+
+
+def test_an_expired_grant_can_be_deleted_without_revoking_first(server: _Server) -> None:
+    andi = server.add_user("andi", UserRole.OPERATOR)
+    client_id, code = server.authorize(user=andi)
+    _redeem(server, client_id, code)
+    (mine,) = server.list_grants.execute(user_id=andi.user_id)
+
+    server.clock.advance(days=31)
+    server.delete_grant.execute(mine.grant_id, deleted_by=andi)
+
+    assert server.list_grants.execute(user_id=andi.user_id) == ()

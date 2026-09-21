@@ -97,6 +97,7 @@ class SqlAlchemyAgentGrantRepository:
                     granted_at=grant.granted_at,
                     refreshed_at=grant.refreshed_at,
                     revoked_at=grant.revoked_at,
+                    label=grant.label,
                     previous_refresh_token_hash=grant.previous_refresh_token_hash,
                 )
             )
@@ -133,6 +134,12 @@ class SqlAlchemyAgentGrantRepository:
             rows = session.execute(query).scalars().all()
         return tuple(_grant(row) for row in rows)
 
+    def delete(self, grant_id: str) -> None:
+        with self._session_factory.begin() as session:
+            row = session.get(AgentGrantRow, grant_id)
+            if row is not None:
+                session.delete(row)
+
     def replace(self, grant: AgentGrant) -> None:
         with self._session_factory.begin() as session:
             row = session.get(AgentGrantRow, grant.grant_id)
@@ -144,6 +151,7 @@ class SqlAlchemyAgentGrantRepository:
             row.refresh_token_expires_at = grant.refresh_token_expires_at
             row.refreshed_at = grant.refreshed_at
             row.revoked_at = grant.revoked_at
+            row.label = grant.label
             row.previous_refresh_token_hash = grant.previous_refresh_token_hash
 
 
@@ -183,6 +191,7 @@ def _grant(row: AgentGrantRow) -> AgentGrant:
         granted_at=_aware(row.granted_at),
         refreshed_at=_optional_aware(row.refreshed_at),
         revoked_at=_optional_aware(row.revoked_at),
+        label=row.label,
         previous_refresh_token_hash=row.previous_refresh_token_hash,
     )
 
