@@ -165,7 +165,7 @@
           </div>
           <div class="stop-controls">
             {% if not loop.first %}
-            <button type="button" data-action="remove" aria-label="Hapus pemberhentian {{ loop.index0 }}">Hapus</button>
+            <button type="button" class="button button--secondary button--small" data-action="remove" aria-label="Hapus pemberhentian {{ loop.index0 }}">Hapus</button>
             {% endif %}
           </div>
         </div>
@@ -243,7 +243,7 @@
         <input id="nama-grant-{{ index }}-label" name="label" type="text" maxlength="80" value="{{ grant.label or '' }}" autocomplete="off">
       </div>
       <div class="button-row">
-        <button type="submit">Simpan nama</button>
+        <button type="submit" class="button">Simpan nama</button>
         <button type="button" class="button button--secondary" data-dialog-close="nama-grant-{{ index }}">Batal</button>
       </div>
     </form>

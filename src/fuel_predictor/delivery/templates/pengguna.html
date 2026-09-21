@@ -33,7 +33,7 @@
                     <span class="hint" id="atur-ulang-{{ loop.index }}-hint">Minimal 12 karakter.</span>
                   </div>
                   <div class="button-row">
-                    <button type="submit">Atur ulang</button>
+                    <button type="submit" class="button">Atur ulang</button>
                     <button type="button" class="button button--secondary" data-dialog-close="atur-ulang-{{ loop.index }}">Batal</button>
                   </div>
                 </form>
@@ -67,7 +67,7 @@
     {{ ui.text_field('full_name', 'Nama lengkap', form_values.get('full_name', ''), errors=errors, required=true) }}
     {{ ui.text_field('password', 'Kata sandi awal', '', hint='Minimal 12 karakter. Sampaikan secara aman kepada pengguna.', errors=errors, required=true, type='password', autocomplete='new-password') }}
     {{ ui.select_field('role', 'Peran', role_options, form_values.get('role', 'operator'), hint='Operator: membuat prediksi, mencatat aktual, dan melihat pemantauan. Manajer: ditambah catatan audit. Administrator: ditambah kelola model, pengguna, dan integrasi agen.', errors=errors, required=true) }}
-    <button type="submit">Simpan pengguna</button>
+    <button type="submit" class="button">Simpan pengguna</button>
   </form>
 </section>
 

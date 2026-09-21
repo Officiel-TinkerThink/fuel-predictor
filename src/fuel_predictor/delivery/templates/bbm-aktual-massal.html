@@ -18,7 +18,7 @@
   <form method="post" action="/bahan-bakar-aktual-massal" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     {{ ui.file_field('file', 'Berkas bahan bakar aktual', '.csv,.xlsx', hint='CSV atau Excel .xlsx yang diisi dari template di atas.') }}
-    <button type="submit">Validasi dan simpan aktual</button>
+    <button type="submit" class="button">Validasi dan simpan aktual</button>
   </form>
 </section>
 

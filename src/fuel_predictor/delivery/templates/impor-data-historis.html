@@ -16,7 +16,7 @@
   <form method="post" action="/impor-data-historis" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     {{ ui.file_field('file', 'Berkas historis', '.csv,.xlsx', hint='CSV atau Excel .xlsx.') }}
-    <button type="submit">Validasi dan buat versi dataset</button>
+    <button type="submit" class="button">Validasi dan buat versi dataset</button>
   </form>
 </section>
 

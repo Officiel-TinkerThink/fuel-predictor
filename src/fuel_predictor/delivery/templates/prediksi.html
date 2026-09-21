@@ -40,7 +40,7 @@
       {{ ui.number_field('total_distance_km', 'Jarak tempuh', 'km', values.get('total_distance_km', ''), hint='Penyedia rute belum dikonfigurasi pada instalasi ini, jadi jarak tempuh seluruh perjalanan (termasuk kembali) wajib diisi sendiri.', errors=errors, required=true, min=0.01) }}
       {% endif %}
     </fieldset>
-    <button type="submit">Simpan &amp; buat estimasi</button>
+    <button type="submit" class="button">Simpan &amp; buat estimasi</button>
   </form>
 </section>
 

@@ -44,7 +44,7 @@
   <p>Latih secara manual memakai {{ dataset.valid_operation_count }} operasi valid pada dataset ini.</p>
   <form method="post" action="/dataset-versions/{{ dataset.dataset_version_id }}/latih-kandidat-baseline">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <button type="submit">Latih kandidat baseline secara manual</button>
+    <button type="submit" class="button">Latih kandidat baseline secara manual</button>
   </form>
 </section>
 {% else %}

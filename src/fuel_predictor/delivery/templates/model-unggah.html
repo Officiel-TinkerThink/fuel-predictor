@@ -10,7 +10,7 @@
   <form method="post" action="/model/unggah" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     {{ ui.file_field('file', 'Berkas paket model', '.zip', hint='Arsip .zip berisi manifest.json, model.onnx atau model.skops, reference-statistics.json, dan smoke-tests.json.') }}
-    <button type="submit">Validasi paket</button>
+    <button type="submit" class="button">Validasi paket</button>
   </form>
   <p class="hint">Mengunggah tidak mengaktifkan model. Paket yang lolos menjadi kandidat, dan
     aktivasi tetap merupakan tindakan manual di halaman Pengelolaan Model.</p>

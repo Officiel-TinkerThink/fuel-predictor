@@ -328,10 +328,8 @@ a:hover {
   flex: 0 0 auto;
 }
 
-/* Written with the element+attribute so it outranks the generic
-   button[type="submit"] rule, whose 1.5rem side padding squeezed the icon to
-   nothing inside this 36px box. */
-button[type="submit"].app__signout-button {
+.app__signout-button {
+  font: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -345,8 +343,8 @@ button[type="submit"].app__signout-button {
   cursor: pointer;
 }
 
-button[type="submit"].app__signout-button:hover,
-button[type="submit"].app__signout-button:focus-visible {
+.app__signout-button:hover,
+.app__signout-button:focus-visible {
   background: rgba(255, 255, 255, 0.12);
   color: var(--color-text-inverse);
   outline: none;
@@ -733,9 +731,11 @@ select[aria-invalid="true"] {
   white-space: nowrap;
 }
 
-.button,
-button[type="submit"],
-button[type="button"] {
+/* Buttons are a class, never an element selector: every <button> and every
+   <a> that acts like one carries .button, plus a tone. Nothing here depends on
+   type="submit" or type="button", so a bespoke button (the sign-out icon, the
+   stop-row controls) styles itself without fighting a generic rule. */
+.button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -751,27 +751,21 @@ button[type="button"] {
   text-decoration: none;
 }
 
-.button:hover,
-button[type="submit"]:hover {
+.button:hover {
   background: var(--color-brand-strong);
   border-color: var(--color-brand-strong);
   color: var(--color-text-inverse);
 }
 
-/* Repeated with the element selector so a <button type="submit"> can be
-   secondary too; the attribute selector above would otherwise outrank it. */
-.button--secondary,
-button[type="submit"].button--secondary,
-button[type="button"].button--secondary {
+.button--secondary {
   background: var(--color-surface);
   color: var(--color-brand-strong);
   border-color: var(--color-border-strong);
 }
 
-.button--secondary:hover,
-button[type="submit"].button--secondary:hover,
-button[type="button"].button--secondary:hover {
+.button--secondary:hover {
   background: var(--color-surface-sunken);
+  border-color: var(--color-border-strong);
   color: var(--color-brand-strong);
 }
 
@@ -781,16 +775,13 @@ button[type="button"].button--secondary:hover {
   border-color: var(--color-brand);
 }
 
-.button--danger,
-button[type="submit"].button--danger,
-button[type="button"].button--danger {
+.button--danger {
   background: var(--color-danger);
   border-color: var(--color-danger);
+  color: var(--color-text-inverse);
 }
 
-.button--danger:hover,
-button[type="submit"].button--danger:hover,
-button[type="button"].button--danger:hover {
+.button--danger:hover {
   background: #7d1c19;
   border-color: #7d1c19;
 }
@@ -1317,16 +1308,9 @@ dialog::backdrop {
   margin-top: 22px;
 }
 
-.stop-row .stop-controls button {
+.stop-row .stop-controls .button {
   width: 100%;
   height: 38px;
-  padding: 0 12px;
-  border: 1px solid #cdd5d9;
-  background: #ffffff;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text);
 }
 
 #add-stop {
@@ -1420,7 +1404,7 @@ dialog::backdrop {
     justify-self: end;
   }
 
-  .stop-row .stop-controls button {
+  .stop-row .stop-controls .button {
     width: auto;
     height: 34px;
   }
@@ -1429,20 +1413,6 @@ dialog::backdrop {
 .stop-controls {
   display: flex;
   gap: var(--space-1);
-}
-
-.stop-controls button {
-  width: auto;
-  padding: 0.5rem 0.65rem;
-  background: var(--color-surface-sunken);
-  color: var(--color-text);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.stop-controls button:hover {
-  background: var(--color-neutral-soft);
 }
 
 .stop-list {
@@ -1484,7 +1454,7 @@ dialog::backdrop {
   color: var(--color-text-muted);
 }
 
-.signin__card button[type="submit"] {
+.signin__card .button {
   width: 100%;
 }
 

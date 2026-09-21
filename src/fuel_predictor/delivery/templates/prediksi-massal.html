@@ -19,7 +19,7 @@
   <form method="post" action="/prediksi-operasi-massal" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     {{ ui.file_field('file', 'Berkas rencana operasi', '.csv,.xlsx', hint='CSV atau Excel .xlsx yang diisi dari template di atas.') }}
-    <button type="submit">Buat prediksi massal</button>
+    <button type="submit" class="button">Buat prediksi massal</button>
   </form>
 </section>
 
