@@ -26,6 +26,26 @@
 </section>
 {% endif %}
 
+{% if awaiting %}
+<section class="card">
+  <div class="card__title"><h2>Menunggu BBM aktual</h2>{{ ui.badge(awaiting | length, 'warning') }}</div>
+  <p class="hint">Operasi yang sudah diprediksi tetapi belum dilaporkan hasilnya, terbaru di atas.</p>
+  <ul class="row-list">
+    {% for item in awaiting %}
+    <li>
+      <div class="row-list__main">
+        <strong>{{ item.vehicle or item.vehicle_category.value }}{% if item.departure %} · {{ item.departure }} → {{ item.destination }}{% endif %}</strong>
+        <span class="row-list__meta">Diprediksi {{ item.predicted_at | waktu }}</span>
+      </div>
+      <span class="row-list__figure">{{ item.recommended_allocation_liters | angka }} L <span class="hint">dialokasikan</span></span>
+      <a class="button button--secondary button--small row-list__action" href="/bahan-bakar-aktual?operation_id={{ item.operation_id }}">Catat</a>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if can_monitor %}
 {% if is_healthy %}
 {{ ui.banner('success', 'Layanan berjalan normal', 'Tidak ada peringatan kritis saat ini.') }}
 {% else %}
@@ -110,5 +130,6 @@
     {% endif %}
   </section>
 </div>
+{% endif %}
 
 {% endblock %}

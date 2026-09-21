@@ -33,7 +33,7 @@ from fuel_predictor.application.agent_grants import (
 from fuel_predictor.delivery.rendering import render, render_error_page
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.agent_authorization import AgentAuthorizationError
-from fuel_predictor.domain.identity import AgentScope
+from fuel_predictor.domain.identity import AgentScope, Capability
 
 # What a scope means, in words a planner deciding whether to allow it can weigh.
 SCOPE_DESCRIPTIONS: dict[AgentScope, str] = {
@@ -153,6 +153,8 @@ def build_oauth_router(
         caller = guard.require_caller(request)
         if not is_system_provisioned():
             return _consent_unavailable()
+        if not caller.allows(Capability.MANAGE_OWN_AGENTS):
+            return _consent_not_for_this_role()
         query = request.query_params
         try:
             authorization = validate_request.execute(
@@ -211,6 +213,8 @@ def build_oauth_router(
         caller = guard.require_caller(request)
         if not is_system_provisioned():
             return _consent_unavailable()
+        if not caller.allows(Capability.MANAGE_OWN_AGENTS):
+            return _consent_not_for_this_role()
         form = await request.form()
 
         def field(name: str) -> str | None:
@@ -375,6 +379,18 @@ def _consent_refused(error: AgentAuthorizationError) -> HTMLResponse:
             "meminta akses, lalu coba sambungkan lagi.",
         ),
         status_code=status.HTTP_400_BAD_REQUEST,
+    )
+
+
+def _consent_not_for_this_role() -> HTMLResponse:
+    return HTMLResponse(
+        render_error_page(
+            "Peran Anda tidak dapat menyambungkan agen",
+            "Agen yang tersambung bertindak dengan hak akses akun Anda, dan hanya "
+            "administrator yang dapat menyambungkan agen. Minta administrator bila "
+            "memang diperlukan.",
+        ),
+        status_code=status.HTTP_403_FORBIDDEN,
     )
 
 

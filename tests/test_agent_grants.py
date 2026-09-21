@@ -197,7 +197,9 @@ def test_a_user_can_connect_an_agent_and_it_reaches_mcp_as_them(server: _Server)
     assert tokens.access_token.startswith(ACCESS_TOKEN_PREFIX)
     assert tokens.refresh_token.startswith(REFRESH_TOKEN_PREFIX)
     assert tokens.expires_in == 3600
-    assert tokens.scopes == frozenset({AgentScope.PREDICT, AgentScope.MONITOR})
+    # An operator's job is prediction; the monitoring scope asked for is not
+    # theirs to delegate, so the grant carries only what they hold.
+    assert tokens.scopes == frozenset({AgentScope.PREDICT})
 
     principal = server.resolve_bearer.execute(tokens.access_token)
     assert principal is not None
@@ -587,7 +589,7 @@ def test_a_grant_can_be_given_a_label_by_its_owner_or_an_administrator(
 
     with pytest.raises(IdentityValidationError):
         server.rename_grant.execute(mine.grant_id, "x" * 81, renamed_by=andi)
-    assert [r.action for r in server.audit.list_recent(3)].count("agent_grant_renamed") == 2
+    assert [r.action for r in server.audit.list_recent(20)].count("agent_grant_renamed") == 2
 
 
 def test_only_a_revoked_or_expired_grant_can_be_deleted(server: _Server) -> None:

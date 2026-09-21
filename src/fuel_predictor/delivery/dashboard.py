@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
+from fuel_predictor.application.actual_fuel import ListOperationsAwaitingActualFuel
 from fuel_predictor.application.identity import (
     ActiveCaller,
     ChangeOwnPassword,
@@ -38,7 +39,6 @@ from fuel_predictor.domain.identity import (
 
 _ROLE_LABELS = {
     UserRole.OPERATOR: "Operator",
-    UserRole.MANAGER: "Manajer",
     UserRole.ADMINISTRATOR: "Administrator",
 }
 
@@ -60,6 +60,7 @@ def build_dashboard_router(
     change_password: ChangePassword,
     change_own_password: ChangeOwnPassword,
     list_audit_records: ListAuditRecords,
+    list_awaiting_actual: ListOperationsAwaitingActualFuel,
     guard: SecurityGuard,
     monitoring_runs: MonitoringRunRepository,
     backup_runs: BackupRunRepository,
@@ -86,14 +87,29 @@ def build_dashboard_router(
         critical_alerts = [
             alert for alert in monitoring.active_alerts if alert.severity.value == "critical"
         ]
+        can_monitor = caller.allows(Capability.VIEW_MONITORING)
         return HTMLResponse(
             render(
                 "ringkasan.html",
                 caller=caller,
                 page_title="Ringkasan",
                 active_path="/",
-                eyebrow="IKHTISAR LAYANAN",
-                page_lead="Status layanan, model aktif, dan hal yang perlu perhatian hari ini.",
+                eyebrow="IKHTISAR LAYANAN" if can_monitor else "HARI INI",
+                page_lead=(
+                    "Status layanan, model aktif, dan hal yang perlu perhatian hari ini."
+                    if can_monitor
+                    else "Buat estimasi untuk operasi hari ini, dan catat BBM aktual "
+                    "untuk yang sudah selesai."
+                ),
+                # An operator's overview is their two jobs, with the operations
+                # still waiting for actual fuel; the health of the model and
+                # the service is the administrator's to read.
+                can_monitor=can_monitor,
+                awaiting=(
+                    ()
+                    if can_monitor or not caller.allows(Capability.RECORD_ACTUAL_FUEL)
+                    else list_awaiting_actual.execute()[:8]
+                ),
                 monitoring=monitoring,
                 governance=governance,
                 is_healthy=len(critical_alerts) == 0,
@@ -108,7 +124,7 @@ def build_dashboard_router(
                 # is imported and a candidate trained and promoted. Only the
                 # people who can do those steps are walked through them.
                 setup_needed=(
-                    governance.active_model is None and caller.allows(Capability.IMPORT_OPERATIONS)
+                    governance.active_model is None and caller.allows(Capability.MANAGE_MODELS)
                 ),
                 candidate_count=len(governance.candidate_models),
                 freshness=_freshness(),
@@ -128,7 +144,7 @@ def build_dashboard_router(
             page_title="Pengguna",
             active_path="/pengguna",
             eyebrow="PENGATURAN",
-            page_lead="Kelola akun operator, manajer, dan administrator.",
+            page_lead="Kelola akun operator dan administrator.",
             users=list_users.execute(),
             role_options=[(role.value, _ROLE_LABELS[role]) for role in UserRole],
             errors=errors,

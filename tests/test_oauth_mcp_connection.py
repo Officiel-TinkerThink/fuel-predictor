@@ -60,6 +60,13 @@ def _sign_out(client: TestClient) -> None:
 
 
 def _add_operator(client: TestClient) -> None:
+    """Andi, the person who connects an agent in the tests below.
+
+    Connecting an agent is an administrator's action now (an operator's job
+    is prediction and actual fuel, and consent refuses them), so Andi is a
+    second administrator; the name stays because every scenario reads as
+    "a person connects their own agent", which is unchanged.
+    """
     _sign_in(client, *_ADMIN)
     page = client.get("/pengguna")
     response = client.post(
@@ -68,7 +75,7 @@ def _add_operator(client: TestClient) -> None:
             "username": _OPERATOR[0],
             "full_name": "Andi Operator",
             "password": _OPERATOR[1],
-            "role": "operator",
+            "role": "administrator",
             "csrf_token": _csrf_token(page.text),
         },
         follow_redirects=False,

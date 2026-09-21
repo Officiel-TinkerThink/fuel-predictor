@@ -58,7 +58,8 @@ _CSRF_EXEMPT_PATHS = frozenset({"/oauth/token", "/oauth/revoke"})
 # A route with no session simply cannot reach anything past the middleware, so
 # this table only ever decides *which* authenticated caller may proceed.
 ROUTE_CAPABILITIES: tuple[tuple[str, str, Capability], ...] = (
-    ("GET", "/", Capability.VIEW_MONITORING),
+    # Everyone lands here after signing in; the page shows each role its part.
+    ("GET", "/", Capability.MANAGE_OWN_ACCOUNT),
     ("GET", "/prediksi", Capability.CREATE_PREDICTION),
     # Route preview, drawn while the operation is still being planned.
     ("GET", "/prediksi/rute", Capability.CREATE_PREDICTION),
@@ -66,9 +67,11 @@ ROUTE_CAPABILITIES: tuple[tuple[str, str, Capability], ...] = (
     ("GET", "/operasi-harian/*", Capability.CREATE_PREDICTION),
     ("POST", "/operasi-harian/*/prediksi", Capability.CREATE_PREDICTION),
     ("GET", "/riwayat-prediksi", Capability.CREATE_PREDICTION),
-    ("GET", "/impor-data-historis", Capability.IMPORT_OPERATIONS),
-    ("POST", "/impor-data-historis", Capability.IMPORT_OPERATIONS),
-    ("GET", "/contoh-data-riwayat.csv", Capability.IMPORT_OPERATIONS),
+    # Training history is model work, not the daily job (IMPORT_OPERATIONS
+    # stays for predicting a sheet of operations).
+    ("GET", "/impor-data-historis", Capability.MANAGE_MODELS),
+    ("POST", "/impor-data-historis", Capability.MANAGE_MODELS),
+    ("GET", "/contoh-data-riwayat.csv", Capability.MANAGE_MODELS),
     ("POST", "/dataset-versions/*/latih-kandidat-baseline", Capability.MANAGE_MODELS),
     ("GET", "/prediksi-operasi-massal", Capability.IMPORT_OPERATIONS),
     ("POST", "/prediksi-operasi-massal", Capability.IMPORT_OPERATIONS),
@@ -106,12 +109,12 @@ ROUTE_CAPABILITIES: tuple[tuple[str, str, Capability], ...] = (
     ("GET", "/api/v1/daily-operations/*", Capability.CREATE_PREDICTION),
     ("POST", "/api/v1/daily-operations/*/predictions", Capability.CREATE_PREDICTION),
     ("POST", "/api/v1/daily-operations/*/actual-fuel", Capability.RECORD_ACTUAL_FUEL),
-    ("POST", "/api/v1/historical-datasets", Capability.IMPORT_OPERATIONS),
+    ("POST", "/api/v1/historical-datasets", Capability.MANAGE_MODELS),
     ("GET", "/api/v1/bulk-operation-predictions/template", Capability.IMPORT_OPERATIONS),
     ("POST", "/api/v1/bulk-operation-predictions", Capability.IMPORT_OPERATIONS),
     ("GET", "/api/v1/bulk-actual-fuel/template", Capability.RECORD_ACTUAL_FUEL),
     ("POST", "/api/v1/bulk-actual-fuel", Capability.RECORD_ACTUAL_FUEL),
-    ("GET", "/api/v1/dataset-versions/*/daily-operations", Capability.IMPORT_OPERATIONS),
+    ("GET", "/api/v1/dataset-versions/*/daily-operations", Capability.MANAGE_MODELS),
     ("POST", "/api/v1/dataset-versions/*/baseline-candidates", Capability.MANAGE_MODELS),
     ("GET", "/api/v1/model-candidates/*/comparison", Capability.VIEW_MODELS),
     ("POST", "/api/v1/model-candidates/*/promote", Capability.MANAGE_MODELS),
@@ -218,9 +221,7 @@ class _SessionMiddleware:
             downstream_receive = replay_body
 
             supplied = await _supplied_csrf_token(request)
-            expected = caller.csrf_token if caller is not None else request.cookies.get(
-                CSRF_COOKIE
-            )
+            expected = caller.csrf_token if caller is not None else request.cookies.get(CSRF_COOKIE)
             if not expected or not supplied or not compare_digest(expected, supplied):
                 await _csrf_failure_response(request)(scope, receive, send)
                 return
@@ -346,9 +347,7 @@ def _authentication_required_response(request: Request) -> Response:
     if request.url.query:
         target = f"{target}?{request.url.query}"
     destination = quote(target, safe="")
-    return RedirectResponse(
-        f"/masuk?tujuan={destination}", status_code=status.HTTP_303_SEE_OTHER
-    )
+    return RedirectResponse(f"/masuk?tujuan={destination}", status_code=status.HTTP_303_SEE_OTHER)
 
 
 def _authorization_denied_response(request: Request) -> Response:
@@ -362,10 +361,7 @@ def _authorization_denied_response(request: Request) -> Response:
 
 
 def _csrf_failure_response(request: Request) -> Response:
-    message = (
-        "Sesi formulir sudah tidak berlaku. Muat ulang halaman lalu kirim kembali "
-        "isian Anda."
-    )
+    message = "Sesi formulir sudah tidak berlaku. Muat ulang halaman lalu kirim kembali isian Anda."
     if is_api_path(request.url.path):
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,

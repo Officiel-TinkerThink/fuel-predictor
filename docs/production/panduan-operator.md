@@ -29,8 +29,15 @@ Kalau ada langkah yang meminta Anda mengetik perintah, itu ada di
 1. Buka alamat aplikasi di peramban (Chrome, Edge, atau Firefox).
 2. Isi nama pengguna dan kata sandi, lalu tekan **Masuk**.
 
-Menu di sebelah kiri hanya menampilkan halaman yang boleh Anda buka. Kalau Anda tidak melihat
-suatu menu, berarti peran akun Anda memang tidak mencakupnya — itu bukan kerusakan.
+Menu di sebelah kiri hanya menampilkan halaman yang boleh Anda buka. Ada dua peran:
+
+- **Operator** — membuat prediksi (satu per satu atau dari berkas), melihat riwayatnya, dan
+  mencatat BBM aktual. Bagian 2–4 panduan ini.
+- **Administrator** — semuanya: ditambah pemantauan, model, pengguna, dan integrasi agen.
+  Bagian 5–7 hanya berlaku untuk administrator.
+
+Kalau Anda tidak melihat suatu menu, berarti peran akun Anda memang tidak mencakupnya — itu
+bukan kerusakan.
 
 **Kalau kata sandi ditolak:** periksa huruf besar/kecil. Setelah beberapa kali gagal, sistem
 menahan percobaan berikutnya sebentar. Tunggu, lalu coba lagi.
@@ -125,7 +132,7 @@ Lakukan ini rutin — mingguan sudah cukup.
 
 ## 5. Membaca halaman Pemantauan
 
-Menu **Pemantauan**. Bagian yang perlu Anda perhatikan:
+Hanya untuk akun administrator. Menu **Pemantauan**. Bagian yang perlu Anda perhatikan:
 
 **Peringatan aktif.** Setiap peringatan menyebutkan tindakan yang perlu diambil. Ikuti
 kalimat "Tindakan:" — kalimat itu memang ditulis untuk dibaca tanpa latar belakang teknis.
@@ -162,7 +169,7 @@ Spanduk di atas juga memberi tahu apakah peringatan dikirim ke luar aplikasi. Bi
 
 ## 6. Mengganti model
 
-Hanya untuk akun dengan peran pengelola model.
+Hanya untuk akun administrator.
 
 **Model pertama, atau melatih ulang dari riwayat:** menu **Impor Data Historis**, unggah
 riwayat operasi beserta BBM yang disiapkan (templatnya ada di halaman itu). Setelah impor,
@@ -224,7 +231,8 @@ kredensial itu. Bila mereka butuh penjelasan alat-alatnya, berikan berkas
 
 ### 7a. Menyambungkan agen Anda sendiri
 
-Semua akun. Menu **Agen Saya**.
+Hanya untuk akun administrator. Menu **Agen Saya**. Agen yang tersambung bertindak dengan hak
+akses akun Anda; operator tidak dapat menyambungkan agen.
 
 Untuk agen pengkodean di laptop Anda sendiri (Claude Code, Cursor, dan sejenisnya) tidak perlu
 kredensial dari administrator. Tambahkan alamat MCP yang tertera di halaman itu ke agen Anda

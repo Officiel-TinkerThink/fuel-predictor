@@ -522,6 +522,7 @@ def create_app(
             change_password,
             change_own_password,
             list_audit_records,
+            list_awaiting_actual,
             guard,
             monitoring_run_repository,
             backup_run_repository,

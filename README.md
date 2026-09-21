@@ -174,7 +174,7 @@ Latih kandidat regresi linear yang dapat ditelusuri secara manual melalui
 `POST /api/v1/dataset-versions/{dataset_version_id}/baseline-candidates`. Model memakai satu
 kontrak fitur `baseline-v1` untuk pelatihan dan inferensi, serta menyimpan artefak dan parameter
 di MLflow lokal. Kandidat berstatus `candidate` dan tidak dapat dipakai untuk prediksi sampai
-manager memilih promosi manual. Promosi dilakukan melalui
+administrator memilih promosi manual. Promosi dilakukan melalui
 `POST /api/v1/model-candidates/{model_version_id}/promote`; model aktif sebelumnya berubah menjadi
 `retired`, sehingga riwayat pelayanannya tetap dapat diaudit. Endpoint tersebut aman diulang untuk
 model yang sudah aktif, tetapi model pensiun tidak dapat dipromosikan kembali.

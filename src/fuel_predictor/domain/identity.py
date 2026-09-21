@@ -11,8 +11,11 @@ from enum import StrEnum
 
 
 class UserRole(StrEnum):
+    """Two roles. An operator plans the day and reports what was burned; an
+    administrator does that and runs everything else. The plan's third role,
+    manager, added one menu (the audit log) and was folded into administrator."""
+
     OPERATOR = "operator"
-    MANAGER = "manager"
     ADMINISTRATOR = "administrator"
 
 
@@ -35,29 +38,23 @@ class Capability(StrEnum):
     MANAGE_OWN_ACCOUNT = "manage_own_account"
 
 
+# The operator's whole job: make predictions (one at a time or from a sheet),
+# record actual fuel, and keep their own password. Nothing they can see is
+# about the model or the system.
 _OPERATOR_CAPABILITIES = frozenset(
     {
         Capability.CREATE_PREDICTION,
-        Capability.RECORD_ACTUAL_FUEL,
         Capability.IMPORT_OPERATIONS,
-        Capability.VIEW_MONITORING,
-        Capability.VIEW_MODELS,
-        Capability.MANAGE_OWN_AGENTS,
+        Capability.RECORD_ACTUAL_FUEL,
         Capability.MANAGE_OWN_ACCOUNT,
     }
 )
 
-_MANAGER_CAPABILITIES = _OPERATOR_CAPABILITIES | {Capability.VIEW_AUDIT}
-
-_ADMINISTRATOR_CAPABILITIES = _MANAGER_CAPABILITIES | {
-    Capability.MANAGE_MODELS,
-    Capability.MANAGE_USERS,
-}
+_ADMINISTRATOR_CAPABILITIES = frozenset(Capability)
 
 _ROLE_CAPABILITIES: dict[UserRole, frozenset[Capability]] = {
     UserRole.OPERATOR: _OPERATOR_CAPABILITIES,
-    UserRole.MANAGER: frozenset(_MANAGER_CAPABILITIES),
-    UserRole.ADMINISTRATOR: frozenset(_ADMINISTRATOR_CAPABILITIES),
+    UserRole.ADMINISTRATOR: _ADMINISTRATOR_CAPABILITIES,
 }
 
 
@@ -121,9 +118,7 @@ _SCOPE_CAPABILITIES: dict[AgentScope, frozenset[Capability]] = {
 
 # Read/compute only. An administrator has to choose MODELS_ADMIN deliberately;
 # it is not something a credential acquires by accepting the defaults.
-DEFAULT_AGENT_SCOPES = frozenset(
-    {AgentScope.PREDICT, AgentScope.MONITOR, AgentScope.MODELS_READ}
-)
+DEFAULT_AGENT_SCOPES = frozenset({AgentScope.PREDICT, AgentScope.MONITOR, AgentScope.MODELS_READ})
 
 
 def capabilities_for_scopes(scopes: frozenset[AgentScope]) -> frozenset[Capability]:

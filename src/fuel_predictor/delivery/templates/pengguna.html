@@ -66,7 +66,7 @@
     {{ ui.text_field('username', 'Nama pengguna', form_values.get('username', ''), hint='Huruf, angka, titik, garis, dan garis bawah.', errors=errors, required=true, autocomplete='username') }}
     {{ ui.text_field('full_name', 'Nama lengkap', form_values.get('full_name', ''), errors=errors, required=true) }}
     {{ ui.text_field('password', 'Kata sandi awal', '', hint='Minimal 12 karakter. Sampaikan secara aman kepada pengguna.', errors=errors, required=true, type='password', autocomplete='new-password') }}
-    {{ ui.select_field('role', 'Peran', role_options, form_values.get('role', 'operator'), hint='Operator: membuat prediksi, mencatat aktual, dan melihat pemantauan. Manajer: ditambah catatan audit. Administrator: ditambah kelola model, pengguna, dan integrasi agen.', errors=errors, required=true) }}
+    {{ ui.select_field('role', 'Peran', role_options, form_values.get('role', 'operator'), hint='Operator: membuat prediksi (satu per satu atau dari berkas) dan mencatat BBM aktual. Administrator: semuanya, termasuk pemantauan, model, pengguna, dan integrasi agen.', errors=errors, required=true) }}
     <button type="submit" class="button">Simpan pengguna</button>
   </form>
 </section>

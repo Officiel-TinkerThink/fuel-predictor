@@ -83,8 +83,15 @@ bukan menggantikan pencatatan aktual. Setiap prediksi selalu menampilkan kalimat
 <li>Buka alamat aplikasi di peramban (Chrome, Edge, atau Firefox).</li>
 <li>Isi nama pengguna dan kata sandi, lalu tekan <strong>Masuk</strong>.</li>
 </ol>
-<p>Menu di sebelah kiri hanya menampilkan halaman yang boleh Anda buka. Kalau Anda tidak melihat
-suatu menu, berarti peran akun Anda memang tidak mencakupnya — itu bukan kerusakan.</p>
+<p>Menu di sebelah kiri hanya menampilkan halaman yang boleh Anda buka. Ada dua peran:</p>
+<ul>
+<li><strong>Operator</strong> — membuat prediksi (satu per satu atau dari berkas), melihat riwayatnya, dan
+mencatat BBM aktual. Bagian 2–4 panduan ini.</li>
+<li><strong>Administrator</strong> — semuanya: ditambah pemantauan, model, pengguna, dan integrasi agen.
+Bagian 5–7 hanya berlaku untuk administrator.</li>
+</ul>
+<p>Kalau Anda tidak melihat suatu menu, berarti peran akun Anda memang tidak mencakupnya — itu
+bukan kerusakan.</p>
 <p><strong>Kalau kata sandi ditolak:</strong> periksa huruf besar/kecil. Setelah beberapa kali gagal, sistem
 menahan percobaan berikutnya sebentar. Tunggu, lalu coba lagi.</p>
 <p><strong>Lupa kata sandi:</strong> minta administrator mengatur ulang — di menu <strong>Pengguna</strong>, tombol
@@ -179,7 +186,7 @@ tombol <strong>Catat BBM aktual untuk operasi ini</strong> yang langsung ke form
 <p>Lakukan ini rutin — mingguan sudah cukup.</p>
 <hr />
 <h2 id="5-membaca-halaman-pemantauan">5. Membaca halaman Pemantauan</h2>
-<p>Menu <strong>Pemantauan</strong>. Bagian yang perlu Anda perhatikan:</p>
+<p>Hanya untuk akun administrator. Menu <strong>Pemantauan</strong>. Bagian yang perlu Anda perhatikan:</p>
 <p><strong>Peringatan aktif.</strong> Setiap peringatan menyebutkan tindakan yang perlu diambil. Ikuti
 kalimat &quot;Tindakan:&quot; — kalimat itu memang ditulis untuk dibaca tanpa latar belakang teknis.</p>
 <p><strong>Penggolongan kendaraan berubah.</strong> Muncul bila katalog armada (tipe atau grup sebuah unit)
@@ -207,7 +214,7 @@ hubungi penanggung jawab teknis.</p>
 <p>Spanduk di atas juga memberi tahu apakah peringatan dikirim ke luar aplikasi. Bila tertulis <em>saluran pemberitahuan belum dikonfigurasi</em>, peringatan hanya terlihat di halaman ini — sampaikan ke penanggung jawab teknis.</p>
 <hr />
 <h2 id="6-mengganti-model">6. Mengganti model</h2>
-<p>Hanya untuk akun dengan peran pengelola model.</p>
+<p>Hanya untuk akun administrator.</p>
 <p><strong>Model pertama, atau melatih ulang dari riwayat:</strong> menu <strong>Impor Data Historis</strong>, unggah
 riwayat operasi beserta BBM yang disiapkan (templatnya ada di halaman itu). Setelah impor,
 tekan <strong>Latih kandidat baseline secara manual</strong>; kandidatnya lalu muncul di <strong>Pengelolaan
@@ -252,7 +259,8 @@ potongan itu memuat kredensialnya. Mereka tidak memerlukan akun di aplikasi ini;
 kredensial itu. Bila mereka butuh penjelasan alat-alatnya, berikan berkas
 <code>docs/production/mcp-integration.md</code>.</p>
 <h3 id="7a-menyambungkan-agen-anda-sendiri">7a. Menyambungkan agen Anda sendiri</h3>
-<p>Semua akun. Menu <strong>Agen Saya</strong>.</p>
+<p>Hanya untuk akun administrator. Menu <strong>Agen Saya</strong>. Agen yang tersambung bertindak dengan hak
+akses akun Anda; operator tidak dapat menyambungkan agen.</p>
 <p>Untuk agen pengkodean di laptop Anda sendiri (Claude Code, Cursor, dan sejenisnya) tidak perlu
 kredensial dari administrator. Tambahkan alamat MCP yang tertera di halaman itu ke agen Anda
 <em>tanpa</em> kredensial; agen akan membuka peramban ke halaman izin aplikasi ini. Periksa nama agen

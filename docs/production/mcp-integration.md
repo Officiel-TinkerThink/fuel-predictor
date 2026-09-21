@@ -44,7 +44,8 @@ scheme (`X-Forwarded-Proto: https`); `FUEL_PREDICTOR_PUBLIC_URL` overrides it wh
 be changed (recovery runbook §3).
 
 The agent acts **as the user**, audited as `<username> via <client name>`, and can never hold a
-scope the user's own role does not. Access tokens last one hour, refresh tokens thirty days of
+scope the user's own role does not. Only an administrator can connect one: the consent screen
+refuses an operator, whose job is prediction and actual fuel and nothing else. Access tokens last one hour, refresh tokens thirty days of
 disuse. The user sees and revokes their grants on **Agen Saya**; an administrator sees everyone's
 on **Integrasi Agen**. Revocation is immediate. A grant can also be given a label of the user's
 own (display only - the client's id, name and tokens are untouched) and, once revoked or expired,

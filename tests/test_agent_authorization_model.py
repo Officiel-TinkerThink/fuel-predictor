@@ -191,14 +191,18 @@ def test_a_grant_presents_itself_to_mcp_as_an_agent_client_named_after_the_user(
 # --- what a user may delegate ------------------------------------------------------
 
 
-def test_every_role_may_delegate_the_read_compute_scopes() -> None:
-    for role in UserRole:
-        assert delegable_scopes_for(role) >= DEFAULT_AGENT_SCOPES
+def test_an_administrator_may_delegate_the_read_compute_scopes() -> None:
+    assert delegable_scopes_for(UserRole.ADMINISTRATOR) >= DEFAULT_AGENT_SCOPES
+
+
+def test_an_operator_could_only_ever_delegate_prediction() -> None:
+    """Consent is closed to operators (delivery), but were it open, the scope
+    arithmetic would still offer them nothing beyond their own job."""
+    assert delegable_scopes_for(UserRole.OPERATOR) == frozenset({AgentScope.PREDICT})
 
 
 def test_only_an_administrator_may_delegate_model_administration() -> None:
     assert AgentScope.MODELS_ADMIN in delegable_scopes_for(UserRole.ADMINISTRATOR)
-    assert AgentScope.MODELS_ADMIN not in delegable_scopes_for(UserRole.MANAGER)
     assert AgentScope.MODELS_ADMIN not in delegable_scopes_for(UserRole.OPERATOR)
 
 

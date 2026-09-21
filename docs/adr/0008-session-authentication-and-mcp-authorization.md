@@ -75,3 +75,15 @@ anonymously; existing tests must establish a session.
 Because the application is its own authorization server, credential rotation and lockout are
 operator procedures this project must document and rehearse rather than delegate. If a future
 deployment does need federated login, this decision must be superseded rather than quietly extended.
+
+## Amendment (2026-09-21): two roles
+
+The `manager` role is removed. It sat between operator and administrator with one extra
+menu (the audit log) and no other reason to be a separate account type. There are now two
+roles: an **operator** makes predictions (one at a time or from a sheet) and records actual
+fuel, and may change their own password - nothing else; an **administrator** holds every
+capability. Accounts that held `manager` become operators by migration `20260921_23`, the
+narrower choice, and an administrator promotes whoever should be one. Importing training
+history moved under the model capability, since it is model work rather than the daily job,
+and the OAuth consent screen refuses anyone without `manage_own_agents`, which operators no
+longer hold.

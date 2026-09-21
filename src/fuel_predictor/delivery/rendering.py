@@ -20,7 +20,6 @@ STATIC_DIRECTORY = Path(__file__).parent / "static"
 
 _ROLE_LABELS = {
     UserRole.OPERATOR: "Operator",
-    UserRole.MANAGER: "Manajer",
     UserRole.ADMINISTRATOR: "Administrator",
 }
 
@@ -44,7 +43,7 @@ class NavigationGroup:
 NAVIGATION: tuple[NavigationGroup, ...] = (
     NavigationGroup(
         title=None,
-        items=(NavigationItem("Ringkasan", "/", Capability.VIEW_MONITORING),),
+        items=(NavigationItem("Ringkasan", "/", Capability.MANAGE_OWN_ACCOUNT),),
     ),
     NavigationGroup(
         title="Operasi Harian",
@@ -85,9 +84,7 @@ NAVIGATION: tuple[NavigationGroup, ...] = (
         collapsible=True,
         items=(
             NavigationItem("Pengelolaan Model", "/pengelolaan-model", Capability.VIEW_MODELS),
-            NavigationItem(
-                "Impor Data Historis", "/impor-data-historis", Capability.IMPORT_OPERATIONS
-            ),
+            NavigationItem("Impor Data Historis", "/impor-data-historis", Capability.MANAGE_MODELS),
             NavigationItem("Unggah Kandidat", "/model/unggah", Capability.MANAGE_MODELS),
             NavigationItem("Riwayat Paket", "/model/riwayat", Capability.VIEW_MODELS),
         ),

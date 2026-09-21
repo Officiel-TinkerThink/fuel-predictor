@@ -130,10 +130,10 @@ def test_authentication_and_privileged_actions_are_audited(tmp_path: Path) -> No
         client.post(
             "/api/v1/users",
             json={
-                "username": "manajer1",
-                "full_name": "Manajer Satu",
-                "password": "kata-sandi-manajer-1",
-                "role": "manager",
+                "username": "operator1",
+                "full_name": "Operator Satu",
+                "password": "kata-sandi-operator-1",
+                "role": "operator",
             },
         )
         audit = client.get("/api/v1/audit-records")
