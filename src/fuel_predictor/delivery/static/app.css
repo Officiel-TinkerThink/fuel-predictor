@@ -328,7 +328,10 @@ a:hover {
   flex: 0 0 auto;
 }
 
-.app__signout-button {
+/* Written with the element+attribute so it outranks the generic
+   button[type="submit"] rule, whose 1.5rem side padding squeezed the icon to
+   nothing inside this 36px box. */
+button[type="submit"].app__signout-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -342,8 +345,8 @@ a:hover {
   cursor: pointer;
 }
 
-.app__signout-button:hover,
-.app__signout-button:focus-visible {
+button[type="submit"].app__signout-button:hover,
+button[type="submit"].app__signout-button:focus-visible {
   background: rgba(255, 255, 255, 0.12);
   color: var(--color-text-inverse);
   outline: none;
