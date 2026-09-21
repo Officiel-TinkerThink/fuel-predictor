@@ -9,12 +9,14 @@ from fuel_predictor.domain.identity import (
     AuditOutcome,
     AuditRecord,
     AuthenticatedSession,
+    PasswordResetToken,
     User,
     UserRole,
 )
 from fuel_predictor.infrastructure.database import (
     AgentClientRow,
     AuditRecordRow,
+    PasswordResetTokenRow,
     SessionFactory,
     UserRow,
     UserSessionRow,
@@ -74,6 +76,48 @@ class SqlAlchemyUserRepository:
             row.role = str(user.role)
             row.password_hash = user.password_hash
             row.is_active = user.is_active
+
+
+class SqlAlchemyPasswordResetTokenRepository:
+    def __init__(self, session_factory: SessionFactory) -> None:
+        self._session_factory = session_factory
+
+    def add(self, token: PasswordResetToken) -> None:
+        with self._session_factory.begin() as session:
+            session.add(
+                PasswordResetTokenRow(
+                    token_hash=token.token_hash,
+                    user_id=token.user_id,
+                    issued_at=token.issued_at,
+                    expires_at=token.expires_at,
+                    used_at=token.used_at,
+                )
+            )
+
+    def get(self, token_hash: str) -> PasswordResetToken | None:
+        with self._session_factory() as session:
+            row = session.get(PasswordResetTokenRow, token_hash)
+            if row is None:
+                return None
+            return PasswordResetToken(
+                token_hash=row.token_hash,
+                user_id=row.user_id,
+                issued_at=_aware(row.issued_at),
+                expires_at=_aware(row.expires_at),
+                used_at=_aware(row.used_at) if row.used_at is not None else None,
+            )
+
+    def replace(self, token: PasswordResetToken) -> None:
+        with self._session_factory.begin() as session:
+            row = session.get(PasswordResetTokenRow, token.token_hash)
+            if row is not None:
+                row.used_at = token.used_at
+
+    def delete_expired(self, moment: datetime) -> None:
+        with self._session_factory.begin() as session:
+            session.execute(
+                delete(PasswordResetTokenRow).where(PasswordResetTokenRow.expires_at < moment)
+            )
 
 
 class SqlAlchemySessionRepository:

@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 import httpx
 
 from fuel_predictor.application.alert_delivery import AlertNotification, AlertNotifier
+from fuel_predictor.application.identity import PasswordResetMailer
 
 if TYPE_CHECKING:
     from fuel_predictor.configuration import ApplicationSettings
@@ -124,3 +125,75 @@ def build_notifier(settings: "ApplicationSettings") -> AlertNotifier:
             use_starttls=settings.alert_smtp_use_starttls,
         )
     return UnconfiguredAlertNotifier()
+
+
+# --- Password-reset mail --------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class SmtpPasswordResetMailer:
+    """The reset link, over the same SMTP channel alerts use.
+
+    Unlike an alert it goes to one person's own address, and the body says
+    what the link does and how long it lives so a surprised recipient knows
+    whether to worry.
+    """
+
+    host: str
+    port: int
+    sender: str
+    username: str | None = None
+    password: str | None = None
+    use_starttls: bool = True
+    timeout_seconds: float = 30.0
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self.host and self.sender)
+
+    def send_reset_link(self, email: str, link: str) -> None:
+        message = EmailMessage()
+        message["Subject"] = "Atur ulang kata sandi Perencana Operasi Harian"
+        message["From"] = self.sender
+        message["To"] = email
+        message.set_content(
+            "Seseorang meminta pengaturan ulang kata sandi untuk akun dengan alamat ini "
+            "di Perencana Operasi Harian.\n\n"
+            f"Buka tautan berikut untuk memilih kata sandi baru:\n{link}\n\n"
+            "Tautan berlaku 30 menit dan hanya bisa dipakai sekali. Bila bukan Anda yang "
+            "meminta, abaikan surel ini; kata sandi Anda tidak berubah."
+        )
+        with smtplib.SMTP(self.host, self.port, timeout=self.timeout_seconds) as server:
+            if self.use_starttls:
+                server.starttls()
+            if self.username and self.password:
+                server.login(self.username, self.password)
+            server.send_message(message)
+
+
+@dataclass(frozen=True, slots=True)
+class UnconfiguredPasswordResetMailer:
+    """No SMTP channel: the pages say so and point at the administrator."""
+
+    @property
+    def is_configured(self) -> bool:
+        return False
+
+    def send_reset_link(self, email: str, link: str) -> None:
+        raise RuntimeError("Saluran surel untuk atur ulang kata sandi belum dikonfigurasi.")
+
+
+def build_password_reset_mailer(settings: "ApplicationSettings") -> PasswordResetMailer:
+    """SMTP when the alert channel's host and sender are set; nothing else is needed
+    (recipients are the accounts' own addresses)."""
+    if settings.alert_smtp_host and settings.alert_email_sender:
+        password = settings.alert_smtp_password.get_secret_value()
+        return SmtpPasswordResetMailer(
+            host=settings.alert_smtp_host,
+            port=settings.alert_smtp_port,
+            sender=settings.alert_email_sender,
+            username=settings.alert_smtp_username or None,
+            password=password or None,
+            use_starttls=settings.alert_smtp_use_starttls,
+        )
+    return UnconfiguredPasswordResetMailer()

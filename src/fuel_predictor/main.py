@@ -50,7 +50,10 @@ from fuel_predictor.application.identity import (
     EnsureBootstrapAdministrator,
     ListAuditRecords,
     ListUsers,
+    PasswordResetMailer,
     RecordAuditEvent,
+    RequestPasswordReset,
+    ResetPasswordWithToken,
     ResolveSession,
     SetUserActivation,
     SignIn,
@@ -126,7 +129,10 @@ from fuel_predictor.delivery.security import (
     register_security_error_handlers,
 )
 from fuel_predictor.domain.identity import AuditOutcome
-from fuel_predictor.infrastructure.alert_notifiers import build_notifier
+from fuel_predictor.infrastructure.alert_notifiers import (
+    build_notifier,
+    build_password_reset_mailer,
+)
 from fuel_predictor.infrastructure.database import (
     build_engine,
     build_session_factory,
@@ -162,6 +168,7 @@ from fuel_predictor.infrastructure.sqlalchemy_historical_datasets import (
 from fuel_predictor.infrastructure.sqlalchemy_identity import (
     SqlAlchemyAgentClientRepository,
     SqlAlchemyAuditRepository,
+    SqlAlchemyPasswordResetTokenRepository,
     SqlAlchemySessionRepository,
     SqlAlchemyUserRepository,
 )
@@ -231,6 +238,7 @@ def create_app(
     bootstrap_administrator: tuple[str, str] | None = None,
     allow_unprovisioned_access: bool | None = None,
     public_url: str | None = None,
+    password_reset_mailer: PasswordResetMailer | None = None,
 ) -> FastAPI:
     if database_path is not None and database_url is not None:
         raise ValueError("Pilih salah satu: database_path atau database_url.")
@@ -356,6 +364,20 @@ def create_app(
         user_repository, session_repository, password_hasher, record_audit
     )
     change_own_password = ChangeOwnPassword(user_repository, password_hasher, change_password)
+    reset_mailer = (
+        password_reset_mailer
+        if password_reset_mailer is not None
+        else build_password_reset_mailer(settings)
+    )
+    request_password_reset = RequestPasswordReset(
+        user_repository,
+        SqlAlchemyPasswordResetTokenRepository(session_factory),
+        reset_mailer,
+        record_audit,
+    )
+    reset_password = ResetPasswordWithToken(
+        user_repository, SqlAlchemyPasswordResetTokenRepository(session_factory), change_password
+    )
     list_audit_records = ListAuditRecords(audit_repository)
     ensure_bootstrap_administrator = EnsureBootstrapAdministrator(user_repository, create_user)
     resolved_bootstrap_administrator = bootstrap_administrator or (
@@ -510,6 +532,10 @@ def create_app(
             list_audit_records,
             guard,
             cookies_require_https=settings.session_cookies_require_https,
+            request_password_reset=request_password_reset,
+            reset_password=reset_password,
+            reset_mail_configured=reset_mailer.is_configured,
+            public_url=resolved_public_url,
         )
     )
     app.include_router(

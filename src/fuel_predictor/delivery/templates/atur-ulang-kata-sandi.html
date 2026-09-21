@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atur Ulang Kata Sandi · Perencana Operasi Harian</title>
+  <link rel="stylesheet" href="/statis/app.css">
+  <link rel="icon" href="data:,">
+</head>
+<body>
+<div class="signin">
+  <main class="signin__card">
+    <h1>Kata sandi baru</h1>
+    <p class="lead">Untuk akun <strong>{{ username }}</strong>. Setelah disimpan, semua sesi lama
+      berakhir dan Anda masuk dengan kata sandi ini.</p>
+    {% if error %}
+    <div class="error-summary" role="alert" tabindex="-1" id="ringkasan-kesalahan">
+      <h2>Belum dapat disimpan</h2>
+      <p>{{ error }}</p>
+    </div>
+    {% endif %}
+    <form method="post" action="/atur-ulang-kata-sandi" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="token" value="{{ token }}">
+      <input type="hidden" name="username" value="{{ username }}" autocomplete="username">
+      <div class="field">
+        <label for="field-new_password">Kata sandi baru</label>
+        <input id="field-new_password" name="new_password" type="password" required minlength="12"
+               autocomplete="new-password" aria-describedby="hint-new_password">
+        <span class="hint" id="hint-new_password">Minimal 12 karakter. Hindari kata sandi yang dipakai di tempat lain.</span>
+      </div>
+      <button type="submit" class="button">Simpan kata sandi</button>
+    </form>
+  </main>
+</div>
+<script src="/statis/app.js" defer></script>
+</body>
+</html>

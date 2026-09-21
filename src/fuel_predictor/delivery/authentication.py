@@ -10,11 +10,14 @@ from fuel_predictor.application.identity import (
     CreateUser,
     ListAuditRecords,
     ListUsers,
+    PasswordResetTokenInvalidError,
+    RequestPasswordReset,
+    ResetPasswordWithToken,
     SignIn,
     SignInFailedError,
     SignOut,
 )
-from fuel_predictor.delivery.rendering import render_standalone
+from fuel_predictor.delivery.rendering import render_error_page, render_standalone
 from fuel_predictor.delivery.security import (
     SESSION_COOKIE,
     SecurityGuard,
@@ -73,6 +76,7 @@ class AuditListResponse(BaseModel):
 # Why someone is back at the sign-in page, when the reason was their own doing.
 _SIGN_IN_NOTICES = {
     "kata-sandi": "Kata sandi Anda sudah diubah. Masuk lagi dengan kata sandi yang baru.",
+    "atur-ulang": "Kata sandi baru tersimpan. Masuk dengan kata sandi itu.",
 }
 
 
@@ -84,6 +88,11 @@ def build_authentication_router(
     list_audit_records: ListAuditRecords,
     guard: SecurityGuard,
     cookies_require_https: bool,
+    *,
+    request_password_reset: RequestPasswordReset,
+    reset_password: ResetPasswordWithToken,
+    reset_mail_configured: bool,
+    public_url: str | None = None,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -131,6 +140,85 @@ def build_authentication_router(
         secure = cookies_require_https or request.url.scheme == "https"
         set_session_cookie(response, session.session_token, secure=secure)
         return response
+
+    # --- Forgotten passwords ----------------------------------------------------
+
+    def _forgot_page(request: Request, *, requested: bool) -> Response:
+        token = request.cookies.get("fp_csrf") or new_csrf_token()
+        response = HTMLResponse(
+            render_standalone(
+                "lupa-kata-sandi.html",
+                csrf_token=token,
+                available=reset_mail_configured,
+                requested=requested,
+            )
+        )
+        issue_pre_session_csrf_token(request, response, token=token)
+        return response
+
+    @router.get("/lupa-kata-sandi", response_class=HTMLResponse)
+    def show_forgot_password(request: Request) -> Response:
+        return _forgot_page(request, requested=False)
+
+    @router.post("/lupa-kata-sandi", response_class=HTMLResponse)
+    async def submit_forgot_password(request: Request) -> Response:
+        if not reset_mail_configured:
+            return _forgot_page(request, requested=False)
+        form = await request.form()
+        origin = public_url or str(request.base_url).rstrip("/")
+        request_password_reset.execute(
+            str(form.get("identifier", "")),
+            link_for=lambda raw: f"{origin}/atur-ulang-kata-sandi?token={raw}",
+        )
+        # The same page whatever happened: nothing here says whether the
+        # account exists or has an address.
+        return _forgot_page(request, requested=True)
+
+    def _reset_page(request: Request, token: str, username: str, error: str | None) -> Response:
+        csrf = request.cookies.get("fp_csrf") or new_csrf_token()
+        response = HTMLResponse(
+            render_standalone(
+                "atur-ulang-kata-sandi.html",
+                csrf_token=csrf,
+                token=token,
+                username=username,
+                error=error,
+            ),
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT if error else status.HTTP_200_OK,
+        )
+        issue_pre_session_csrf_token(request, response, token=csrf)
+        return response
+
+    def _link_spent() -> HTMLResponse:
+        return HTMLResponse(
+            render_error_page(
+                "Tautan tidak berlaku",
+                "Tautan ini sudah dipakai, kedaluwarsa, atau tidak dikenal. Minta tautan baru "
+                "dari halaman Lupa kata sandi.",
+            ),
+            status_code=status.HTTP_410_GONE,
+        )
+
+    @router.get("/atur-ulang-kata-sandi", response_class=HTMLResponse)
+    def show_reset_password(request: Request, token: str = "") -> Response:
+        try:
+            user = reset_password.inspect(token)
+        except PasswordResetTokenInvalidError:
+            return _link_spent()
+        return _reset_page(request, token, user.username, None)
+
+    @router.post("/atur-ulang-kata-sandi", response_class=HTMLResponse)
+    async def submit_reset_password(request: Request) -> Response:
+        form = await request.form()
+        token = str(form.get("token", ""))
+        try:
+            reset_password.execute(token, str(form.get("new_password", "")))
+        except PasswordResetTokenInvalidError:
+            return _link_spent()
+        except IdentityValidationError as error:
+            user = reset_password.inspect(token)
+            return _reset_page(request, token, user.username, error.message)
+        return RedirectResponse("/masuk?pesan=atur-ulang", status_code=status.HTTP_303_SEE_OTHER)
 
     @router.post("/keluar")
     async def submit_sign_out(request: Request) -> Response:

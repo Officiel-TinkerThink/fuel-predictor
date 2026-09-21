@@ -42,7 +42,10 @@ bukan kerusakan.
 **Kalau kata sandi ditolak:** periksa huruf besar/kecil. Setelah beberapa kali gagal, sistem
 menahan percobaan berikutnya sebentar. Tunggu, lalu coba lagi.
 
-**Lupa kata sandi:** minta administrator mengatur ulang — di menu **Pengguna**, tombol
+**Lupa kata sandi:** tekan **Lupa kata sandi?** di halaman masuk, isi nama pengguna atau email,
+lalu buka tautan yang dikirim ke email akun Anda (berlaku 30 menit, sekali pakai) dan pilih kata
+sandi baru. Bila akun Anda belum punya email, atau halaman itu menyebut pengiriman email belum
+diaktifkan, minta administrator mengatur ulang — di menu **Pengguna**, tombol
 **Atur ulang kata sandi** pada baris akun Anda. **Mengganti kata sandi sendiri:** tautan
 **Ubah kata sandi** di bawah nama Anda pada menu samping; Anda diminta kata sandi yang lama
 dulu, lalu masuk lagi dengan yang baru.

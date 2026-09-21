@@ -29,6 +29,9 @@ _PUBLIC_PATHS = frozenset(
     {
         "/masuk",
         "/keluar",
+        # A person who cannot sign in is exactly who these are for.
+        "/lupa-kata-sandi",
+        "/atur-ulang-kata-sandi",
         "/sehat",
         "/statis",
         "/docs",

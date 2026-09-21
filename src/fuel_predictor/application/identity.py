@@ -18,6 +18,7 @@ from fuel_predictor.domain.identity import (
     AuthenticatedSession,
     Capability,
     IdentityValidationError,
+    PasswordResetToken,
     User,
     UserRole,
     normalize_email,
@@ -171,7 +172,7 @@ class SignIn:
     def execute(self, username: str, password: str) -> SignedInSession:
         """`username` is whatever the person typed: their username or their email."""
         moment = self.now()
-        normalized = self._normalized_identifier(username)
+        normalized = _normalized_identifier(username)
         if normalized is None:
             # Never reveal which half of the credential pair was wrong.
             self._audit_failure(username.strip().lower()[:254], "invalid_username")
@@ -181,7 +182,7 @@ class SignIn:
             self._audit_failure(normalized, "throttled")
             raise SignInThrottledError()
 
-        user = self._find(normalized)
+        user = _find_user(self.user_repository, normalized)
         if user is None or not user.is_active:
             self._audit_failure(normalized, "unknown_or_inactive")
             raise SignInFailedError()
@@ -216,24 +217,6 @@ class SignIn:
             user=user,
             expires_at=expires_at,
         )
-
-    @staticmethod
-    def _normalized_identifier(typed: str) -> str | None:
-        """An address is recognised by its "@"; anything else must be a username."""
-        if "@" in typed:
-            try:
-                return normalize_email(typed)
-            except IdentityValidationError:
-                return None
-        try:
-            return normalize_username(typed)
-        except IdentityValidationError:
-            return None
-
-    def _find(self, identifier: str) -> User | None:
-        if "@" in identifier:
-            return self.user_repository.get_by_email(identifier)
-        return self.user_repository.get_by_username(identifier)
 
     def _is_throttled(self, username: str, moment: datetime) -> bool:
         since = moment - timedelta(seconds=FAILED_SIGN_IN_WINDOW_SECONDS)
@@ -446,6 +429,137 @@ class ChangeOwnPassword:
         if not self.password_hasher.verify(current_password, user.password_hash):
             raise IdentityValidationError("current_password", "Kata sandi saat ini salah.")
         return self.change_password.execute(user_id, new_password, changed_by=user.username)
+
+
+# --- Forgotten passwords -------------------------------------------------------
+
+PASSWORD_RESET_LIFETIME_SECONDS = 30 * 60
+MAX_PASSWORD_RESET_REQUESTS = 3
+PASSWORD_RESET_REQUEST_WINDOW_SECONDS = 15 * 60
+
+
+class PasswordResetTokenRepository(Protocol):
+    def add(self, token: PasswordResetToken) -> None: ...
+
+    def get(self, token_hash: str) -> PasswordResetToken | None: ...
+
+    def replace(self, token: PasswordResetToken) -> None: ...
+
+    def delete_expired(self, moment: datetime) -> None: ...
+
+
+class PasswordResetMailer(Protocol):
+    """Delivers the link. `is_configured` is False when no channel exists, in
+    which case the pages say so instead of pretending to send."""
+
+    @property
+    def is_configured(self) -> bool: ...
+
+    def send_reset_link(self, email: str, link: str) -> None: ...
+
+
+class PasswordResetTokenInvalidError(ValueError):
+    """Unknown, used, or expired: the same answer for all three."""
+
+
+@dataclass(frozen=True, slots=True)
+class RequestPasswordReset:
+    """Mail a reset link to the account behind a username or email.
+
+    Silent by design: the caller learns nothing about whether the account
+    exists or has an address. What is recorded is the audit event, which is
+    also what throttles repeated requests for one identifier.
+    """
+
+    user_repository: UserRepository
+    tokens: PasswordResetTokenRepository
+    mailer: PasswordResetMailer
+    record_audit: RecordAuditEvent
+    now: Callable[[], datetime] = lambda: datetime.now(UTC)
+
+    def execute(self, identifier: str, *, link_for: Callable[[str], str]) -> None:
+        moment = self.now()
+        normalized = _normalized_identifier(identifier)
+        if normalized is None:
+            return
+        since = moment - timedelta(seconds=PASSWORD_RESET_REQUEST_WINDOW_SECONDS)
+        recent = self.record_audit.audit_repository.count_recent(
+            "password_reset_requested", normalized, since
+        )
+        if recent >= MAX_PASSWORD_RESET_REQUESTS:
+            return
+        self.record_audit.execute(
+            actor=normalized,
+            action="password_reset_requested",
+            outcome=AuditOutcome.SUCCEEDED,
+            subject=normalized,
+        )
+        user = _find_user(self.user_repository, normalized)
+        if user is None or not user.is_active or not user.email:
+            return
+        raw = token_urlsafe(32)
+        self.tokens.delete_expired(moment)
+        self.tokens.add(
+            PasswordResetToken(
+                token_hash=hash_session_token(raw),
+                user_id=user.user_id,
+                issued_at=moment,
+                expires_at=moment + timedelta(seconds=PASSWORD_RESET_LIFETIME_SECONDS),
+            )
+        )
+        self.mailer.send_reset_link(user.email, link_for(raw))
+
+
+@dataclass(frozen=True, slots=True)
+class ResetPasswordWithToken:
+    user_repository: UserRepository
+    tokens: PasswordResetTokenRepository
+    change_password: ChangePassword
+    now: Callable[[], datetime] = lambda: datetime.now(UTC)
+
+    def inspect(self, raw_token: str) -> User:
+        """The account a still-usable token belongs to, for showing the form."""
+        token = self.tokens.get(hash_session_token(raw_token))
+        if token is None or not token.is_usable_at(self.now()):
+            raise PasswordResetTokenInvalidError()
+        user = self.user_repository.get(token.user_id)
+        if user is None or not user.is_active:
+            raise PasswordResetTokenInvalidError()
+        return user
+
+    def execute(self, raw_token: str, new_password: str) -> User:
+        moment = self.now()
+        token = self.tokens.get(hash_session_token(raw_token))
+        if token is None or not token.is_usable_at(moment):
+            raise PasswordResetTokenInvalidError()
+        user = self.user_repository.get(token.user_id)
+        if user is None or not user.is_active:
+            raise PasswordResetTokenInvalidError()
+        # Validation may refuse the password; the token stays usable then.
+        updated = self.change_password.execute(
+            user.user_id, new_password, changed_by=f"{user.username} (tautan email)"
+        )
+        self.tokens.replace(token.used(moment))
+        return updated
+
+
+def _normalized_identifier(typed: str) -> str | None:
+    """A username or an email as typed, normalised; None when it is neither."""
+    if "@" in typed:
+        try:
+            return normalize_email(typed)
+        except IdentityValidationError:
+            return None
+    try:
+        return normalize_username(typed)
+    except IdentityValidationError:
+        return None
+
+
+def _find_user(users: UserRepository, identifier: str) -> User | None:
+    if "@" in identifier:
+        return users.get_by_email(identifier)
+    return users.get_by_username(identifier)
 
 
 @dataclass(frozen=True, slots=True)

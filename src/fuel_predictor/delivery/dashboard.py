@@ -301,6 +301,7 @@ _ACTION_LABELS = {
     "sign_in_failed": "Masuk gagal",
     "sign_out": "Keluar",
     "password_changed": "Kata sandi diubah",
+    "password_reset_requested": "Tautan atur ulang kata sandi diminta",
     "user_created": "Pengguna dibuat",
     "user_activated": "Pengguna diaktifkan",
     "model_rollback_requested": "Pengembalian model diminta",

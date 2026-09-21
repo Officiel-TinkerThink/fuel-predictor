@@ -5,7 +5,7 @@ declares the capability it needs rather than naming a role, so adding a role
 later does not mean editing every route.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from enum import StrEnum
 
@@ -94,6 +94,28 @@ class User:
 
     def allows(self, capability: Capability) -> bool:
         return self.is_active and role_allows(self.role, capability)
+
+
+@dataclass(frozen=True, slots=True)
+class PasswordResetToken:
+    """One chance to choose a new password, mailed to the account's address.
+
+    Only the hash is stored, as with sessions; the raw token lives in the
+    link. Single use and short-lived: presenting it once, or after the
+    deadline, is the end of it.
+    """
+
+    token_hash: str
+    user_id: str
+    issued_at: datetime
+    expires_at: datetime
+    used_at: datetime | None = None
+
+    def is_usable_at(self, moment: datetime) -> bool:
+        return self.used_at is None and moment < self.expires_at
+
+    def used(self, moment: datetime) -> "PasswordResetToken":
+        return replace(self, used_at=moment)
 
 
 class AgentScope(StrEnum):

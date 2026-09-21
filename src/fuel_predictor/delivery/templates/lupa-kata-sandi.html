@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lupa Kata Sandi · Perencana Operasi Harian</title>
+  <link rel="stylesheet" href="/statis/app.css">
+  <link rel="icon" href="data:,">
+</head>
+<body>
+<div class="signin">
+  <main class="signin__card">
+    <h1>Lupa kata sandi</h1>
+    {% if not available %}
+    <p class="lead">Pengiriman tautan lewat email belum diaktifkan pada instalasi ini.
+      Minta administrator mengatur ulang kata sandi Anda dari menu <strong>Pengguna</strong>.</p>
+    {% elif requested %}
+    <div class="banner banner--success" role="status">
+      <p>Jika akun itu punya email, tautan untuk memilih kata sandi baru sudah dikirim ke sana.
+        Periksa kotak masuk (dan folder spam); tautan berlaku 30 menit.</p>
+    </div>
+    <p class="hint">Tidak menerima apa pun? Alamat email mungkin belum tercatat pada akun Anda —
+      administrator bisa mengatur ulang kata sandi Anda langsung.</p>
+    {% else %}
+    <p class="lead">Masukkan nama pengguna atau email akun Anda. Bila akun itu punya email,
+      tautan untuk memilih kata sandi baru dikirim ke sana.</p>
+    <form method="post" action="/lupa-kata-sandi" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field">
+        <label for="field-identifier">Nama pengguna atau email</label>
+        <input id="field-identifier" name="identifier" type="text" required autocomplete="username"
+               autocapitalize="none" spellcheck="false" inputmode="email">
+      </div>
+      <button type="submit" class="button">Kirim tautan</button>
+    </form>
+    {% endif %}
+    <p class="hint" style="margin-top: var(--space-5)"><a href="/masuk">Kembali ke halaman masuk</a></p>
+  </main>
+</div>
+</body>
+</html>
