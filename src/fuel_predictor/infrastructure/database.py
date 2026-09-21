@@ -196,6 +196,8 @@ class UserRow(Base):
     user_id: Mapped[str] = mapped_column(String(40), primary_key=True)
     username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     full_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    # Normalised before it gets here, so a plain unique index is enough.
+    email: Mapped[str | None] = mapped_column(String(254), unique=True, nullable=True)
     role: Mapped[str] = mapped_column(String(32), nullable=False)
     password_hash: Mapped[str] = mapped_column(String(512), nullable=False)
     is_active: Mapped[bool] = mapped_column(nullable=False, default=True)

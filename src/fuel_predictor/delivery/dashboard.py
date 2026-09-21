@@ -255,12 +255,14 @@ def build_dashboard_router(
         values = {
             "username": str(form.get("username", "")),
             "full_name": str(form.get("full_name", "")),
+            "email": str(form.get("email", "")),
             "role": str(form.get("role", UserRole.OPERATOR.value)),
         }
         try:
             create_user.execute(
                 username=values["username"],
                 full_name=values["full_name"],
+                email=values["email"],
                 password=str(form.get("password", "")),
                 role=UserRole(values["role"]),
                 created_by=caller.user.username,

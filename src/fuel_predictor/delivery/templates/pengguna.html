@@ -15,7 +15,7 @@
       <tbody>
         {% for user in users %}
         <tr data-user-id="{{ user.user_id }}">
-          <td>{{ user.username }}<br><span class="hint">{{ user.full_name }}</span></td>
+          <td>{{ user.username }}<br><span class="hint">{{ user.full_name }}{% if user.email %} · {{ user.email }}{% endif %}</span></td>
           <td>{{ role_options | selectattr('0', 'equalto', user.role.value) | map(attribute='1') | first }}</td>
           <td>{{ ui.badge('Aktif', 'success') if user.is_active else ui.badge('Nonaktif', 'neutral') }}</td>
           <td>
@@ -64,7 +64,8 @@
   <form method="post" action="/pengguna" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     {{ ui.text_field('username', 'Nama pengguna', form_values.get('username', ''), hint='Huruf, angka, titik, garis, dan garis bawah.', errors=errors, required=true, autocomplete='username') }}
-    {{ ui.text_field('full_name', 'Nama lengkap', form_values.get('full_name', ''), errors=errors, required=true) }}
+    {{ ui.text_field('full_name', 'Nama', form_values.get('full_name', ''), errors=errors, required=true) }}
+    {{ ui.text_field('email', 'Email', form_values.get('email', ''), hint='Opsional. Bila diisi, bisa dipakai untuk masuk sebagai ganti nama pengguna.', errors=errors, type='email', autocomplete='email') }}
     {{ ui.text_field('password', 'Kata sandi awal', '', hint='Minimal 12 karakter. Sampaikan secara aman kepada pengguna.', errors=errors, required=true, type='password', autocomplete='new-password') }}
     {{ ui.select_field('role', 'Peran', role_options, form_values.get('role', 'operator'), hint='Operator: membuat prediksi (satu per satu atau dari berkas) dan mencatat BBM aktual. Administrator: semuanya, termasuk pemantauan, model, pengguna, dan integrasi agen.', errors=errors, required=true) }}
     <button type="submit" class="button">Simpan pengguna</button>

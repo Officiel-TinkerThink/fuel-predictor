@@ -37,6 +37,7 @@ class CreateUserRequest(BaseModel):
 
     username: str
     full_name: str
+    email: str | None = None
     password: str = Field(min_length=1)
     role: UserRole
 
@@ -45,6 +46,7 @@ class UserResponse(BaseModel):
     user_id: str
     username: str
     full_name: str
+    email: str | None
     role: UserRole
     is_active: bool
 
@@ -146,6 +148,7 @@ def build_authentication_router(
         user = create_user.execute(
             username=payload.username,
             full_name=payload.full_name,
+            email=payload.email,
             password=payload.password,
             role=payload.role,
             created_by=actor.user.username,
@@ -187,6 +190,7 @@ def _user_response(user: User) -> UserResponse:
         user_id=user.user_id,
         username=user.username,
         full_name=user.full_name,
+        email=user.email,
         role=user.role,
         is_active=user.is_active,
     )

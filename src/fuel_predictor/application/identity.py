@@ -20,6 +20,7 @@ from fuel_predictor.domain.identity import (
     IdentityValidationError,
     User,
     UserRole,
+    normalize_email,
     normalize_username,
     validate_full_name,
     validate_password,
@@ -43,6 +44,8 @@ class UserRepository(Protocol):
     def get(self, user_id: str) -> User | None: ...
 
     def get_by_username(self, username: str) -> User | None: ...
+
+    def get_by_email(self, email: str) -> User | None: ...
 
     def list_users(self) -> Sequence[User]: ...
 
@@ -99,6 +102,11 @@ class SignInThrottledError(SignInFailedError):
 class UsernameAlreadyExistsError(IdentityValidationError):
     def __init__(self, username: str) -> None:
         super().__init__("username", f"Nama pengguna {username} sudah digunakan.")
+
+
+class EmailAlreadyExistsError(IdentityValidationError):
+    def __init__(self, email: str) -> None:
+        super().__init__("email", f"Email {email} sudah dipakai akun lain.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -161,19 +169,19 @@ class SignIn:
     now: Callable[[], datetime] = lambda: datetime.now(UTC)
 
     def execute(self, username: str, password: str) -> SignedInSession:
+        """`username` is whatever the person typed: their username or their email."""
         moment = self.now()
-        try:
-            normalized = normalize_username(username)
-        except IdentityValidationError:
+        normalized = self._normalized_identifier(username)
+        if normalized is None:
             # Never reveal which half of the credential pair was wrong.
-            self._audit_failure(username, "invalid_username")
-            raise SignInFailedError() from None
+            self._audit_failure(username.strip().lower()[:254], "invalid_username")
+            raise SignInFailedError()
 
         if self._is_throttled(normalized, moment):
             self._audit_failure(normalized, "throttled")
             raise SignInThrottledError()
 
-        user = self.user_repository.get_by_username(normalized)
+        user = self._find(normalized)
         if user is None or not user.is_active:
             self._audit_failure(normalized, "unknown_or_inactive")
             raise SignInFailedError()
@@ -208,6 +216,24 @@ class SignIn:
             user=user,
             expires_at=expires_at,
         )
+
+    @staticmethod
+    def _normalized_identifier(typed: str) -> str | None:
+        """An address is recognised by its "@"; anything else must be a username."""
+        if "@" in typed:
+            try:
+                return normalize_email(typed)
+            except IdentityValidationError:
+                return None
+        try:
+            return normalize_username(typed)
+        except IdentityValidationError:
+            return None
+
+    def _find(self, identifier: str) -> User | None:
+        if "@" in identifier:
+            return self.user_repository.get_by_email(identifier)
+        return self.user_repository.get_by_username(identifier)
 
     def _is_throttled(self, username: str, moment: datetime) -> bool:
         since = moment - timedelta(seconds=FAILED_SIGN_IN_WINDOW_SECONDS)
@@ -307,12 +333,16 @@ class CreateUser:
         password: str,
         role: UserRole,
         created_by: str,
+        email: str | None = None,
     ) -> User:
         normalized = normalize_username(username)
         validated_name = validate_full_name(full_name)
+        normalized_email = normalize_email(email)
         validate_password(password)
         if self.user_repository.get_by_username(normalized) is not None:
             raise UsernameAlreadyExistsError(normalized)
+        if normalized_email and self.user_repository.get_by_email(normalized_email) is not None:
+            raise EmailAlreadyExistsError(normalized_email)
         user = User(
             user_id=f"USR-{uuid4().hex[:20]}",
             username=normalized,
@@ -321,6 +351,7 @@ class CreateUser:
             password_hash=self.password_hasher.hash(password),
             is_active=True,
             created_at=self.now(),
+            email=normalized_email,
         )
         self.user_repository.add(user)
         self.record_audit.execute(
@@ -351,6 +382,7 @@ class SetUserActivation:
             password_hash=user.password_hash,
             is_active=is_active,
             created_at=user.created_at,
+            email=user.email,
         )
         self.user_repository.replace(updated)
         if not is_active:
@@ -385,6 +417,7 @@ class ChangePassword:
             password_hash=self.password_hasher.hash(new_password),
             is_active=user.is_active,
             created_at=user.created_at,
+            email=user.email,
         )
         self.user_repository.replace(updated)
         self.session_repository.delete_for_user(user.user_id)

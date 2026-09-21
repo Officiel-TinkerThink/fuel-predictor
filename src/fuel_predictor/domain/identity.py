@@ -87,6 +87,10 @@ class User:
     password_hash: str
     is_active: bool
     created_at: datetime
+    # Optional: a shared desk or a service account has no address to give.
+    # Stored normalised (trimmed, lower-cased) and unique when present, so it
+    # can stand in for the username at sign-in.
+    email: str | None = None
 
     def allows(self, capability: Capability) -> bool:
         return self.is_active and role_allows(self.role, capability)
@@ -215,6 +219,33 @@ def validate_password(value: str) -> str:
     if len(value) > 256:
         raise IdentityValidationError("password", "Kata sandi maksimal 256 karakter.")
     return value
+
+
+def normalize_email(value: str | None) -> str | None:
+    """Trimmed and lower-cased, or None when nothing was given.
+
+    The check is deliberately shallow - one "@" with something either side and
+    a dot in the domain - because the only thing an address is used for here
+    is to be typed again at sign-in; a bounce is not something this system
+    could act on.
+    """
+    email = (value or "").strip().lower()
+    if not email:
+        return None
+    if len(email) > 254:
+        raise IdentityValidationError("email", "Email maksimal 254 karakter.")
+    local, separator, domain = email.partition("@")
+    malformed = (
+        not separator
+        or not local
+        or "." not in domain
+        or domain.startswith(".")
+        or domain.endswith(".")
+        or any(character.isspace() for character in email)
+    )
+    if malformed:
+        raise IdentityValidationError("email", "Alamat email tidak valid.")
+    return email
 
 
 def validate_full_name(value: str) -> str:

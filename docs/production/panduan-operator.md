@@ -27,7 +27,7 @@ Kalau ada langkah yang meminta Anda mengetik perintah, itu ada di
 ## 1. Masuk ke aplikasi
 
 1. Buka alamat aplikasi di peramban (Chrome, Edge, atau Firefox).
-2. Isi nama pengguna dan kata sandi, lalu tekan **Masuk**.
+2. Isi nama pengguna **atau email** akun Anda dan kata sandi, lalu tekan **Masuk**.
 
 Menu di sebelah kiri hanya menampilkan halaman yang boleh Anda buka. Ada dua peran:
 

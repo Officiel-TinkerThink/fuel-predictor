@@ -32,6 +32,7 @@ class SqlAlchemyUserRepository:
                     user_id=user.user_id,
                     username=user.username,
                     full_name=user.full_name,
+                    email=user.email,
                     role=str(user.role),
                     password_hash=user.password_hash,
                     is_active=user.is_active,
@@ -51,6 +52,13 @@ class SqlAlchemyUserRepository:
             ).scalar_one_or_none()
             return _user(row) if row is not None else None
 
+    def get_by_email(self, email: str) -> User | None:
+        with self._session_factory() as session:
+            row = session.execute(
+                select(UserRow).where(UserRow.email == email)
+            ).scalar_one_or_none()
+            return _user(row) if row is not None else None
+
     def list_users(self) -> tuple[User, ...]:
         with self._session_factory() as session:
             rows = session.execute(select(UserRow).order_by(UserRow.username)).scalars().all()
@@ -62,6 +70,7 @@ class SqlAlchemyUserRepository:
             if row is None:
                 return
             row.full_name = user.full_name
+            row.email = user.email
             row.role = str(user.role)
             row.password_hash = user.password_hash
             row.is_active = user.is_active
@@ -199,6 +208,7 @@ def _user(row: UserRow) -> User:
         password_hash=row.password_hash,
         is_active=row.is_active,
         created_at=_aware(row.created_at),
+        email=row.email,
     )
 
 

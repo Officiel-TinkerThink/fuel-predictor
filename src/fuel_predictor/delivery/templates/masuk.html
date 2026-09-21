@@ -27,9 +27,9 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="tujuan" value="{{ destination }}">
       <div class="field">
-        <label for="field-username">Nama pengguna</label>
+        <label for="field-username">Nama pengguna atau email</label>
         <input id="field-username" name="username" type="text" required autocomplete="username"
-               value="{{ username }}" autocapitalize="none" spellcheck="false">
+               value="{{ username }}" autocapitalize="none" spellcheck="false" inputmode="email">
       </div>
       <div class="field">
         <label for="field-password">Kata sandi</label>
