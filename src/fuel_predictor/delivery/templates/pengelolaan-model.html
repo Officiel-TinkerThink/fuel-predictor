@@ -23,8 +23,8 @@
   <h2>Kandidat menunggu keputusan</h2>
   {% if dashboard.candidate_models %}
   <div class="table-wrap">
-    <table>
-      <thead><tr><th>Model</th><th>Dataset</th><th>Evaluasi</th><th>Keputusan</th></tr></thead>
+    <table data-list data-list-label="Kandidat menunggu keputusan">
+      <thead><tr><th>Model</th><th>Dataset</th><th data-no-sort>Evaluasi</th><th data-no-sort>Keputusan</th></tr></thead>
       <tbody>
         {% for candidate in dashboard.candidate_models %}
         <tr>
@@ -53,8 +53,8 @@
   {{ ui.listing_toolbar(versions, placeholder='Versi, algoritma, atau status') }}
   {% if versions.items %}
   <div class="table-wrap">
-    <table>
-      <thead><tr>{{ ui.sort_th(versions, 'versi', 'Versi') }}<th>Algoritma</th>{{ ui.sort_th(versions, 'waktu', 'Dilatih') }}{{ ui.sort_th(versions, 'status', 'Status') }}<th><span class="visually-hidden">Tindakan</span></th></tr></thead>
+    <table class="table--sortable">
+      <thead><tr>{{ ui.sort_th(versions, 'versi', 'Versi') }}<th>Algoritma</th>{{ ui.sort_th(versions, 'waktu', 'Dilatih') }}{{ ui.sort_th(versions, 'status', 'Status') }}<th data-no-sort><span class="visually-hidden">Tindakan</span></th></tr></thead>
       <tbody>
         {% for model in versions.items %}
         <tr>

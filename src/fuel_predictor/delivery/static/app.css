@@ -13,11 +13,17 @@
 
   --color-text: #182c32;
   --color-text-muted: #596c73;
-  --color-text-inverse: #ffffff;
 
   --color-brand: #087e75;
   --color-brand-strong: #075e58;
   --color-brand-soft: #e5f4f0;
+  --color-on-brand: #ffffff;
+  --color-on-danger: #ffffff;
+  --color-danger-hover: #7d1c19;
+  --color-task-primary: #075e58;
+  --color-task-text: #ffffff;
+  --color-task-muted: #d5ebe7;
+  --color-result-border: #a6cfc5;
 
   --color-success: #1c6b3f;
   --color-success-soft: #e2f2e8;
@@ -48,6 +54,37 @@
 
   --measure: 68ch;
   --nav-width: 16rem;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-surface: #17262c;
+  --color-surface-sunken: #101c21;
+  --color-surface-raised: #1b2c32;
+  --color-border: #34494f;
+  --color-border-strong: #60767d;
+  --color-text: #e5eff1;
+  --color-text-muted: #a8bdc3;
+  --color-brand: #6ed9c5;
+  --color-brand-strong: #a2eadc;
+  --color-brand-soft: #203f3c;
+  --color-on-brand: #102a26;
+  --color-success: #91dcaf;
+  --color-success-soft: #203d30;
+  --color-warning: #f2ce83;
+  --color-warning-soft: #42361f;
+  --color-danger: #ffaaa4;
+  --color-danger-soft: #472b2d;
+  --color-danger-hover: #ffc6c2;
+  --color-on-danger: #371716;
+  --color-neutral: #becdd2;
+  --color-neutral-soft: #2a3b42;
+  --color-task-primary: #214b45;
+  --color-task-text: #e6faf4;
+  --color-task-muted: #c3e4db;
+  --color-result-border: #477d70;
+  --shadow-sm: 0 1px 2px #00000020;
+  --shadow-md: 0 8px 24px #00000035;
 }
 
 *,
@@ -124,7 +161,7 @@ a:hover {
   z-index: 20;
   padding: var(--space-2) var(--space-4);
   background: var(--color-brand);
-  color: var(--color-text-inverse);
+  color: var(--color-on-brand);
   border-radius: var(--radius-md);
   transition: top 0.15s ease;
 }
@@ -173,7 +210,7 @@ a:hover {
   height: 40px;
   border-radius: 12px;
   background: var(--color-brand);
-  color: white;
+  color: var(--color-on-brand);
 }
 
 .app__brand-name small {
@@ -295,7 +332,7 @@ a:hover {
 /* Who is signed in: initial, name and role, and a single sign-out glyph on
    the right - no button, no label; the row reads as one line. */
 .app__account {
-  margin-top: auto;
+  margin-top: 0;
   border-top: 1px solid var(--color-border);
   padding-top: var(--space-4);
   font-size: 0.82rem;
@@ -774,7 +811,7 @@ select[aria-invalid="true"] {
   padding: 0.45rem var(--space-4);
   font: inherit;
   font-weight: 600;
-  color: var(--color-text-inverse);
+  color: var(--color-on-brand);
   background: var(--color-brand);
   border: 1px solid var(--color-brand);
   border-radius: var(--radius-md);
@@ -785,7 +822,7 @@ select[aria-invalid="true"] {
 .button:hover {
   background: var(--color-brand-strong);
   border-color: var(--color-brand-strong);
-  color: var(--color-text-inverse);
+  color: var(--color-on-brand);
 }
 
 .button--secondary {
@@ -809,12 +846,13 @@ select[aria-invalid="true"] {
 .button--danger {
   background: var(--color-danger);
   border-color: var(--color-danger);
-  color: var(--color-text-inverse);
+  color: var(--color-on-danger);
 }
 
 .button--danger:hover {
-  background: #7d1c19;
-  border-color: #7d1c19;
+  color: var(--color-on-danger);
+  background: var(--color-danger-hover);
+  border-color: var(--color-danger-hover);
 }
 
 .button--small {
@@ -899,7 +937,7 @@ thead th {
 }
 
 tbody tr:hover td {
-  background: rgba(16, 85, 111, 0.03);
+  background: var(--color-brand-soft);
 }
 
 /* A sortable header is a link; the arrow shows the active direction. */
@@ -1236,7 +1274,7 @@ dialog[open]:not(:modal) {
 .pagination__pages span[aria-current="page"] {
   background: var(--color-brand);
   border-color: var(--color-brand);
-  color: var(--color-text-inverse);
+  color: var(--color-on-brand);
   font-weight: 600;
 }
 
@@ -1291,13 +1329,13 @@ dialog[open]:not(:modal) {
 
 .steps li[aria-current="step"]::before {
   background: var(--color-brand);
-  color: var(--color-text-inverse);
+  color: var(--color-on-brand);
 }
 
 .steps li[data-state="done"]::before {
   content: "\2713";
   background: var(--color-success);
-  color: var(--color-text-inverse);
+  color: var(--color-on-brand);
 }
 
 /* ---------- Definition lists ---------- */
@@ -1424,7 +1462,7 @@ dialog::backdrop {
   cursor: grab;
   touch-action: none;
   user-select: none;
-  color: #9aa7ac;
+  color: var(--color-text-muted);
   font-size: 16px;
   letter-spacing: -2px;
   line-height: 1;
@@ -1433,7 +1471,7 @@ dialog::backdrop {
 
 .stop-drag:hover {
   opacity: 1;
-  color: #1c5871;
+  color: var(--color-brand);
 }
 
 .stop-row--dragging {
@@ -1456,8 +1494,8 @@ dialog::backdrop {
   height: 24px;
   margin-top: 22px;
   border-radius: 50%;
-  background: #5c6b71;
-  color: #ffffff;
+  background: var(--color-text-muted);
+  color: var(--color-surface);
   font-size: 11px;
   font-weight: 700;
   display: flex;
@@ -1466,7 +1504,7 @@ dialog::backdrop {
 }
 
 .stop-marker--start {
-  background: #1c5871;
+  background: var(--color-brand);
 }
 
 .stop-fields {
@@ -1485,7 +1523,7 @@ dialog::backdrop {
 .stop-fields .field label {
   font-size: 12px;
   font-weight: 600;
-  color: #455158;
+  color: var(--color-text-muted);
   margin-bottom: 6px;
 }
 
@@ -1518,21 +1556,21 @@ dialog::backdrop {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.05em;
-  color: #7c8b91;
+  color: var(--color-text-muted);
   margin: 0 0 6px;
 }
 
 .route-preview__canvas {
-  border: 1px solid #dde3e6;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   overflow: hidden;
   min-height: 340px;
   background: repeating-linear-gradient(
     45deg,
-    #eef2f3,
-    #eef2f3 8px,
-    #e6ebec 8px,
-    #e6ebec 16px
+    var(--color-surface-sunken),
+    var(--color-surface-sunken) 8px,
+    var(--color-border) 8px,
+    var(--color-border) 16px
   );
 }
 
@@ -1563,7 +1601,7 @@ dialog::backdrop {
   margin: 6px 0 0;
   font-size: 12px;
   font-family: var(--font-mono);
-  color: #8a969b;
+  color: var(--color-text-muted);
 }
 
 @media (max-width: 60rem) {
@@ -1879,26 +1917,26 @@ dialog::backdrop {
 }
 
 .task-card--primary {
-  background: var(--color-brand-strong);
-  border-color: var(--color-brand-strong);
-  color: white;
+  background: var(--color-task-primary);
+  border-color: var(--color-task-primary);
+  color: var(--color-task-text);
 }
 
 .task-card--primary:hover {
-  color: white;
+  color: var(--color-task-text);
 }
 
 .task-card--primary > span {
-  color: #d5ebe7;
+  color: var(--color-task-muted);
 }
 
 .task-card--primary .task-card__action {
-  color: white;
+  color: var(--color-task-text);
 }
 
 .task-card--primary > .ui-icon {
   background: #ffffff20;
-  color: white;
+  color: var(--color-task-text);
 }
 
 .destination-grid {
@@ -1967,7 +2005,7 @@ dialog::backdrop {
 
 .result-metrics .metric:first-child {
   background: var(--color-brand-soft);
-  border-color: #a6cfc5;
+  border-color: var(--color-result-border);
 }
 
 .result-metrics .metric:first-child .metric__value {
@@ -2021,6 +2059,85 @@ dialog::backdrop {
 .form-footer {
   padding-top: var(--space-5);
   border-top: 1px solid var(--color-border);
+}
+
+/* ---------- Appearance and collection controls ---------- */
+
+.app__preferences {
+  margin-top: auto;
+}
+
+.theme-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.8rem;
+}
+
+.theme-picker select {
+  width: auto;
+  flex: 1;
+  min-width: 7rem;
+}
+
+.signin__card .theme-picker {
+  margin-bottom: var(--space-5);
+}
+
+.theme-picker[hidden],
+[data-list] [hidden] {
+  display: none !important;
+}
+
+.collection-toolbar {
+  flex-wrap: wrap;
+}
+
+.collection-toolbar .field {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.collection-toolbar .field:first-child {
+  flex-grow: 2;
+}
+
+.collection-sort {
+  border: 0;
+  padding: 0;
+  min-height: 36px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.collection-sort::after {
+  content: " ↕";
+  color: var(--color-text-muted);
+}
+
+th[aria-sort="ascending"] .collection-sort::after { content: " ↑"; }
+th[aria-sort="descending"] .collection-sort::after { content: " ↓"; }
+
+.collection-pagination {
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.collection-pagination__buttons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ---------- Responsive ---------- */
@@ -2089,13 +2206,17 @@ dialog::backdrop {
 }
 
 @media print {
+  [data-list] [hidden] { display: revert !important; }
   .app {
     display: block;
   }
 
   .app__nav,
   .button-row,
-  .table-toolbar {
+  .table-toolbar,
+  .collection-toolbar,
+  .collection-pagination,
+  .theme-picker {
     display: none;
   }
 

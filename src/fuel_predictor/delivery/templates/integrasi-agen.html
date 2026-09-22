@@ -69,8 +69,8 @@
     <h2>Klien terdaftar</h2>
     {% if clients %}
     <div class="table-wrap">
-      <table>
-        <thead><tr><th>Nama</th><th>Cakupan</th><th>Status</th><th>Tindakan</th></tr></thead>
+      <table data-list data-list-label="Klien terdaftar">
+        <thead><tr><th>Nama</th><th>Cakupan</th><th>Status</th><th data-no-sort>Tindakan</th></tr></thead>
         <tbody>
           {% for client in clients %}
           <tr>
@@ -104,8 +104,8 @@
   {{ ui.listing_toolbar(grants, placeholder='Pengguna, agen, atau nama sambungan') }}
   {% if grants.items %}
   <div class="table-wrap">
-    <table>
-      <thead><tr>{{ ui.sort_th(grants, 'pengguna', 'Pengguna') }}{{ ui.sort_th(grants, 'agen', 'Agen') }}<th>Cakupan</th>{{ ui.sort_th(grants, 'waktu', 'Disambungkan') }}<th>Status</th><th><span class="visually-hidden">Tindakan</span></th></tr></thead>
+    <table class="table--sortable">
+      <thead><tr>{{ ui.sort_th(grants, 'pengguna', 'Pengguna') }}{{ ui.sort_th(grants, 'agen', 'Agen') }}<th>Cakupan</th>{{ ui.sort_th(grants, 'waktu', 'Disambungkan') }}<th>Status</th><th data-no-sort><span class="visually-hidden">Tindakan</span></th></tr></thead>
       <tbody>
         {% for summary in grants.items %}
         <tr>

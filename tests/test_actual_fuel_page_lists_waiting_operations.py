@@ -80,3 +80,17 @@ def test_the_page_says_so_when_nothing_is_waiting(tmp_path: Path) -> None:
         page = client.get("/bahan-bakar-aktual").text
 
     assert "Semua prediksi sudah punya BBM aktual" in page
+
+
+def test_waiting_list_does_not_drop_operations_after_twenty(tmp_path: Path) -> None:
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        _train_baseline(client)
+        ids = [
+            _operation_with_prediction(client, 20 + index)["operation"]["operation_id"]
+            for index in range(21)
+        ]
+        page = client.get("/bahan-bakar-aktual").text
+
+    for operation_id in ids:
+        assert f'href="/bahan-bakar-aktual?operation_id={operation_id}"' in page
+    assert 'data-list-label="Menunggu BBM aktual"' in page

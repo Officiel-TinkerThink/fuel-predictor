@@ -26,7 +26,7 @@ class PredictionOutcomeReader(Protocol):
 
 class AwaitingActualFuelReader(Protocol):
     def get_operations_awaiting_actual(
-        self, limit: int
+        self, limit: int | None
     ) -> Sequence["OperationAwaitingActualFuel"]: ...
 
 
@@ -95,7 +95,7 @@ class ListOperationsAwaitingActualFuel:
     """Newest first: the operation someone just finished is the one they came to record."""
 
     reader: AwaitingActualFuelReader
-    limit: int = 20
+    limit: int | None = None
 
     def execute(self) -> tuple[OperationAwaitingActualFuel, ...]:
         return tuple(self.reader.get_operations_awaiting_actual(self.limit))

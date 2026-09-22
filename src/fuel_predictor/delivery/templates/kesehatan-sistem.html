@@ -61,12 +61,12 @@
   <p class="hint">Prediksi yang lebih dari {{ missing_actual_after_days }} hari belum dilaporkan
     hasilnya. Tanpa aktual, model tidak bisa belajar dari operasi ini.</p>
   <div class="table-wrap">
-    <table>
-      <thead><tr><th>Diprediksi</th><th>ID operasi</th><th>Kategori</th><th><span class="visually-hidden">Tindakan</span></th></tr></thead>
+    <table data-list data-list-label="BBM aktual tertunda">
+      <thead><tr><th>Diprediksi</th><th>ID operasi</th><th>Kategori</th><th data-no-sort><span class="visually-hidden">Tindakan</span></th></tr></thead>
       <tbody>
         {% for item in missing_actual_predictions %}
         <tr>
-          <td>{{ item.created_at | waktu }}</td>
+          <td data-sort-value="{{ item.created_at or '' }}">{{ item.created_at | waktu }}</td>
           <td><code class="mono-id">{{ item.operation_id }}</code></td>
           <td>{{ item.vehicle_category.value }}</td>
           <td><a class="button button--secondary button--small" href="/bahan-bakar-aktual?operation_id={{ item.operation_id }}">Catat aktual</a></td>
@@ -85,7 +85,7 @@
   <h2>Kualitas data</h2>
   <p class="hint">Baris impor yang dikarantina dan belum diperbaiki.</p>
   <div class="table-wrap">
-    <table>
+    <table data-list data-list-label="Kualitas data">
       <thead><tr><th>Dataset</th><th>Baris</th><th>Pesan</th></tr></thead>
       <tbody>
         {% for issue in unresolved_data_quality_issues %}
@@ -118,7 +118,7 @@
   <summary>Versi dataset yang pernah diimpor</summary>
   {% if dataset_validation_summaries %}
   <div class="table-wrap">
-    <table>
+    <table data-list data-list-label="Versi dataset">
       <thead><tr><th>Dataset</th><th>Berkas</th><th class="numeric">Valid</th><th class="numeric">Dikarantina</th></tr></thead>
       <tbody>
         {% for item in dataset_validation_summaries %}

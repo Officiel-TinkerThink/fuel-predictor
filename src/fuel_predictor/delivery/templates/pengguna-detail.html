@@ -90,9 +90,9 @@
   </div>
   {% if detail.recent_operations %}
   <h3>Operasi terakhir</h3>
-  <ul class="row-list">
+  <ul class="row-list" data-list data-list-label="Operasi terakhir" data-list-sort="name:Kendaraan,time:Waktu:date,amount:Jarak:number">
     {% for item in detail.recent_operations %}
-    <li>
+    <li data-sort-name="{{ item.vehicle or '' }}" data-sort-time="{{ item.created_at or '' }}" data-sort-amount="{{ item.total_distance_km }}">
       <div class="row-list__main">
         <strong><a href="/operasi-harian/{{ item.operation_id }}">{{ item.vehicle or 'Operasi' }}</a></strong>
         <span class="row-list__meta">{% if item.created_at %}{{ item.created_at | waktu }} · {% endif %}{{ item.total_distance_km | angka }} km · <code>{{ item.operation_id }}</code></span>
@@ -112,12 +112,12 @@
     pencarian dan halaman, ada di <a href="/audit?cari={{ user.username | urlencode }}">Catatan Audit</a>.</p>
   {% if trail %}
   <div class="table-wrap">
-    <table>
-      <thead><tr><th>Waktu</th><th>Tindakan</th><th>Oleh</th><th>Hasil</th></tr></thead>
+    <table data-list data-list-label="Jejak aktivitas">
+      <thead><tr><th>Waktu</th><th data-no-sort>Tindakan</th><th>Oleh</th><th>Hasil</th></tr></thead>
       <tbody>
         {% for record in trail %}
         <tr>
-          <td>{{ record.occurred_at | waktu }}</td>
+          <td data-sort-value="{{ record.occurred_at or '' }}">{{ record.occurred_at | waktu }}</td>
           <td>{{ record.action_label }}
             {% if record.details %}
             <ul class="detail-inline">

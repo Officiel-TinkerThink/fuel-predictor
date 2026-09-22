@@ -17,7 +17,7 @@
        href="data:text/csv;charset=utf-8,{{ results_csv | urlencode }}">Unduh hasil (CSV)</a>
   </div>
   <div class="table-wrap">
-    <table>
+    <table data-list data-list-label="Baris berhasil diprediksi">
       <thead>
         <tr><th>Baris sumber</th><th>ID operasi</th><th class="numeric">Estimasi kebutuhan BBM</th><th class="numeric">Alokasi rekomendasi</th></tr>
       </thead>
@@ -42,7 +42,7 @@
 <section class="card">
   <h2>Laporan koreksi</h2>
   <div class="table-wrap">
-    <table>
+    <table data-list data-list-label="Laporan koreksi">
       <caption>{{ result.correction_report | length }} baris dikarantina</caption>
       <thead><tr><th>Baris sumber</th><th>Alasan</th></tr></thead>
       <tbody>

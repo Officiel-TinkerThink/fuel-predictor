@@ -4,12 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Atur Ulang Kata Sandi · Perencana Operasi Harian</title>
+  <script src="/statis/theme.js"></script>
   <link rel="stylesheet" href="/statis/app.css">
   <link rel="icon" href="data:,">
 </head>
 <body>
 <div class="signin">
   <main class="signin__card">
+    {% include "theme-picker.html" %}
     <h1>Kata sandi baru</h1>
     <p class="lead">Untuk akun <strong>{{ username }}</strong>. Setelah disimpan, semua sesi lama
       berakhir dan Anda masuk dengan kata sandi ini.</p>

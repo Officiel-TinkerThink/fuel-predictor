@@ -48,7 +48,9 @@ class SqlAlchemyActualFuelRepository:
         except IntegrityError as error:
             raise ActualFuelAlreadyRecordedError() from error
 
-    def get_operations_awaiting_actual(self, limit: int) -> tuple[OperationAwaitingActualFuel, ...]:
+    def get_operations_awaiting_actual(
+        self, limit: int | None
+    ) -> tuple[OperationAwaitingActualFuel, ...]:
         latest_prediction_id = (
             select(PredictionRow.prediction_id)
             .where(PredictionRow.operation_id == DailyOperationRow.operation_id)

@@ -28,7 +28,7 @@
   <h2>Per kategori ANGBER</h2>
   {% if performance.by_vehicle_category %}
   <div class="table-wrap">
-    <table>
+    <table data-list data-list-label="Per kategori ANGBER">
       <thead><tr><th>Kategori</th><th class="numeric">Cocok</th><th class="numeric">MAE</th><th class="numeric">RMSE</th><th class="numeric">sMAPE</th><th class="numeric">Cakupan interval</th></tr></thead>
       <tbody>
         {% for category, metrics in performance.by_vehicle_category %}
@@ -59,12 +59,12 @@
   {% endif %}
   {% if rolling_error_trend %}
   <div class="table-wrap">
-    <table>
+    <table data-list data-list-label="Tren kesalahan bergulir">
       <thead><tr><th>Tanggal aktual</th><th class="numeric">Data cocok</th><th class="numeric">MAE</th></tr></thead>
       <tbody>
         {% for point in rolling_error_trend %}
         <tr>
-          <td>{{ point.observed_at | waktu }}</td>
+          <td data-sort-value="{{ point.observed_at or '' }}">{{ point.observed_at | waktu }}</td>
           <td class="numeric">{{ point.matched_record_count }}</td>
           <td class="numeric">{{ point.mae_liters | angka }} L</td>
         </tr>
@@ -82,7 +82,7 @@
   <p class="hint">Ambang MAE: {{ degradation_mae_threshold_liters | angka }} L.</p>
   {% if category_degradation %}
   <div class="table-wrap">
-    <table>
+    <table data-list data-list-label="Degradasi per kategori">
       <thead><tr><th>Kategori</th><th class="numeric">Data cocok</th><th class="numeric">MAE bergulir</th><th>Status</th></tr></thead>
       <tbody>
         {% for item in category_degradation %}

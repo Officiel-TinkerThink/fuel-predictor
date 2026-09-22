@@ -41,7 +41,7 @@
   <p class="hint">Dihitung ulang pada operasi yang sudah punya bahan bakar aktual. Makin kecil
     makin baik, kecuali "aktual di dalam rentang".</p>
   <div class="table-wrap">
-    <table>
+    <table data-static-table="metric-comparison">
       <thead><tr><th>Ukuran</th><th class="numeric">Kandidat</th><th class="numeric">Model aktif</th></tr></thead>
       <tbody>
         <tr><td>Selisih rata-rata (MAE)</td>
@@ -63,7 +63,7 @@
   <details class="technical">
     <summary>Selisih rata-rata per kategori</summary>
     <div class="table-wrap">
-      <table>
+      <table data-list data-list-label="Selisih rata-rata per kategori">
         <thead><tr><th>Kategori</th><th class="numeric">Kandidat</th><th class="numeric">Model aktif</th></tr></thead>
         <tbody>
           {% for item in comparison.by_vehicle_category %}

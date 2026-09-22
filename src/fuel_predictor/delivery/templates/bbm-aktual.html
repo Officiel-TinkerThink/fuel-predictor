@@ -26,9 +26,9 @@
   {% if awaiting %}
   <p class="hint">Operasi yang sudah diprediksi tetapi belum dilaporkan hasilnya, terbaru di atas.
     Pilih <strong>Catat</strong> untuk mengisi ID-nya ke formulir.</p>
-  <ul class="row-list">
+  <ul class="row-list" data-list data-list-label="Menunggu BBM aktual" data-list-sort="name:Kendaraan,time:Waktu:date,amount:Alokasi:number">
     {% for item in awaiting %}
-    <li{% if item.operation_id == values.get('operation_id') %} class="is-selected"{% endif %}>
+    <li data-sort-name="{{ item.vehicle or '' }}" data-sort-time="{{ item.predicted_at }}" data-sort-amount="{{ item.recommended_allocation_liters }}"{% if item.operation_id == values.get('operation_id') %} class="is-selected"{% endif %}>
       <div class="row-list__main">
         <strong>{{ item.vehicle or item.vehicle_category.value }}
           {% if item.departure %}· {{ item.departure }} → {{ item.destination }}{% endif %}</strong>

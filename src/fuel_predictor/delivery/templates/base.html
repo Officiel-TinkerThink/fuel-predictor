@@ -5,6 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ page_title }}{% endblock %} · Perencana Operasi Harian</title>
+  <script src="/statis/theme.js"></script>
   <link rel="stylesheet" href="/statis/app.css">
   <link rel="icon" href="data:,">
   {# The phone-width menu folds away only when the script that unfolds it is
@@ -46,6 +47,7 @@
         {% endif %}
         {% endfor %}
       </nav>
+      <div class="app__preferences">{% include "theme-picker.html" %}</div>
       {% if caller_user %}
       <div class="app__account">
         <span class="app__avatar" aria-hidden="true">{{ caller_user.full_name[:1] | upper }}</span>
@@ -89,6 +91,7 @@
     {% block content %}{% endblock %}
   </main>
 </div>
+<script src="/statis/collections.js" defer></script>
 <script src="/statis/app.js" defer></script>
 </body>
 </html>
