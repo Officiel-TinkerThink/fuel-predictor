@@ -53,10 +53,10 @@ def _create_operator(client: TestClient) -> str:
 
 
 def _user_id(page: str, username: str) -> str:
-    """The data-user-id of the row that lists this username."""
-    row_start = page.rindex('data-user-id="', 0, page.index(f"<td>{username}<br>"))
-    row_start += len('data-user-id="')
-    return page[row_start : page.index('"', row_start)]
+    """The data-user-id of the directory row that lists this username."""
+    row = page.index(f'data-user="{username}"')
+    start = page.index('data-user-id="', row) + len('data-user-id="')
+    return page[start : page.index('"', start)]
 
 
 def test_an_administrator_can_reset_someone_elses_password(tmp_path: Path) -> None:

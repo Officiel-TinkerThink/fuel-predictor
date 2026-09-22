@@ -19,7 +19,8 @@ Kalau ada langkah yang meminta Anda mengetik perintah, itu ada di
 4. [Mencatat bahan bakar aktual](#4-mencatat-bahan-bakar-aktual)
 5. [Membaca halaman Pemantauan](#5-membaca-halaman-pemantauan)
 6. [Mengganti model](#6-mengganti-model)
-7. [Mengelola kredensial agen](#7-mengelola-kredensial-agen)
+7. [Mengelola pengguna](#6b-mengelola-pengguna)
+8. [Mengelola kredensial agen](#7-mengelola-kredensial-agen)
 8. [Kalau ada yang tidak beres](#8-kalau-ada-yang-tidak-beres)
 
 ---
@@ -204,6 +205,28 @@ tersimpan), lalu hubungi penanggung jawab teknis.
 
 Tombol **Promosikan** — selalu dengan konfirmasi — adalah satu-satunya cara model berganti.
 Tidak ada promosi otomatis.
+
+---
+
+## 6b. Mengelola pengguna
+
+Hanya untuk akun administrator. Menu **Pengguna**.
+
+Halaman ini adalah daftar semua akun: berapa yang aktif, kapan tiap orang terakhir masuk,
+dan berapa prediksi serta BBM aktual yang mereka buat dalam 30 hari terakhir. Kotak **Cari**
+menyaring berdasarkan nama, nama pengguna, atau email; **Status** menyaring akun aktif atau
+nonaktif.
+
+- **Tambah pengguna** — nama pengguna, nama, email (opsional), kata sandi awal, dan peran.
+  Sampaikan kata sandi awal secara aman; pengguna bisa menggantinya sendiri lewat
+  **Ubah kata sandi**.
+- **Buka** pada satu baris membawa Anda ke halaman orang itu: ubah nama, email, atau peran
+  (peran Anda sendiri hanya bisa diubah administrator lain), **Atur ulang kata sandi**,
+  **Nonaktifkan** atau **Aktifkan kembali**, daftar operasi terakhir yang dibuatnya, dan
+  jejak aktivitasnya dari catatan audit.
+
+Akun yang dinonaktifkan langsung keluar dan tidak bisa masuk lagi; pekerjaan dan catatannya
+tetap tersimpan, dan akun bisa diaktifkan kembali kapan saja.
 
 ---
 

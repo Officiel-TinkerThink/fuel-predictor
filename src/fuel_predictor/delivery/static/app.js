@@ -79,6 +79,15 @@
     });
   });
 
+  // A dialog the server rendered open (a rejected submission) becomes a real
+  // modal, so it gets its backdrop and its focus trap like one opened here.
+  document.querySelectorAll("dialog[open]").forEach(function (dialog) {
+    if (typeof dialog.showModal === "function") {
+      dialog.removeAttribute("open");
+      dialog.showModal();
+    }
+  });
+
   // Confirmation dialogs. Without JavaScript the dialog stays in the page and its
   // form still submits, so the destructive action remains reachable.
   document.addEventListener("click", function (event) {

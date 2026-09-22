@@ -103,6 +103,8 @@ ROUTE_CAPABILITIES: tuple[tuple[str, str, Capability], ...] = (
     ("POST", "/agen-saya/*/hapus", Capability.MANAGE_OWN_AGENTS),
     ("GET", "/pengguna", Capability.MANAGE_USERS),
     ("POST", "/pengguna", Capability.MANAGE_USERS),
+    ("GET", "/pengguna/*", Capability.MANAGE_USERS),
+    ("POST", "/pengguna/*/profil", Capability.MANAGE_USERS),
     ("POST", "/pengguna/*/kata-sandi", Capability.MANAGE_USERS),
     ("POST", "/pengguna/*/status", Capability.MANAGE_USERS),
     ("GET", "/kata-sandi", Capability.MANAGE_OWN_ACCOUNT),

@@ -927,6 +927,39 @@ th.numeric {
   max-width: 20rem;
 }
 
+/* The one button a toolbar carries sits at the far end, level with the fields. */
+.table-toolbar__action {
+  margin-left: auto;
+}
+
+/* A person's initial, standing in for a photo. */
+.avatar {
+  flex: 0 0 auto;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--color-brand-soft);
+  color: var(--color-brand-strong);
+  font-weight: 700;
+}
+
+.text-danger {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+/* A dialog the server reopened (a rejected submission) needs a backdrop too;
+   the `open` attribute alone shows it inline without one. app.js upgrades
+   it to a modal on load. */
+dialog[open]:not(:modal) {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  z-index: 30;
+}
+
 .quick-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1042,6 +1075,7 @@ th.numeric {
 }
 
 .row-list__meta {
+  display: block;
   font-size: 0.86rem;
   color: var(--color-text-muted);
   overflow-wrap: anywhere;

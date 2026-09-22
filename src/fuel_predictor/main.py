@@ -95,6 +95,11 @@ from fuel_predictor.application.routing import (
     UnavailableRoutingProvider,
 )
 from fuel_predictor.application.similar_operations import FindSimilarOperations
+from fuel_predictor.application.user_directory import (
+    GetUserDetail,
+    GetUserDirectory,
+    UpdateUserProfile,
+)
 from fuel_predictor.application.vehicles import VehicleCatalog
 from fuel_predictor.configuration import ApplicationSettings
 from fuel_predictor.delivery.actual_fuel_pages import build_actual_fuel_pages_router
@@ -128,6 +133,7 @@ from fuel_predictor.delivery.security import (
     install_session_middleware,
     register_security_error_handlers,
 )
+from fuel_predictor.delivery.user_pages import build_user_pages_router
 from fuel_predictor.domain.identity import AuditOutcome
 from fuel_predictor.infrastructure.alert_notifiers import (
     build_notifier,
@@ -188,6 +194,7 @@ from fuel_predictor.infrastructure.sqlalchemy_predictions import SqlAlchemyPredi
 from fuel_predictor.infrastructure.sqlalchemy_similar_operations import (
     SqlAlchemyHistoricalOperationSource,
 )
+from fuel_predictor.infrastructure.sqlalchemy_user_activity import SqlAlchemyUserActivityRepository
 from fuel_predictor.infrastructure.sqlalchemy_vehicles import SqlAlchemyVehicleRepository
 from fuel_predictor.infrastructure.system_memory_probe import SystemMemoryProbe
 from fuel_predictor.infrastructure.zip_model_package_archive import ZipModelPackageArchiveReader
@@ -364,6 +371,7 @@ def create_app(
         user_repository, session_repository, password_hasher, record_audit
     )
     change_own_password = ChangeOwnPassword(user_repository, password_hasher, change_password)
+    user_activity = SqlAlchemyUserActivityRepository(session_factory)
     reset_mailer = (
         password_reset_mailer
         if password_reset_mailer is not None
@@ -539,14 +547,21 @@ def create_app(
         )
     )
     app.include_router(
+        build_user_pages_router(
+            create_user=create_user,
+            get_user_directory=GetUserDirectory(user_repository, audit_repository, user_activity),
+            get_user_detail=GetUserDetail(user_repository, audit_repository, user_activity),
+            update_user_profile=UpdateUserProfile(user_repository, record_audit),
+            set_user_activation=set_user_activation,
+            change_password=change_password,
+            change_own_password=change_own_password,
+            guard=guard,
+        )
+    )
+    app.include_router(
         build_dashboard_router(
             get_monitoring_dashboard,
             get_model_governance_dashboard,
-            create_user,
-            list_users,
-            set_user_activation,
-            change_password,
-            change_own_password,
             list_audit_records,
             list_awaiting_actual,
             guard,

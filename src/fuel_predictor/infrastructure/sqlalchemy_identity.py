@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from typing import cast
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select
 
 from fuel_predictor.domain.identity import (
     AgentClient,
@@ -200,19 +200,32 @@ class SqlAlchemyAuditRepository:
                 .scalars()
                 .all()
             )
-        return tuple(
-            AuditRecord(
-                audit_id=row.audit_id,
-                occurred_at=_aware(row.occurred_at),
-                actor=row.actor,
-                actor_kind=row.actor_kind,
-                action=row.action,
-                outcome=AuditOutcome(row.outcome),
-                subject=row.subject,
-                details=cast("dict[str, str | int | float | bool | None]", row.details),
+        return tuple(_audit_record(row) for row in rows)
+
+    def list_for_user(self, username: str, limit: int) -> tuple[AuditRecord, ...]:
+        with self._session_factory() as session:
+            rows = (
+                session.execute(
+                    select(AuditRecordRow)
+                    .where(
+                        or_(AuditRecordRow.actor == username, AuditRecordRow.subject == username)
+                    )
+                    .order_by(AuditRecordRow.occurred_at.desc(), AuditRecordRow.audit_id.desc())
+                    .limit(limit)
+                )
+                .scalars()
+                .all()
             )
-            for row in rows
-        )
+        return tuple(_audit_record(row) for row in rows)
+
+    def last_occurrence(self, action: str, subject: str) -> datetime | None:
+        with self._session_factory() as session:
+            moment = session.execute(
+                select(func.max(AuditRecordRow.occurred_at)).where(
+                    AuditRecordRow.action == action, AuditRecordRow.subject == subject
+                )
+            ).scalar_one_or_none()
+        return _aware(moment) if moment is not None else None
 
     def count_recent_by_actor(self, actor: str, action_prefix: str, since: datetime) -> int:
         with self._session_factory() as session:
@@ -318,4 +331,17 @@ def _agent(row: AgentClientRow) -> AgentClient:
         created_at=_aware(row.created_at),
         is_active=row.is_active,
         revoked_at=_aware(row.revoked_at) if row.revoked_at is not None else None,
+    )
+
+
+def _audit_record(row: AuditRecordRow) -> AuditRecord:
+    return AuditRecord(
+        audit_id=row.audit_id,
+        occurred_at=_aware(row.occurred_at),
+        actor=row.actor,
+        actor_kind=row.actor_kind,
+        action=row.action,
+        outcome=AuditOutcome(row.outcome),
+        subject=row.subject,
+        details=cast("dict[str, str | int | float | bool | None]", row.details),
     )

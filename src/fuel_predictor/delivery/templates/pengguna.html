@@ -3,73 +3,79 @@
 
 {% block content %}
 
-{{ ui.error_summary(errors, 'Perubahan belum dapat disimpan') }}
+{{ ui.error_summary(errors, 'Pengguna belum dapat disimpan') }}
 {% if notice %}{{ ui.banner('success', 'Tersimpan', notice) }}{% endif %}
 
+<div class="grid grid--metrics">
+  {{ ui.metric('Pengguna', directory.entries | length ~ ' pengguna', context=directory.active_count ~ ' aktif · ' ~ (directory.entries | length - directory.active_count) ~ ' nonaktif') }}
+  {{ ui.metric('Administrator', directory.administrator_count, context='Dapat mengelola model, pengguna, dan integrasi.') }}
+  {{ ui.metric('Operator', directory.entries | length - directory.administrator_count, context='Membuat prediksi dan mencatat BBM aktual.') }}
+</div>
+
 <section class="card">
-  <h2>Daftar pengguna</h2>
-  {% if users %}
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Nama pengguna</th><th>Peran</th><th>Status</th><th><span class="visually-hidden">Tindakan</span></th></tr></thead>
-      <tbody>
-        {% for user in users %}
-        <tr data-user-id="{{ user.user_id }}">
-          <td>{{ user.username }}<br><span class="hint">{{ user.full_name }}{% if user.email %} · {{ user.email }}{% endif %}</span></td>
-          <td>{{ role_options | selectattr('0', 'equalto', user.role.value) | map(attribute='1') | first }}</td>
-          <td>{{ ui.badge('Aktif', 'success') if user.is_active else ui.badge('Nonaktif', 'neutral') }}</td>
-          <td>
-            <div class="button-row button-row--tight">
-              <button type="button" class="button button--secondary button--small" data-dialog="atur-ulang-{{ loop.index }}">Atur ulang kata sandi</button>
-              <dialog id="atur-ulang-{{ loop.index }}" aria-labelledby="atur-ulang-{{ loop.index }}-title">
-                <form method="dialog"><button class="visually-hidden" value="batal">Tutup</button></form>
-                <h2 id="atur-ulang-{{ loop.index }}-title">Atur ulang kata sandi {{ user.username }}?</h2>
-                <p>Semua sesi pengguna ini diakhiri. Sampaikan kata sandi baru secara aman.</p>
-                <form method="post" action="/pengguna/{{ user.user_id }}/kata-sandi">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                  <div class="field">
-                    <label for="atur-ulang-{{ loop.index }}-password">Kata sandi baru</label>
-                    <input id="atur-ulang-{{ loop.index }}-password" name="password" type="password" required minlength="12" autocomplete="new-password" aria-describedby="atur-ulang-{{ loop.index }}-hint">
-                    <span class="hint" id="atur-ulang-{{ loop.index }}-hint">Minimal 12 karakter.</span>
-                  </div>
-                  <div class="button-row">
-                    <button type="submit" class="button">Atur ulang</button>
-                    <button type="button" class="button button--secondary" data-dialog-close="atur-ulang-{{ loop.index }}">Batal</button>
-                  </div>
-                </form>
-              </dialog>
-              {% if user.user_id != caller_user.user_id %}
-              {% if user.is_active %}
-              {{ ui.confirm_button('nonaktifkan-' ~ loop.index, 'Nonaktifkan', 'Nonaktifkan akun ' ~ user.username ~ '?', 'Pengguna ini langsung keluar dan tidak bisa masuk lagi sampai diaktifkan kembali. Catatan dan tindakannya tetap tersimpan.', '/pengguna/' ~ user.user_id ~ '/status', csrf_token, tone='danger', hidden_fields={'is_active': 'false'}) }}
-              {% else %}
-              {{ ui.confirm_button('aktifkan-' ~ loop.index, 'Aktifkan', 'Aktifkan kembali akun ' ~ user.username ~ '?', 'Pengguna ini bisa masuk lagi dengan kata sandinya yang sekarang.', '/pengguna/' ~ user.user_id ~ '/status', csrf_token, tone='secondary', hidden_fields={'is_active': 'true'}) }}
-              {% endif %}
-              {% else %}
-              <span class="hint">Akun Anda</span>
-              {% endif %}
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div class="table-toolbar">
+    <div class="field">
+      <label for="saring-pengguna">Cari</label>
+      <input id="saring-pengguna" type="search" data-table-filter="daftar-pengguna" aria-describedby="saring-pengguna-status" placeholder="Nama, nama pengguna, atau email">
+      <span class="hint" id="saring-pengguna-status" aria-live="polite"></span>
+    </div>
+    <div class="field">
+      <label for="saring-status">Status</label>
+      <select id="saring-status" data-table-filter="daftar-pengguna" data-filter-attribute="data-status" aria-describedby="saring-pengguna-status">
+        <option value="">Semua</option>
+        <option value="aktif">Aktif</option>
+        <option value="nonaktif">Nonaktif</option>
+      </select>
+    </div>
+    <div class="table-toolbar__action">
+      <button type="button" class="button" data-dialog="tambah-pengguna">+ Tambah pengguna</button>
+    </div>
   </div>
+
+  {% if directory.entries %}
+  <ul class="row-list" id="daftar-pengguna">
+    {% for entry in directory.entries %}
+    {% set user = entry.user %}{% set activity = entry.activity %}
+    <li data-user="{{ user.username }}" data-user-id="{{ user.user_id }}" data-status="{{ 'aktif' if user.is_active else 'nonaktif' }}">
+      <span class="avatar" aria-hidden="true">{{ user.full_name[:1] | upper }}</span>
+      <div class="row-list__main">
+        <strong><a href="/pengguna/{{ user.user_id }}">{{ user.full_name }}</a>
+          {% if user.user_id == caller_user.user_id %}<span class="hint">(Anda)</span>{% endif %}</strong>
+        <span class="row-list__meta">{{ user.username }}{% if user.email %} · {{ user.email }}{% endif %}</span>
+        <span class="row-list__meta">
+          {% if activity.last_sign_in %}Terakhir masuk {{ activity.last_sign_in | waktu }}{% else %}Belum pernah masuk{% endif %}
+          · 30 hari: {{ activity.operations_recent }} prediksi · {{ activity.actuals_recent }} aktual
+          {% if activity.failed_sign_ins_recent %}· <span class="text-danger">{{ activity.failed_sign_ins_recent }} kali gagal masuk</span>{% endif %}
+        </span>
+      </div>
+      <span class="row-list__figure">
+        {{ ui.badge(role_labels[user.role], 'info' if user.role.value == 'administrator' else 'neutral') }}
+        {{ ui.badge('Aktif', 'success') if user.is_active else ui.badge('Nonaktif', 'neutral') }}
+      </span>
+      <a class="button button--secondary button--small row-list__action" href="/pengguna/{{ user.user_id }}">Buka</a>
+    </li>
+    {% endfor %}
+  </ul>
   {% else %}
   {{ ui.empty_state('Belum ada pengguna lain.') }}
   {% endif %}
 </section>
 
-<section class="card">
-  <h2>Tambah pengguna</h2>
+<dialog id="tambah-pengguna" aria-labelledby="tambah-pengguna-title"{% if add_dialog_open %} open{% endif %}>
+  <form method="dialog"><button class="visually-hidden" value="batal">Tutup</button></form>
+  <h2 id="tambah-pengguna-title">Tambah pengguna</h2>
   <form method="post" action="/pengguna" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     {{ ui.text_field('username', 'Nama pengguna', form_values.get('username', ''), hint='Huruf, angka, titik, garis, dan garis bawah.', errors=errors, required=true, autocomplete='username') }}
     {{ ui.text_field('full_name', 'Nama', form_values.get('full_name', ''), errors=errors, required=true) }}
-    {{ ui.text_field('email', 'Email', form_values.get('email', ''), hint='Opsional. Bila diisi, bisa dipakai untuk masuk sebagai ganti nama pengguna.', errors=errors, type='email', autocomplete='email') }}
+    {{ ui.text_field('email', 'Email', form_values.get('email', ''), hint='Opsional. Bila diisi, bisa dipakai untuk masuk dan untuk tautan lupa kata sandi.', errors=errors, type='email', autocomplete='email') }}
     {{ ui.text_field('password', 'Kata sandi awal', '', hint='Minimal 12 karakter. Sampaikan secara aman kepada pengguna.', errors=errors, required=true, type='password', autocomplete='new-password') }}
-    {{ ui.select_field('role', 'Peran', role_options, form_values.get('role', 'operator'), hint='Operator: membuat prediksi (satu per satu atau dari berkas) dan mencatat BBM aktual. Administrator: semuanya, termasuk pemantauan, model, pengguna, dan integrasi agen.', errors=errors, required=true) }}
-    <button type="submit" class="button">Simpan pengguna</button>
+    {{ ui.select_field('role', 'Peran', role_options, form_values.get('role', 'operator'), hint='Operator: prediksi dan BBM aktual. Administrator: semuanya.', errors=errors, required=true) }}
+    <div class="button-row">
+      <button type="submit" class="button">Simpan pengguna</button>
+      <button type="button" class="button button--secondary" data-dialog-close="tambah-pengguna">Batal</button>
+    </div>
   </form>
-</section>
+</dialog>
 
 {% endblock %}

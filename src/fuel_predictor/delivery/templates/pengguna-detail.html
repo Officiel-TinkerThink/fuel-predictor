@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+{% set user = detail.user %}{% set activity = detail.activity %}
+
+{{ ui.error_summary(errors, 'Perubahan belum dapat disimpan') }}
+{% if notice %}{{ ui.banner('success', 'Tersimpan', notice) }}{% endif %}
+{% if not user.is_active %}
+{{ ui.banner('warning', 'Akun nonaktif', 'Pengguna ini tidak bisa masuk sampai diaktifkan kembali. Catatan dan pekerjaannya tetap tersimpan.') }}
+{% endif %}
+
+<div class="grid grid--two">
+  <section class="card">
+    <div class="card__title">
+      <h2>Profil</h2>
+      {{ ui.badge(role_labels[user.role], 'info' if user.role.value == 'administrator' else 'neutral') }}
+    </div>
+    <form method="post" action="/pengguna/{{ user.user_id }}/profil" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <dl class="detail-list">
+        <dt>Nama pengguna</dt><dd>{{ user.username }}</dd>
+        <dt>Dibuat</dt><dd>{{ user.created_at | waktu }}</dd>
+      </dl>
+      {{ ui.text_field('full_name', 'Nama', user.full_name, errors=errors, required=true) }}
+      {{ ui.text_field('email', 'Email', user.email or '', hint='Opsional. Dipakai untuk masuk dan untuk tautan lupa kata sandi.', errors=errors, type='email', autocomplete='email') }}
+      {% if is_self %}
+      <input type="hidden" name="role" value="{{ user.role.value }}">
+      <p class="hint">Peran Anda sendiri hanya bisa diubah oleh administrator lain.</p>
+      {% else %}
+      {{ ui.select_field('role', 'Peran', role_options, user.role.value, hint='Operator: prediksi dan BBM aktual. Administrator: semuanya.', errors=errors, required=true) }}
+      {% endif %}
+      <button type="submit" class="button">Simpan profil</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Akun</h2>
+    <dl class="detail-list">
+      <dt>Status</dt><dd>{{ ui.badge('Aktif', 'success') if user.is_active else ui.badge('Nonaktif', 'neutral') }}</dd>
+      <dt>Terakhir masuk</dt><dd>{% if activity.last_sign_in %}{{ activity.last_sign_in | waktu }}{% else %}Belum pernah{% endif %}</dd>
+      <dt>Masuk 30 hari terakhir</dt><dd>{{ activity.sign_ins_recent }} kali{% if activity.failed_sign_ins_recent %} · <span class="text-danger">{{ activity.failed_sign_ins_recent }} kali gagal</span>{% endif %}</dd>
+    </dl>
+    <div class="button-row">
+      <button type="button" class="button button--secondary" data-dialog="atur-ulang">Atur ulang kata sandi</button>
+      <dialog id="atur-ulang" aria-labelledby="atur-ulang-title">
+        <form method="dialog"><button class="visually-hidden" value="batal">Tutup</button></form>
+        <h2 id="atur-ulang-title">Atur ulang kata sandi {{ user.username }}?</h2>
+        <p>Semua sesi pengguna ini diakhiri. Sampaikan kata sandi baru secara aman.</p>
+        <form method="post" action="/pengguna/{{ user.user_id }}/kata-sandi">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div class="field">
+            <label for="atur-ulang-password">Kata sandi baru</label>
+            <input id="atur-ulang-password" name="password" type="password" required minlength="12" autocomplete="new-password" aria-describedby="atur-ulang-hint">
+            <span class="hint" id="atur-ulang-hint">Minimal 12 karakter.</span>
+          </div>
+          <div class="button-row">
+            <button type="submit" class="button">Atur ulang</button>
+            <button type="button" class="button button--secondary" data-dialog-close="atur-ulang">Batal</button>
+          </div>
+        </form>
+      </dialog>
+      {% if is_self %}
+      <span class="hint">Akun Anda sendiri tidak bisa dinonaktifkan dari sini.</span>
+      {% elif user.is_active %}
+      {{ ui.confirm_button('nonaktifkan', 'Nonaktifkan', 'Nonaktifkan akun ' ~ user.username ~ '?', 'Pengguna ini langsung keluar dan tidak bisa masuk lagi sampai diaktifkan kembali. Catatan dan pekerjaannya tetap tersimpan.', '/pengguna/' ~ user.user_id ~ '/status', csrf_token, tone='danger', hidden_fields={'is_active': 'false'}) }}
+      {% else %}
+      {{ ui.confirm_button('aktifkan', 'Aktifkan kembali', 'Aktifkan kembali akun ' ~ user.username ~ '?', 'Pengguna ini bisa masuk lagi dengan kata sandinya yang sekarang.', '/pengguna/' ~ user.user_id ~ '/status', csrf_token, tone='secondary', hidden_fields={'is_active': 'true'}) }}
+      {% endif %}
+    </div>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Pekerjaan</h2>
+  <p class="hint">Yang dibuat pengguna ini sendiri; angka 30 hari terakhir di samping totalnya.</p>
+  <div class="grid grid--metrics">
+    <div class="metric">
+      <p class="metric__label">Prediksi dibuat</p>
+      <p class="metric__value"><span data-stat="operations-30d">{{ activity.operations_recent }}</span><span class="metric__unit">30 hari terakhir</span></p>
+      <p class="metric__context">Total <span data-stat="operations-total">{{ activity.operations_total }}</span></p>
+    </div>
+    <div class="metric">
+      <p class="metric__label">BBM aktual dicatat</p>
+      <p class="metric__value"><span data-stat="actuals-30d">{{ activity.actuals_recent }}</span><span class="metric__unit">30 hari terakhir</span></p>
+      <p class="metric__context">Total <span data-stat="actuals-total">{{ activity.actuals_total }}</span></p>
+    </div>
+  </div>
+  {% if detail.recent_operations %}
+  <h3>Operasi terakhir</h3>
+  <ul class="row-list">
+    {% for item in detail.recent_operations %}
+    <li>
+      <div class="row-list__main">
+        <strong><a href="/operasi-harian/{{ item.operation_id }}">{{ item.vehicle or 'Operasi' }}</a></strong>
+        <span class="row-list__meta">{% if item.created_at %}{{ item.created_at | waktu }} · {% endif %}{{ item.total_distance_km | angka }} km · <code>{{ item.operation_id }}</code></span>
+      </div>
+      <span class="row-list__figure">{{ ui.badge('Aktual tercatat', 'success') if item.has_actual else ui.badge('Menunggu aktual', 'warning') }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  {{ ui.empty_state('Belum ada operasi yang dibuat pengguna ini.') }}
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Jejak aktivitas</h2>
+  <p class="hint">Catatan audit yang melibatkan pengguna ini, terbaru di atas.</p>
+  {% if trail %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Waktu</th><th>Tindakan</th><th>Oleh</th><th>Hasil</th></tr></thead>
+      <tbody>
+        {% for record in trail %}
+        <tr>
+          <td>{{ record.occurred_at | waktu }}</td>
+          <td>{{ record.action_label }}
+            {% if record.details %}
+            <ul class="detail-inline">
+              {% for label, value in record.details %}<li><span class="hint">{{ label }}:</span> {{ value }}</li>{% endfor %}
+            </ul>
+            {% endif %}
+          </td>
+          <td>{{ record.actor }}</td>
+          <td>
+            {% if record.outcome == 'succeeded' %}{{ ui.badge('Berhasil', 'success') }}
+            {% elif record.outcome == 'denied' %}{{ ui.badge('Ditolak', 'warning') }}
+            {% else %}{{ ui.badge('Gagal', 'danger') }}{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ ui.empty_state('Belum ada catatan.') }}
+  {% endif %}
+</section>
+
+<div class="button-row"><a class="button button--secondary" href="/pengguna">Kembali ke daftar pengguna</a></div>
+
+{% endblock %}
