@@ -42,6 +42,7 @@ class SqlAlchemyActualFuelRepository:
                         source_filename=record.source_filename,
                         source_sheet_name=record.source_sheet_name,
                         source_row_number=record.source_row_number,
+                        recorded_by=record.recorded_by,
                     )
                 )
         except IntegrityError as error:

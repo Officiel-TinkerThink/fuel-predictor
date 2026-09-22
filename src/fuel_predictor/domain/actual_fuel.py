@@ -24,3 +24,5 @@ class ActualFuelRecord:
     source_filename: str | None = None
     source_sheet_name: str | None = None
     source_row_number: int | None = None
+    # Who reported it. None on rows from before this was recorded.
+    recorded_by: str | None = None

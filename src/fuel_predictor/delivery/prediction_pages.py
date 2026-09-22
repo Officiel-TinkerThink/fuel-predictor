@@ -192,7 +192,9 @@ def build_prediction_pages_router(
 
         try:
             validated = CreateDailyOperationRequest.model_validate(payload)
-            operation = execute_create(validated, create_daily_operation)
+            operation = execute_create(
+                validated, create_daily_operation, created_by=caller.user.username
+            )
         except ValidationError as error:
             return HTMLResponse(
                 _render_form(

@@ -11,6 +11,7 @@ operation has proven itself, per the plan.
 
 import json
 from collections.abc import Callable, Mapping, Sequence
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
@@ -162,9 +163,7 @@ class McpRequestHandler:
             raise McpAuthenticationError("Kredensial agen tidak valid atau sudah dicabut.")
         return client
 
-    def call(
-        self, client: AgentClient, tool_name: str, arguments: Mapping[str, Any]
-    ) -> Any:
+    def call(self, client: AgentClient, tool_name: str, arguments: Mapping[str, Any]) -> Any:
         tool = self.registry.get(tool_name)
         if tool is None:
             self._audit(client, tool_name, AuditOutcome.FAILED, "alat tidak dikenal")
@@ -191,13 +190,16 @@ class McpRequestHandler:
             )
             raise McpRateLimitError(self.max_calls_per_window, self.window_seconds)
 
+        # The client's name is what an operation it creates is attributed to;
+        # the handler signature stays a plain mapping of arguments.
+        actor_token = current_actor.set(client.name)
         try:
             result = tool.handler(arguments)
         except Exception as error:  # noqa: BLE001 - audited, then re-raised
-            self._audit(
-                client, tool_name, AuditOutcome.FAILED, f"{type(error).__name__}: {error}"
-            )
+            self._audit(client, tool_name, AuditOutcome.FAILED, f"{type(error).__name__}: {error}")
             raise
+        finally:
+            current_actor.reset(actor_token)
 
         # A privileged tool's first call only previews; it returns a status and
         # changes nothing. Recording both calls as a bare "succeeded" would let
@@ -245,6 +247,11 @@ class McpRequestHandler:
             subject=tool_name,
             details=details,
         )
+
+
+# The agent client whose tool call is running, for the handlers that create
+# something on its behalf. Set around each call by McpToolRegistry.
+current_actor: ContextVar[str | None] = ContextVar("mcp_current_actor", default=None)
 
 
 def _required(arguments: Mapping[str, Any], key: str) -> Any:
@@ -358,6 +365,7 @@ def build_registry(
                 total_distance_km=float(raw_distance) if raw_distance is not None else None,
                 distance_source=DistanceSource(arguments.get("distance_source", "manual")),
                 stop_sequence=stop_sequence,
+                created_by=current_actor.get(),
             )
         )
         prediction = generate_prediction.execute(operation.operation_id)

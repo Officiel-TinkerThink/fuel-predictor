@@ -59,6 +59,7 @@ def build_actual_fuel_pages_router(
                     operation_id=submitted.get("operation_id", "").strip(),
                     actual_fuel_liters=validated.actual_fuel_liters,
                     measurement_source=validated.measurement_source,
+                    recorded_by=caller.user.username,
                 )
             )
         except ValidationError as error:
@@ -116,7 +117,9 @@ def build_actual_fuel_pages_router(
         caller = guard.require_caller(request)
         try:
             result = bulk_actual_fuel.execute(
-                file.filename or "berkas-bbm-aktual", await file.read()
+                file.filename or "berkas-bbm-aktual",
+                await file.read(),
+                actor=caller.user.username,
             )
         except HistoricalDatasetImportError as error:
             return HTMLResponse(

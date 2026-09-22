@@ -397,8 +397,12 @@ def build_router(
         response_model_exclude_none=True,
         status_code=status.HTTP_201_CREATED,
     )
-    def create_operation(request: CreateDailyOperationRequest) -> DailyOperationResponse:
-        operation = execute_create(request, create_daily_operation)
+    def create_operation(
+        request: CreateDailyOperationRequest, http_request: Request
+    ) -> DailyOperationResponse:
+        operation = execute_create(
+            request, create_daily_operation, created_by=actor_of(http_request)
+        )
         return _operation_response(operation)
 
     @router.get(
@@ -447,10 +451,13 @@ def build_router(
         status_code=status.HTTP_201_CREATED,
     )
     async def predict_bulk_operations(
+        http_request: Request,
         file: UploadFile = _UPLOAD_FILE,
     ) -> BulkOperationPredictionResponse:
         result = bulk_operation_prediction.execute(
-            file.filename or "berkas-prediksi-operasi", await file.read()
+            file.filename or "berkas-prediksi-operasi",
+            await file.read(),
+            actor=actor_of(http_request),
         )
         return _bulk_prediction_response(result)
 
@@ -475,8 +482,12 @@ def build_router(
         response_model=BulkActualFuelResponse,
         status_code=status.HTTP_201_CREATED,
     )
-    async def record_bulk_actual_fuel(file: UploadFile = _UPLOAD_FILE) -> BulkActualFuelResponse:
-        result = bulk_actual_fuel.execute(file.filename or "berkas-bbm-aktual", await file.read())
+    async def record_bulk_actual_fuel(
+        http_request: Request, file: UploadFile = _UPLOAD_FILE
+    ) -> BulkActualFuelResponse:
+        result = bulk_actual_fuel.execute(
+            file.filename or "berkas-bbm-aktual", await file.read(), actor=actor_of(http_request)
+        )
         return _bulk_actual_fuel_response(result)
 
     @router.get(
@@ -548,13 +559,16 @@ def build_router(
         response_model=ActualFuelResponse,
         status_code=status.HTTP_201_CREATED,
     )
-    def record_actual(operation_id: str, request: ActualFuelRequest) -> ActualFuelResponse:
+    def record_actual(
+        operation_id: str, request: ActualFuelRequest, http_request: Request
+    ) -> ActualFuelResponse:
         return _actual_fuel_response(
             record_actual_fuel.execute(
                 RecordActualFuelCommand(
                     operation_id=operation_id,
                     actual_fuel_liters=request.actual_fuel_liters,
                     measurement_source=request.measurement_source,
+                    recorded_by=actor_of(http_request),
                 )
             )
         )
@@ -861,11 +875,21 @@ def _monitoring_alert_response(item: MonitoringAlert) -> MonitoringAlertResponse
     )
 
 
+def actor_of(http_request: Request) -> str | None:
+    """The signed-in username the session middleware put on the request, if any."""
+    caller = getattr(http_request.state, "caller", None)
+    return caller.user.username if caller is not None else None
+
+
 def execute_create(
-    request: CreateDailyOperationRequest, create_daily_operation: CreateDailyOperation
+    request: CreateDailyOperationRequest,
+    create_daily_operation: CreateDailyOperation,
+    *,
+    created_by: str | None = None,
 ) -> DailyOperation:
     return create_daily_operation.execute(
         CreateDailyOperationCommand(
+            created_by=created_by,
             vehicle_category=request.vehicle_category,
             vehicle=request.vehicle,
             activity_mode=request.activity_mode,

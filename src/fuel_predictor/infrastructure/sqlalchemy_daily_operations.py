@@ -34,6 +34,8 @@ class SqlAlchemyDailyOperationRepository:
                     lifting_hours=operation.lifting_hours,
                     total_distance_km=operation.total_distance_km,
                     distance_source=operation.distance_source.value,
+                    created_by=operation.created_by,
+                    created_at=operation.created_at,
                     route_distance_manual_fallback=operation.route_distance_manual_fallback,
                 )
             )
@@ -117,4 +119,6 @@ def _to_domain(
         stop_sequence=stop_sequence,
         stop_activities=stop_activities,
         route_distance_manual_fallback=row.route_distance_manual_fallback,
+        created_by=row.created_by,
+        created_at=row.created_at,
     )

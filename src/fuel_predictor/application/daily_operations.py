@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Protocol
 from uuid import uuid4
 
@@ -42,6 +43,9 @@ class CreateDailyOperationCommand:
     vehicle: str | None = None
     stop_sequence: tuple[str, ...] = ()
     stop_activities: tuple[str, ...] = ()
+    # The signed-in username, or an agent client's name; None from a caller
+    # that identifies itself no further.
+    created_by: str | None = None
 
 
 class CreateDailyOperation:
@@ -50,10 +54,12 @@ class CreateDailyOperation:
         repository: DailyOperationWriter,
         routing_provider: RoutingProvider | None = None,
         operation_id_factory: Callable[[], str] | None = None,
+        now: Callable[[], datetime] | None = None,
     ) -> None:
         self._repository = repository
         self._routing_provider = routing_provider or UnavailableRoutingProvider()
         self._operation_id_factory = operation_id_factory or _new_operation_id
+        self._now = now or (lambda: datetime.now(UTC))
 
     def execute(self, command: CreateDailyOperationCommand) -> DailyOperation:
         validate_stop_sequence(command.stop_sequence)
@@ -88,6 +94,8 @@ class CreateDailyOperation:
             stop_sequence=command.stop_sequence,
             stop_activities=command.stop_activities,
             route_distance_manual_fallback=route_distance_manual_fallback,
+            created_by=command.created_by,
+            created_at=self._now(),
         )
         self._repository.add(operation)
         return operation

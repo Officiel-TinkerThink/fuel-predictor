@@ -38,6 +38,9 @@ class DailyOperationRow(Base):
     total_distance_km: Mapped[float] = mapped_column(Float, nullable=False)
     distance_source: Mapped[str] = mapped_column(String(64), nullable=False)
     route_distance_manual_fallback: Mapped[bool] = mapped_column(nullable=False, default=False)
+    # Who planned it and when; null on rows from before this was recorded.
+    created_by: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class DailyOperationStopRow(Base):
@@ -188,6 +191,7 @@ class ActualFuelRecordRow(Base):
     source_filename: Mapped[str | None] = mapped_column(String(512), nullable=True)
     source_sheet_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     source_row_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    recorded_by: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
 
 
 class UserRow(Base):

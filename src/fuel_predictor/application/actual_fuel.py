@@ -42,6 +42,7 @@ class RecordActualFuelCommand:
     source_filename: str | None = None
     source_sheet_name: str | None = None
     source_row_number: int | None = None
+    recorded_by: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,6 +65,7 @@ class RecordActualFuel:
             source_filename=command.source_filename,
             source_sheet_name=command.source_sheet_name,
             source_row_number=command.source_row_number,
+            recorded_by=command.recorded_by,
         )
         self.actual_fuel_writer.add(record)
         return record

@@ -1,5 +1,5 @@
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from math import isfinite
 
 from fuel_predictor.application.actual_fuel import (
@@ -45,7 +45,9 @@ class BulkActualFuel:
         self._source_reader = source_reader
         self._record_actual_fuel = record_actual_fuel
 
-    def execute(self, source_filename: str, content: bytes) -> BulkActualFuelResult:
+    def execute(
+        self, source_filename: str, content: bytes, *, actor: str | None = None
+    ) -> BulkActualFuelResult:
         if not content:
             raise HistoricalDatasetImportError("Berkas impor kosong.")
 
@@ -72,7 +74,7 @@ class BulkActualFuel:
                     continue
                 assert command is not None
                 try:
-                    record = self._record_actual_fuel.execute(command)
+                    record = self._record_actual_fuel.execute(replace(command, recorded_by=actor))
                 except DailyOperationNotFoundError:
                     issues.append(
                         DataQualityIssue(

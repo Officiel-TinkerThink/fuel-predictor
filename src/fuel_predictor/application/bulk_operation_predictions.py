@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Protocol
 
 from fuel_predictor.application.baseline_predictions import GenerateFuelPrediction
@@ -62,7 +62,9 @@ class BulkOperationPrediction:
         self._generate_fuel_prediction = generate_fuel_prediction
         self._source_writer = source_writer
 
-    def execute(self, source_filename: str, content: bytes) -> BulkOperationPredictionResult:
+    def execute(
+        self, source_filename: str, content: bytes, *, actor: str | None = None
+    ) -> BulkOperationPredictionResult:
         if not content:
             raise HistoricalDatasetImportError("Berkas impor kosong.")
 
@@ -92,7 +94,9 @@ class BulkOperationPrediction:
 
                 assert command is not None
                 try:
-                    operation = self._create_daily_operation.execute(command)
+                    operation = self._create_daily_operation.execute(
+                        replace(command, created_by=actor)
+                    )
                 except DailyOperationValidationError as error:
                     issues.append(
                         DataQualityIssue(

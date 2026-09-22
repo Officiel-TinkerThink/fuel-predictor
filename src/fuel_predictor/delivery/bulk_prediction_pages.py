@@ -43,7 +43,9 @@ def build_bulk_prediction_pages_router(
         caller = guard.require_caller(request)
         try:
             result = bulk_operation_prediction.execute(
-                file.filename or "berkas-prediksi-operasi", await file.read()
+                file.filename or "berkas-prediksi-operasi",
+                await file.read(),
+                actor=caller.user.username,
             )
         except HistoricalDatasetImportError as error:
             return HTMLResponse(

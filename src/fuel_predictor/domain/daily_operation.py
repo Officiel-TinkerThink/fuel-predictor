@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from math import isfinite
 
@@ -42,6 +43,10 @@ class DailyOperation:
     # departure point carries no activity, so its entry is empty.
     stop_activities: tuple[str, ...] = ()
     route_distance_manual_fallback: bool = False
+    # Who planned it and when. None on rows from before this was recorded,
+    # and for programs that identify themselves no further.
+    created_by: str | None = None
+    created_at: datetime | None = None
 
     def __post_init__(self) -> None:
         if not isfinite(self.total_distance_km) or self.total_distance_km <= 0:
