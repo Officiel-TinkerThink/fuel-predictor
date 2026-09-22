@@ -402,10 +402,11 @@ def build_router(
     def create_operation(
         request: CreateDailyOperationRequest, http_request: Request
     ) -> DailyOperationResponse:
+        # Not an event on its own: the estimate that follows is what gets
+        # recorded, or nothing would stop every operation appearing twice.
         operation = execute_create(
             request, create_daily_operation, created_by=actor_of(http_request)
         )
-        events.operation_planned(actor_of(http_request), operation, None)
         return _operation_response(operation)
 
     @router.get(

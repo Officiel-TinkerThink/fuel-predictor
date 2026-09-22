@@ -101,12 +101,13 @@
   <p class="hint">Pengguna menyambungkan agen pengkodeannya sendiri lewat OAuth dari halaman
     <em>Agen Saya</em>; agen itu bertindak dengan hak akses pengguna tersebut, tidak lebih.
     Administrator dapat mencabutnya kapan saja.</p>
-  {% if grants %}
+  {{ ui.listing_toolbar(grants, placeholder='Pengguna, agen, atau nama sambungan') }}
+  {% if grants.items %}
   <div class="table-wrap">
     <table>
       <thead><tr><th>Pengguna</th><th>Agen</th><th>Cakupan</th><th>Disambungkan</th><th>Status</th><th><span class="visually-hidden">Tindakan</span></th></tr></thead>
       <tbody>
-        {% for summary in grants %}
+        {% for summary in grants.items %}
         <tr>
           <td>{{ summary.full_name }}<br><span class="hint">{{ summary.username }}</span></td>
           <td><strong>{{ summary.display_name }}</strong><br>
@@ -120,6 +121,9 @@
       </tbody>
     </table>
   </div>
+  {{ ui.pagination(grants) }}
+  {% elif grants.q %}
+  {{ ui.empty_state('Tidak ada sambungan yang cocok.', 'Tampilkan semua', '/integrasi-agen') }}
   {% else %}
   {{ ui.empty_state('Belum ada pengguna yang menyambungkan agen.') }}
   {% endif %}

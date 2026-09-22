@@ -20,10 +20,19 @@ from fuel_predictor.application.monitoring_runs import (
     MonitoringRunRepository,
 )
 from fuel_predictor.delivery.audit_view import audit_row
+from fuel_predictor.delivery.listing import ListingQuery, SortOption, paginate
 from fuel_predictor.delivery.monitoring_pages import ALERT_KIND_LABELS
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.identity import Capability
+
+# The trail pages over its newest rows in memory; a search reaches the rest.
+_AUDIT_MAX = 5000
+_AUDIT_SORTS = (
+    SortOption("waktu", "Waktu", lambda r: r["occurred_at"]),
+    SortOption("pelaku", "Pelaku", lambda r: r["actor"]),
+    SortOption("tindakan", "Tindakan", lambda r: r["action_label"]),
+)
 
 # The day's work, in the order it happens: plan, then report what was burned.
 # The overview leads with these so nobody has to hunt the sidebar for them.
@@ -113,6 +122,22 @@ def build_dashboard_router(
     @router.get("/audit", response_class=HTMLResponse)
     def show_audit(request: Request) -> HTMLResponse:
         caller = guard.require_caller(request)
+        outcome = request.query_params.get("hasil", "")
+        rows = [audit_row(record) for record in list_audit_records.execute(_AUDIT_MAX)]
+        if outcome in ("succeeded", "failed", "denied"):
+            rows = [row for row in rows if row["outcome"] == outcome]
+        listing = paginate(
+            rows,
+            ListingQuery.from_params(request.query_params, extra_keys=("hasil",)),
+            search=lambda r: [
+                str(r["actor"]),
+                str(r["action_label"]),
+                str(r["action"]),
+                str(r["subject"] or ""),
+            ],
+            sorts=_AUDIT_SORTS,
+            default_sort="waktu",
+        )
         return HTMLResponse(
             render(
                 "audit.html",
@@ -120,8 +145,12 @@ def build_dashboard_router(
                 page_title="Catatan Audit",
                 active_path="/audit",
                 eyebrow="PENGATURAN",
-                page_lead="Riwayat masuk, tindakan istimewa, dan hasilnya.",
-                records=[audit_row(record) for record in list_audit_records.execute()],
+                page_lead=(
+                    "Kejadian penting: operasi direncanakan, aktual dicatat, berkas diimpor, "
+                    "model berganti, akun diubah, dan percobaan masuk yang gagal."
+                ),
+                listing=listing,
+                outcome=outcome,
             )
         )
 

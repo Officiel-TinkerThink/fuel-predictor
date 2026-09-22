@@ -13,28 +13,24 @@
 </div>
 
 <section class="card">
-  <div class="table-toolbar">
-    <div class="field">
-      <label for="saring-pengguna">Cari</label>
-      <input id="saring-pengguna" type="search" data-table-filter="daftar-pengguna" aria-describedby="saring-pengguna-status" placeholder="Nama, nama pengguna, atau email">
-      <span class="hint" id="saring-pengguna-status" aria-live="polite"></span>
-    </div>
-    <div class="field">
-      <label for="saring-status">Status</label>
-      <select id="saring-status" data-table-filter="daftar-pengguna" data-filter-attribute="data-status" aria-describedby="saring-pengguna-status">
-        <option value="">Semua</option>
-        <option value="aktif">Aktif</option>
-        <option value="nonaktif">Nonaktif</option>
-      </select>
-    </div>
-    <div class="table-toolbar__action">
-      <button type="button" class="button" data-dialog="tambah-pengguna">+ Tambah pengguna</button>
-    </div>
+  <div class="card__title">
+    <h2>Daftar pengguna</h2>
+    <button type="button" class="button" data-dialog="tambah-pengguna">+ Tambah pengguna</button>
   </div>
+  {% call ui.listing_toolbar(listing, placeholder='Nama, nama pengguna, atau email') %}
+  <div class="field">
+    <label for="status">Status</label>
+    <select id="status" name="status">
+      <option value="">Semua</option>
+      <option value="aktif"{% if status_filter == 'aktif' %} selected{% endif %}>Aktif</option>
+      <option value="nonaktif"{% if status_filter == 'nonaktif' %} selected{% endif %}>Nonaktif</option>
+    </select>
+  </div>
+  {% endcall %}
 
-  {% if directory.entries %}
+  {% if listing.items %}
   <ul class="row-list" id="daftar-pengguna">
-    {% for entry in directory.entries %}
+    {% for entry in listing.items %}
     {% set user = entry.user %}{% set activity = entry.activity %}
     <li data-user="{{ user.username }}" data-user-id="{{ user.user_id }}" data-status="{{ 'aktif' if user.is_active else 'nonaktif' }}">
       <span class="avatar" aria-hidden="true">{{ user.full_name[:1] | upper }}</span>
@@ -56,6 +52,9 @@
     </li>
     {% endfor %}
   </ul>
+  {{ ui.pagination(listing) }}
+  {% elif listing.q or status_filter %}
+  {{ ui.empty_state('Tidak ada pengguna yang cocok.', 'Tampilkan semua', '/pengguna') }}
   {% else %}
   {{ ui.empty_state('Belum ada pengguna lain.') }}
   {% endif %}

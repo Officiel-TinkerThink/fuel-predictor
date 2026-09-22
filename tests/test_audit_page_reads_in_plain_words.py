@@ -43,5 +43,5 @@ def test_actions_are_labelled_and_details_shown(tmp_path: Path) -> None:
     # The raw code stays available for anyone grepping a log against the page.
     assert "sign_in_failed" in page.text
     # A filter on outcome, so failures can be read on their own.
-    assert 'data-filter-attribute="data-outcome"' in page.text
+    assert 'name="hasil"' in page.text
     assert 'data-outcome="failed"' in page.text

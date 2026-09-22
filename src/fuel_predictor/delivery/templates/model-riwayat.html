@@ -4,16 +4,16 @@
 {% block content %}
 
 <section class="card">
-  {% if records %}
+  {{ ui.listing_toolbar(listing, placeholder='Versi model, pelaku, atau alasan') }}
+  {% if listing.items %}
   <div class="table-wrap">
     <table>
-      <caption>{{ records | length }} unggahan terakhir</caption>
       <thead><tr><th>Waktu</th><th>Versi model</th><th>Pelaku</th><th>Hasil</th><th>Kelayakan</th></tr></thead>
       <tbody>
-        {% for record in records %}
+        {% for record in listing.items %}
         <tr>
           <td>{{ record.validated_at | waktu }}</td>
-          <td>{{ record.model_version }}</td>
+          <td><code class="mono-id">{{ record.model_version }}</code></td>
           <td>{{ record.actor }}</td>
           <td>{% if record.was_accepted %}{{ ui.badge('Diterima', 'success') }}{% else %}{{ ui.badge('Ditolak', 'danger') }}{% endif %}</td>
           <td>
@@ -29,11 +29,14 @@
       </tbody>
     </table>
   </div>
+  {{ ui.pagination(listing) }}
+  {% elif listing.q %}
+  {{ ui.empty_state('Tidak ada unggahan yang cocok.', 'Tampilkan semua', '/model/riwayat') }}
   {% else %}
   {{ ui.empty_state('Belum ada paket model yang diunggah.') }}
   {% endif %}
 </section>
 
-<p><a class="button button--secondary" href="/model/unggah">Unggah kandidat</a></p>
+<div class="button-row"><a class="button button--secondary" href="/model/unggah">Unggah kandidat</a></div>
 
 {% endblock %}

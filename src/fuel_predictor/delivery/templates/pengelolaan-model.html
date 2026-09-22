@@ -50,12 +50,13 @@
   <h2>Semua versi</h2>
   <p class="hint">Terbaru di atas. Versi yang pernah aktif dan paketnya masih tersimpan bisa
     diaktifkan kembali — itulah cara mengembalikan model bila versi baru bermasalah.</p>
-  {% if dashboard.all_versions %}
+  {{ ui.listing_toolbar(versions, placeholder='Versi, algoritma, atau status') }}
+  {% if versions.items %}
   <div class="table-wrap">
     <table>
       <thead><tr><th>Versi</th><th>Algoritma</th><th>Dilatih</th><th>Status</th><th><span class="visually-hidden">Tindakan</span></th></tr></thead>
       <tbody>
-        {% for model in dashboard.all_versions %}
+        {% for model in versions.items %}
         <tr>
           <td><code class="mono-id">{{ model.model_version_id }}</code></td>
           <td>{{ model.algorithm }}</td>
@@ -77,6 +78,9 @@
       </tbody>
     </table>
   </div>
+  {{ ui.pagination(versions) }}
+  {% elif versions.q %}
+  {{ ui.empty_state('Tidak ada versi yang cocok.', 'Tampilkan semua', '/pengelolaan-model') }}
   {% else %}
   {{ ui.empty_state('Belum ada versi model.') }}
   {% endif %}

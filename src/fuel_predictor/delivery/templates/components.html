@@ -251,6 +251,70 @@
 </div>
 {%- endmacro %}
 
+{# The one list toolbar: search, sort, page size. A plain GET form, so it
+   works without a script and the resulting address can be bookmarked.
+   `extra` renders as hidden fields so the page's own filters survive. #}
+{% macro listing_toolbar(listing, placeholder='Cari…', extra_fields=none) -%}
+<form method="get" class="listing-toolbar" role="search">
+  {% for key, value in (extra_fields or {}).items() %}
+  <input type="hidden" name="{{ key }}" value="{{ value }}">
+  {% endfor %}
+  <div class="field listing-toolbar__search">
+    <label for="cari">Cari</label>
+    <input id="cari" name="cari" type="search" value="{{ listing.q }}" placeholder="{{ placeholder }}">
+  </div>
+  <div class="field">
+    <label for="urut">Urutkan</label>
+    <select id="urut" name="urut">
+      {% for option in listing.sorts %}
+      <option value="{{ option.key }}"{% if option.key == listing.sort %} selected{% endif %}>{{ option.label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="arah">Arah</label>
+    <select id="arah" name="arah">
+      <option value="desc"{% if listing.direction == 'desc' %} selected{% endif %}>Menurun</option>
+      <option value="asc"{% if listing.direction == 'asc' %} selected{% endif %}>Menaik</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="per">Per halaman</label>
+    <select id="per" name="per">
+      {% for size in (20, 50, 100) %}
+      <option value="{{ size }}"{% if size == listing.per_page %} selected{% endif %}>{{ size }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {{ caller() if caller is defined else '' }}
+  <div class="listing-toolbar__submit">
+    <button type="submit" class="button button--secondary">Terapkan</button>
+  </div>
+</form>
+{%- endmacro %}
+
+{# "Menampilkan 21–40 dari 134" and the page links, preserving the search
+   and sort. Rendered only when there is more than one page or a search. #}
+{% macro pagination(listing) -%}
+{% if listing.total %}
+<nav class="pagination" aria-label="Halaman">
+  <p class="pagination__summary">Menampilkan {{ listing.first_index }}–{{ listing.last_index }} dari {{ listing.total }}{% if listing.q %} yang cocok dengan "{{ listing.q }}"{% endif %}</p>
+  {% if listing.pages > 1 %}
+  <ul class="pagination__pages">
+    <li>{% if listing.has_previous %}<a href="{{ listing.url(page=listing.page - 1) }}" rel="prev">‹ Sebelumnya</a>{% else %}<span aria-disabled="true">‹ Sebelumnya</span>{% endif %}</li>
+    {% set ns = namespace(previous=0) %}
+    {% for number in listing.page_numbers %}
+    {% if number - ns.previous > 1 %}<li><span>…</span></li>{% endif %}
+    <li>{% if number == listing.page %}<span aria-current="page">{{ number }}</span>{% else %}<a href="{{ listing.url(page=number) }}">{{ number }}</a>{% endif %}</li>
+    {% set ns.previous = number %}
+    {% endfor %}
+    <li>{% if listing.has_next %}<a href="{{ listing.url(page=listing.page + 1) }}" rel="next">Berikutnya ›</a>{% else %}<span aria-disabled="true">Berikutnya ›</span>{% endif %}</li>
+  </ul>
+  {% endif %}
+</nav>
+{% endif %}
+{%- endmacro %}
+
 {% macro trend_chart(chart, label) -%}
 {# One series over time, drawn against its threshold. Text uses the text
    tokens; only the line and the markers carry the series colour. Each point

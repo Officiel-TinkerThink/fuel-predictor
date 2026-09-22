@@ -4,17 +4,10 @@
 {% block content %}
 
 <section class="card">
-  {% if entries %}
-  <div class="table-toolbar">
-    <div class="field">
-      <label for="saring-riwayat">Cari</label>
-      <input id="saring-riwayat" type="search" data-table-filter="daftar-riwayat"
-             aria-describedby="saring-riwayat-status" placeholder="Kendaraan, lokasi, atau ID">
-      <span class="hint" id="saring-riwayat-status" aria-live="polite"></span>
-    </div>
-  </div>
+  {{ ui.listing_toolbar(listing, placeholder='Kendaraan, lokasi, atau ID operasi') }}
+  {% if listing.items %}
   <ul class="row-list" id="daftar-riwayat">
-    {% for item in entries %}
+    {% for item in listing.items %}
     <li>
       <div class="row-list__main">
         <strong><a href="/operasi-harian/{{ item.operation_id }}">{{ item.vehicle or item.vehicle_category.value }}{% if item.departure %} · {{ item.departure }} → {{ item.destination }}{% endif %}</a></strong>
@@ -30,12 +23,9 @@
     </li>
     {% endfor %}
   </ul>
-  {% if more_limit and more_limit > limit %}
-  <div class="button-row"><a class="button button--secondary" href="/riwayat-prediksi?jumlah={{ more_limit }}">Tampilkan {{ more_limit }} terbaru</a>
-    <span class="hint">Sedang menampilkan {{ limit }} prediksi terbaru.</span></div>
-  {% elif entries | length >= limit %}
-  <p class="hint">Menampilkan {{ limit }} prediksi terbaru — batas maksimum halaman ini.</p>
-  {% endif %}
+  {{ ui.pagination(listing) }}
+  {% elif listing.q %}
+  {{ ui.empty_state('Tidak ada prediksi yang cocok dengan "' ~ listing.q ~ '".', 'Tampilkan semua', '/riwayat-prediksi') }}
   {% else %}
   {{ ui.empty_state('Belum ada prediksi. Estimasi yang dibuat akan muncul di sini.', 'Buat prediksi', '/prediksi') }}
   {% endif %}

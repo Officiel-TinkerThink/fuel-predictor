@@ -18,12 +18,12 @@ from fuel_predictor.application.agent_credentials import (
     RevokeAgentCredential,
 )
 from fuel_predictor.application.agent_grants import (
-    AgentGrantSummary,
     DeleteAgentGrant,
     ListAgentGrants,
     RenameAgentGrant,
     RevokeAgentGrant,
 )
+from fuel_predictor.delivery.listing import Listing, ListingQuery, SortOption, paginate
 from fuel_predictor.delivery.oauth_routes import SCOPE_DESCRIPTIONS
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
@@ -35,6 +35,13 @@ from fuel_predictor.domain.identity import (
 
 if TYPE_CHECKING:
     from fuel_predictor.application.identity import ActiveCaller
+
+
+_GRANT_SORTS = (
+    SortOption("waktu", "Disambungkan", lambda g: g.grant.granted_at),
+    SortOption("pengguna", "Pengguna", lambda g: g.username),
+    SortOption("agen", "Agen", lambda g: g.display_name),
+)
 
 
 def build_agent_pages_router(
@@ -52,6 +59,7 @@ def build_agent_pages_router(
     router = APIRouter()
 
     def _admin_page(
+        request: Request,
         caller: "ActiveCaller",
         issued_token: str | None = None,
         error: str | None = None,
@@ -63,12 +71,18 @@ def build_agent_pages_router(
             issued_token,
             error,
             connection=connection,
-            grants=list_grants.execute(),
+            grants=paginate(
+                list_grants.execute(),
+                ListingQuery.from_params(request.query_params),
+                search=lambda g: [g.username, g.full_name, g.client_name, g.grant.label],
+                sorts=_GRANT_SORTS,
+                default_sort="waktu",
+            ),
         )
 
     @router.get("/integrasi-agen", response_class=HTMLResponse)
     def show_agents(request: Request) -> HTMLResponse:
-        return HTMLResponse(_admin_page(guard.require_caller(request)))
+        return HTMLResponse(_admin_page(request, guard.require_caller(request)))
 
     @router.post("/integrasi-agen", response_class=HTMLResponse)
     async def issue(request: Request) -> Response:
@@ -83,13 +97,14 @@ def build_agent_pages_router(
             )
         except IdentityValidationError as error:
             return HTMLResponse(
-                _admin_page(caller, error=error.message),
+                _admin_page(request, caller, error=error.message),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         # Shown exactly once. Only the hash is stored, so this value cannot be
         # recovered later — a lost credential is reissued, not looked up.
         return HTMLResponse(
             _admin_page(
+                request,
                 caller,
                 issued_token=issued.token,
                 connection=_connection_guide(
@@ -106,10 +121,10 @@ def build_agent_pages_router(
             revoke_credential.execute(client_id, revoked_by=caller.user.username)
         except IdentityValidationError as error:
             return HTMLResponse(
-                _admin_page(caller, error=error.message),
+                _admin_page(request, caller, error=error.message),
                 status_code=status.HTTP_404_NOT_FOUND,
             )
-        return HTMLResponse(_admin_page(caller))
+        return HTMLResponse(_admin_page(request, caller))
 
     @router.post("/integrasi-agen/grant/{grant_id}/cabut", response_class=HTMLResponse)
     async def revoke_any_grant(grant_id: str, request: Request) -> Response:
@@ -118,10 +133,10 @@ def build_agent_pages_router(
             revoke_grant.execute(grant_id, revoked_by=caller.user)
         except IdentityValidationError as error:
             return HTMLResponse(
-                _admin_page(caller, error=error.message),
+                _admin_page(request, caller, error=error.message),
                 status_code=status.HTTP_404_NOT_FOUND,
             )
-        return HTMLResponse(_admin_page(caller))
+        return HTMLResponse(_admin_page(request, caller))
 
     @router.post("/integrasi-agen/grant/{grant_id}/nama", response_class=HTMLResponse)
     async def rename_any_grant(grant_id: str, request: Request) -> Response:
@@ -131,7 +146,7 @@ def build_agent_pages_router(
             rename_grant.execute(grant_id, str(form.get("label", "")), renamed_by=caller.user)
         except IdentityValidationError as error:
             return HTMLResponse(
-                _admin_page(caller, error=error.message),
+                _admin_page(request, caller, error=error.message),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         return RedirectResponse("/integrasi-agen", status_code=status.HTTP_303_SEE_OTHER)
@@ -143,7 +158,7 @@ def build_agent_pages_router(
             delete_grant.execute(grant_id, deleted_by=caller.user)
         except IdentityValidationError as error:
             return HTMLResponse(
-                _admin_page(caller, error=error.message),
+                _admin_page(request, caller, error=error.message),
                 status_code=status.HTTP_409_CONFLICT,
             )
         return RedirectResponse("/integrasi-agen", status_code=status.HTTP_303_SEE_OTHER)
@@ -271,7 +286,7 @@ def _render(
     issued_token: str | None,
     error: str | None,
     connection: dict[str, object] | None = None,
-    grants: tuple[AgentGrantSummary, ...] = (),
+    grants: Listing | None = None,
 ) -> str:
     return render(
         "integrasi-agen.html",

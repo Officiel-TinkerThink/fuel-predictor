@@ -552,7 +552,9 @@ def create_app(
         build_user_pages_router(
             create_user=create_user,
             get_user_directory=GetUserDirectory(user_repository, audit_repository, user_activity),
-            get_user_detail=GetUserDetail(user_repository, audit_repository, user_activity),
+            get_user_detail=GetUserDetail(
+                user_repository, audit_repository, user_activity, trail_limit=20
+            ),
             update_user_profile=UpdateUserProfile(user_repository, record_audit),
             set_user_activation=set_user_activation,
             change_password=change_password,

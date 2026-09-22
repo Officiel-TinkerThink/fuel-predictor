@@ -4,29 +4,23 @@
 {% block content %}
 
 <section class="card">
-  <div class="table-toolbar">
-    <div class="field">
-      <label for="filter-audit">Cari catatan</label>
-      <input id="filter-audit" type="search" data-table-filter="tabel-audit" aria-describedby="filter-audit-status" placeholder="Pelaku, tindakan, atau subjek">
-    </div>
-    <div class="field">
-      <label for="filter-audit-outcome">Hasil</label>
-      <select id="filter-audit-outcome" data-table-filter="tabel-audit" data-filter-attribute="data-outcome" aria-describedby="filter-audit-status">
-        <option value="">Semua</option>
-        <option value="succeeded">Berhasil</option>
-        <option value="failed">Gagal</option>
-        <option value="denied">Ditolak</option>
-      </select>
-    </div>
-    <p id="filter-audit-status" role="status" class="hint"></p>
+  {% call ui.listing_toolbar(listing, placeholder='Pelaku, tindakan, atau subjek') %}
+  <div class="field">
+    <label for="hasil">Hasil</label>
+    <select id="hasil" name="hasil">
+      <option value="">Semua</option>
+      <option value="succeeded"{% if outcome == 'succeeded' %} selected{% endif %}>Berhasil</option>
+      <option value="failed"{% if outcome == 'failed' %} selected{% endif %}>Gagal</option>
+      <option value="denied"{% if outcome == 'denied' %} selected{% endif %}>Ditolak</option>
+    </select>
   </div>
-  {% if records %}
+  {% endcall %}
+  {% if listing.items %}
   <div class="table-wrap">
     <table id="tabel-audit">
-      <caption>{{ records | length }} catatan terbaru</caption>
       <thead><tr><th>Waktu</th><th>Pelaku</th><th>Tindakan</th><th>Subjek</th><th>Hasil</th></tr></thead>
       <tbody>
-        {% for record in records %}
+        {% for record in listing.items %}
         <tr data-outcome="{{ record.outcome }}">
           <td>{{ record.occurred_at | waktu }}</td>
           <td>{{ record.actor }}<br><span class="hint">{{ record.actor_kind }}</span></td>
@@ -48,6 +42,9 @@
       </tbody>
     </table>
   </div>
+  {{ ui.pagination(listing) }}
+  {% elif listing.q or outcome %}
+  {{ ui.empty_state('Tidak ada catatan yang cocok.', 'Tampilkan semua', '/audit') }}
   {% else %}
   {{ ui.empty_state('Belum ada catatan audit.') }}
   {% endif %}

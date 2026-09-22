@@ -86,7 +86,7 @@ def test_an_operation_saved_without_a_model_has_a_page_that_offers_the_estimate(
     assert "Buat estimasi kebutuhan BBM" in page.text
 
 
-def test_history_can_reach_further_back_on_request(tmp_path: Path) -> None:
+def test_history_pages_sorts_and_searches_like_every_list(tmp_path: Path) -> None:
     with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
         _train_baseline(client)
         ids = [
@@ -94,9 +94,15 @@ def test_history_can_reach_further_back_on_request(tmp_path: Path) -> None:
             for i in range(3)
         ]
 
-        default_page = client.get("/riwayat-prediksi?jumlah=2").text
-        wider_page = client.get("/riwayat-prediksi?jumlah=10").text
+        page_one = client.get("/riwayat-prediksi").text
+        searched = client.get("/riwayat-prediksi", params={"cari": ids[1][-6:]}).text
+        by_distance = client.get("/riwayat-prediksi", params={"urut": "jarak", "arah": "asc"}).text
 
-    assert ids[0] not in default_page and ids[2] in default_page
-    assert 'href="/riwayat-prediksi?jumlah=8"' in default_page
-    assert all(operation_id in wider_page for operation_id in ids)
+    # All three fit on one page; the toolbar and the summary are there.
+    assert all(operation_id in page_one for operation_id in ids)
+    assert 'name="cari"' in page_one and 'name="urut"' in page_one
+    assert "Menampilkan 1–3 dari 3" in page_one
+    # A search narrows to the one id that matches.
+    assert ids[1] in searched and ids[0] not in searched and ids[2] not in searched
+    # Sorting by distance ascending puts the shortest (20 km) first.
+    assert by_distance.index(ids[0]) < by_distance.index(ids[1]) < by_distance.index(ids[2])

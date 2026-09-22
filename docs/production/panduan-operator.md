@@ -30,6 +30,11 @@ Kalau ada langkah yang meminta Anda mengetik perintah, itu ada di
 1. Buka alamat aplikasi di peramban (Chrome, Edge, atau Firefox).
 2. Isi nama pengguna **atau email** akun Anda dan kata sandi, lalu tekan **Masuk**.
 
+Setiap halaman daftar — riwayat prediksi, pengguna, catatan audit, versi model — punya
+kotak **Cari**, pilihan **Urutkan** dan **Arah**, jumlah baris **Per halaman**, dan tombol
+halaman di bawahnya. Alamat halaman ikut berubah, jadi tampilan yang sama bisa dibuka lagi
+dari riwayat peramban atau dibagikan.
+
 Menu di sebelah kiri hanya menampilkan halaman yang boleh Anda buka. Ada dua peran:
 
 - **Operator** — membuat prediksi (satu per satu atau dari berkas), melihat riwayatnya, dan
@@ -213,9 +218,8 @@ Tidak ada promosi otomatis.
 Hanya untuk akun administrator. Menu **Pengguna**.
 
 Halaman ini adalah daftar semua akun: berapa yang aktif, kapan tiap orang terakhir masuk,
-dan berapa prediksi serta BBM aktual yang mereka buat dalam 30 hari terakhir. Kotak **Cari**
-menyaring berdasarkan nama, nama pengguna, atau email; **Status** menyaring akun aktif atau
-nonaktif.
+dan berapa prediksi serta BBM aktual yang mereka buat dalam 30 hari terakhir. Cari
+berdasarkan nama, nama pengguna, atau email; **Status** menyaring akun aktif atau nonaktif.
 
 - **Tambah pengguna** — nama pengguna, nama, email (opsional), kata sandi awal, dan peran.
   Sampaikan kata sandi awal secara aman; pengguna bisa menggantinya sendiri lewat

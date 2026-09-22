@@ -40,12 +40,21 @@ from fuel_predictor.delivery.http import (
     execute_create,
     translate_validation_errors,
 )
+from fuel_predictor.delivery.listing import ListingQuery, SortOption, paginate
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.daily_operation import DailyOperation, DailyOperationValidationError
 from fuel_predictor.domain.prediction import FuelPrediction
 
-_HISTORY_MAX = 500
+# The history pages over the newest rows in memory; older than this is
+# reached through Riwayat's own search, not by scrolling.
+_HISTORY_MAX = 5000
+_HISTORY_SORTS = (
+    SortOption("waktu", "Waktu prediksi", lambda e: e.predicted_at),
+    SortOption("alokasi", "Alokasi (L)", lambda e: e.recommended_allocation_liters),
+    SortOption("jarak", "Jarak (km)", lambda e: e.total_distance_km),
+    SortOption("kendaraan", "Kendaraan", lambda e: e.vehicle),
+)
 _MODE_LABELS = {
     "transport": "Angkut",
     "lifting": "Lifting",
@@ -241,12 +250,15 @@ def build_prediction_pages_router(
         )
 
     @router.get("/riwayat-prediksi", response_class=HTMLResponse)
-    def show_history(request: Request, jumlah: int = 0) -> HTMLResponse:
+    def show_history(request: Request) -> HTMLResponse:
         caller = guard.require_caller(request)
-        # The default page is enough for "yesterday"; "?jumlah=" reaches
-        # further back, capped so one request cannot pull the whole table.
-        limit = min(jumlah, _HISTORY_MAX) if jumlah > 0 else list_recent_predictions.limit
-        entries = list_recent_predictions.execute(limit)
+        listing = paginate(
+            list_recent_predictions.execute(_HISTORY_MAX),
+            ListingQuery.from_params(request.query_params),
+            search=lambda e: [e.operation_id, e.vehicle, e.departure, e.destination],
+            sorts=_HISTORY_SORTS,
+            default_sort="waktu",
+        )
         return HTMLResponse(
             render(
                 "riwayat-prediksi.html",
@@ -254,12 +266,10 @@ def build_prediction_pages_router(
                 page_title="Riwayat Prediksi",
                 active_path="/riwayat-prediksi",
                 page_lead=(
-                    "Estimasi yang pernah dibuat, terbaru di atas. Buka satu untuk melihat "
-                    "angkanya lagi atau mencatat BBM aktualnya."
+                    "Estimasi yang pernah dibuat. Buka satu untuk melihat angkanya lagi "
+                    "atau mencatat BBM aktualnya."
                 ),
-                entries=entries,
-                limit=limit,
-                more_limit=min(limit * 4, _HISTORY_MAX) if len(entries) >= limit else None,
+                listing=listing,
             )
         )
 

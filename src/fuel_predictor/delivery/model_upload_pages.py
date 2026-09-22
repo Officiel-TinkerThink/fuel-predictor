@@ -21,6 +21,7 @@ from fuel_predictor.application.model_package_records import (
 from fuel_predictor.application.model_package_validation import ValidateModelPackage
 from fuel_predictor.application.retained_package_activation import RegisterIngestedPackage
 from fuel_predictor.delivery.events import ImportantEvents
+from fuel_predictor.delivery.listing import ListingQuery, SortOption, paginate
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.model_package import ModelPackageValidationError
@@ -42,6 +43,14 @@ class ArtifactStore:
     """Minimal shape the upload flow needs from a store."""
 
     store: Any
+
+
+_HISTORY_MAX = 5000
+_HISTORY_SORTS = (
+    SortOption("waktu", "Waktu", lambda r: r.validated_at),
+    SortOption("versi", "Versi model", lambda r: r.model_version),
+    SortOption("pelaku", "Pelaku", lambda r: r.actor),
+)
 
 
 def build_model_upload_pages_router(
@@ -148,7 +157,13 @@ def build_model_upload_pages_router(
                 active_path="/model/riwayat",
                 eyebrow="TATA KELOLA MODEL",
                 page_lead="Setiap unggahan tercatat, termasuk yang ditolak beserta alasannya.",
-                records=validation_records.list_recent(100),
+                listing=paginate(
+                    validation_records.list_recent(_HISTORY_MAX),
+                    ListingQuery.from_params(request.query_params),
+                    search=lambda r: [r.model_version, r.actor, "; ".join(r.reasons)],
+                    sorts=_HISTORY_SORTS,
+                    default_sort="waktu",
+                ),
             )
         )
 

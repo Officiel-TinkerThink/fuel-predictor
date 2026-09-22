@@ -108,7 +108,7 @@ def test_the_directory_shows_who_is_active_and_what_they_did_lately(tmp_path: Pa
         client.__exit__(None, None, None)
 
     assert "2 pengguna" in page and "2 aktif" in page
-    assert 'data-table-filter="daftar-pengguna"' in page
+    assert 'name="cari"' in page and 'name="status"' in page
     assert f'href="/pengguna/{user_id}"' in page
     # Budi's card: signed in just now, planned one, reported one.
     budi = page[

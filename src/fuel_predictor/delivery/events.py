@@ -25,13 +25,13 @@ class ImportantEvents:
     def operation_planned(
         self, actor: str | None, operation: DailyOperation, prediction: FuelPrediction | None
     ) -> None:
+        # Enough to recognise the row; the operation's own page has the rest.
         details: Details = {
             "vehicle": operation.vehicle,
-            "distance_km": round(operation.total_distance_km, 1),
+            "jarak_km": round(operation.total_distance_km, 1),
         }
         if prediction is not None:
             details["liters"] = round(prediction.recommended_allocation_liters, 1)
-            details["model"] = prediction.model.model_version_id
         self._note(actor, "operation_planned", operation.operation_id, details)
 
     def actual_fuel_recorded(self, actor: str | None, record: ActualFuelRecord) -> None:

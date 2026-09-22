@@ -22,6 +22,7 @@ from fuel_predictor.application.user_directory import (
     UpdateUserProfile,
 )
 from fuel_predictor.delivery.audit_view import audit_row
+from fuel_predictor.delivery.listing import ListingQuery, SortOption, paginate
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.identity import IdentityValidationError, UserRole
@@ -31,6 +32,13 @@ _ROLE_LABELS = {
     UserRole.ADMINISTRATOR: "Administrator",
 }
 _ROLE_OPTIONS = [(role.value, _ROLE_LABELS[role]) for role in UserRole]
+
+_DIRECTORY_SORTS = (
+    SortOption("nama", "Nama", lambda e: e.user.full_name),
+    SortOption("masuk", "Terakhir masuk", lambda e: e.activity.last_sign_in),
+    SortOption("prediksi", "Prediksi 30 hari", lambda e: e.activity.operations_recent),
+    SortOption("peran", "Peran", lambda e: e.user.role.value),
+)
 
 # What a redirect back to the page says happened.
 _NOTICES = {
@@ -59,12 +67,28 @@ def build_user_pages_router(
 
     def _directory_page(
         caller: ActiveCaller,
+        request: Request,
         *,
         errors: list[dict[str, str]] | None = None,
         form_values: dict[str, str] | None = None,
         notice: str | None = None,
     ) -> str:
         directory = get_user_directory.execute()
+        status_filter = request.query_params.get("status", "")
+        entries = [
+            entry
+            for entry in directory.entries
+            if status_filter not in ("aktif", "nonaktif")
+            or entry.user.is_active == (status_filter == "aktif")
+        ]
+        listing = paginate(
+            entries,
+            ListingQuery.from_params(request.query_params, extra_keys=("status",)),
+            search=lambda e: [e.user.full_name, e.user.username, e.user.email],
+            sorts=_DIRECTORY_SORTS,
+            default_sort="nama",
+            default_direction="asc",
+        )
         return render(
             "pengguna.html",
             caller=caller,
@@ -73,6 +97,8 @@ def build_user_pages_router(
             eyebrow="PENGATURAN",
             page_lead="Siapa yang memakai aplikasi ini, dan apa yang mereka kerjakan belakangan.",
             directory=directory,
+            listing=listing,
+            status_filter=status_filter,
             role_labels=_ROLE_LABELS,
             role_options=_ROLE_OPTIONS,
             errors=errors or [],
@@ -86,7 +112,7 @@ def build_user_pages_router(
     def show_directory(request: Request) -> HTMLResponse:
         caller = guard.require_caller(request)
         notice = _NOTICES.get(request.query_params.get("pesan", ""))
-        return HTMLResponse(_directory_page(caller, notice=notice))
+        return HTMLResponse(_directory_page(caller, request, notice=notice))
 
     @router.post("/pengguna", response_class=HTMLResponse)
     async def submit_user(request: Request) -> Response:
@@ -112,7 +138,10 @@ def build_user_pages_router(
             field = error.field if isinstance(error, IdentityValidationError) else "role"
             return HTMLResponse(
                 _directory_page(
-                    caller, errors=[{"field": field, "message": message}], form_values=values
+                    caller,
+                    request,
+                    errors=[{"field": field, "message": message}],
+                    form_values=values,
                 ),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )

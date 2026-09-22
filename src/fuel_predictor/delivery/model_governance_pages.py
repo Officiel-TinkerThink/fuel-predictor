@@ -18,6 +18,7 @@ from fuel_predictor.application.retained_package_activation import (
     ActivateRetainedModelPackage,
 )
 from fuel_predictor.delivery.events import ImportantEvents
+from fuel_predictor.delivery.listing import ListingQuery, SortOption, paginate
 from fuel_predictor.delivery.rendering import format_decimal, render
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.model_activation import (
@@ -26,6 +27,12 @@ from fuel_predictor.domain.model_activation import (
 )
 from fuel_predictor.domain.model_package import ModelPackageValidationError
 from fuel_predictor.domain.prediction import ModelLifecycleStatus
+
+_VERSION_SORTS = (
+    SortOption("waktu", "Dilatih", lambda m: m.trained_at),
+    SortOption("status", "Status", lambda m: m.lifecycle_status.value),
+    SortOption("versi", "Versi", lambda m: m.model_version_id),
+)
 
 
 def build_model_governance_pages_router(
@@ -51,6 +58,13 @@ def build_model_governance_pages_router(
                 active_path="/pengelolaan-model",
                 eyebrow="TATA KELOLA MODEL",
                 dashboard=dashboard,
+                versions=paginate(
+                    dashboard.all_versions,
+                    ListingQuery.from_params(request.query_params),
+                    search=lambda m: [m.model_version_id, m.algorithm, m.lifecycle_status.value],
+                    sorts=_VERSION_SORTS,
+                    default_sort="waktu",
+                ),
                 # A retired version can come back only from retained package
                 # bytes; one trained in this process has nothing to reload.
                 reactivatable={

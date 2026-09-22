@@ -108,7 +108,8 @@
 
 <section class="card">
   <h2>Jejak aktivitas</h2>
-  <p class="hint">Catatan audit yang melibatkan pengguna ini, terbaru di atas.</p>
+  <p class="hint">Kejadian penting terakhir yang melibatkan pengguna ini. Selengkapnya, dengan
+    pencarian dan halaman, ada di <a href="/audit?cari={{ user.username | urlencode }}">Catatan Audit</a>.</p>
   {% if trail %}
   <div class="table-wrap">
     <table>

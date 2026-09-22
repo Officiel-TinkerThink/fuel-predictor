@@ -42,6 +42,7 @@ _DETAIL_LABELS = {
     "operation_id": "operasi",
     "vehicle": "kendaraan",
     "liters": "liter",
+    "jarak_km": "jarak (km)",
     "accepted": "diterima",
     "quarantined": "dikarantina",
     "dataset": "dataset",
