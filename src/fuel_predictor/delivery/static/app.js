@@ -23,7 +23,9 @@
 
   // Folding sidebar groups. The server opens the group that holds the current
   // page; this remembers the ones the person unfolded themselves so they stay
-  // open on the next page. Storage can be missing or refused, hence the guards.
+  // open on the next page. Applying that memory is base.html's inline script,
+  // which has to run before the sidebar's scroll offset is restored; this is
+  // only the half that records a change. Storage can be refused, hence guards.
   var NAV_STATE = "nav-groups-open";
   var readOpenGroups = function () {
     try {
@@ -32,12 +34,8 @@
       return [];
     }
   };
-  var openGroups = readOpenGroups();
   document.querySelectorAll("details[data-nav-group]").forEach(function (group) {
     var name = group.getAttribute("data-nav-group");
-    if (openGroups.indexOf(name) !== -1) {
-      group.open = true;
-    }
     group.addEventListener("toggle", function () {
       var remembered = readOpenGroups().filter(function (item) {
         return item !== name;
@@ -50,6 +48,49 @@
       } catch (error) {
         // Private mode or storage disabled: the menu still works, it just forgets.
       }
+    });
+  });
+
+  // Sidebar scroll offset. Every menu click is a full page load, so without
+  // this the list rebuilds at the top and the item just clicked walks away
+  // from the pointer. base.html restores the offset inline, before the first
+  // paint; this is the half that records it.
+  var navScroller = document.querySelector("[data-nav-scroll]");
+  if (navScroller) {
+    var pending = null;
+    var rememberScroll = function () {
+      try {
+        window.sessionStorage.setItem("nav-scroll", String(navScroller.scrollTop));
+      } catch (error) {
+        // Private mode or storage disabled: the sidebar just starts at the top.
+      }
+    };
+    navScroller.addEventListener("scroll", function () {
+      // Debounced, so a flick of the wheel is one write rather than thirty.
+      window.clearTimeout(pending);
+      pending = window.setTimeout(rememberScroll, 100);
+    });
+    // A click can navigate before the debounce fires, so record it on the
+    // way out too.
+    window.addEventListener("pagehide", rememberScroll);
+  }
+
+  // Show the password. The field keeps its name and value throughout - only
+  // the type changes - so a half-typed password survives the switch, and the
+  // button reverts to hidden state on the next page like any other load.
+  document.querySelectorAll("[data-password-reveal]").forEach(function (button) {
+    var input = document.getElementById(button.getAttribute("data-password-reveal"));
+    if (!input) {
+      return;
+    }
+    button.hidden = false;
+    button.addEventListener("click", function () {
+      var revealed = input.type === "text";
+      input.type = revealed ? "password" : "text";
+      button.setAttribute("aria-pressed", revealed ? "false" : "true");
+      var label = revealed ? "Tampilkan kata sandi" : "Sembunyikan kata sandi";
+      button.setAttribute("aria-label", label);
+      button.setAttribute("title", label);
     });
   });
 

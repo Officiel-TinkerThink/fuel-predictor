@@ -1,9 +1,11 @@
+{% import "components.html" as ui %}
 <!DOCTYPE html>
-<html lang="id">
+{# Signed out means one appearance: the switch belongs behind the door. #}
+<html lang="id" data-theme="light" data-theme-locked>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Atur Ulang Kata Sandi · Perencana Operasi Harian</title>
+  <title>Atur Ulang Kata Sandi · Fuel Matrix Calculation</title>
   <script src="/statis/theme.js"></script>
   <link rel="stylesheet" href="/statis/app.css">
   <link rel="icon" href="data:,">
@@ -11,7 +13,6 @@
 <body>
 <div class="signin">
   <main class="signin__card">
-    {% include "theme-picker.html" %}
     <h1>Kata sandi baru</h1>
     <p class="lead">Untuk akun <strong>{{ username }}</strong>. Setelah disimpan, semua sesi lama
       berakhir dan Anda masuk dengan kata sandi ini.</p>
@@ -27,8 +28,11 @@
       <input type="hidden" name="username" value="{{ username }}" autocomplete="username">
       <div class="field">
         <label for="field-new_password">Kata sandi baru</label>
-        <input id="field-new_password" name="new_password" type="password" required minlength="12"
-               autocomplete="new-password" aria-describedby="hint-new_password">
+        <div class="password-input">
+          <input id="field-new_password" name="new_password" type="password" required minlength="12"
+                 autocomplete="new-password" aria-describedby="hint-new_password">
+          {{ ui.password_reveal('field-new_password') }}
+        </div>
         <span class="hint" id="hint-new_password">Minimal 12 karakter. Hindari kata sandi yang dipakai di tempat lain.</span>
       </div>
       <button type="submit" class="button">Simpan kata sandi</button>

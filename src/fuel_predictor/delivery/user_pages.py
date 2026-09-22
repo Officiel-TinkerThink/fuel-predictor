@@ -268,40 +268,46 @@ def build_user_pages_router(
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
-    # --- Own password ---------------------------------------------------------------
+    # --- Own account ----------------------------------------------------------------
 
-    def _own_password_page(caller: ActiveCaller, errors: list[dict[str, str]]) -> str:
+    def _account_page(caller: ActiveCaller, errors: list[dict[str, str]]) -> str:
         return render(
-            "kata-sandi.html",
+            "akun.html",
             caller=caller,
-            page_title="Ubah Kata Sandi",
-            active_path="/kata-sandi",
-            eyebrow="AKUN SAYA",
-            page_lead=(
-                "Setelah diubah, semua sesi Anda diakhiri dan Anda masuk lagi dengan kata "
-                "sandi baru."
-            ),
+            page_title="Akun Saya",
+            active_path="/akun",
             errors=errors,
         )
 
-    @router.get("/kata-sandi", response_class=HTMLResponse)
-    def show_own_password(request: Request) -> HTMLResponse:
-        return HTMLResponse(_own_password_page(guard.require_caller(request), []))
+    @router.get("/akun", response_class=HTMLResponse)
+    def show_account(request: Request) -> HTMLResponse:
+        return HTMLResponse(_account_page(guard.require_caller(request), []))
 
-    @router.post("/kata-sandi", response_class=HTMLResponse)
+    @router.post("/akun", response_class=HTMLResponse)
     async def submit_own_password(request: Request) -> Response:
         caller = guard.require_caller(request)
         form = await request.form()
+        new_password = str(form.get("new_password", ""))
+        # Typed twice, so a slip in a field nobody can read does not become a
+        # password only the browser knows.
+        if new_password != str(form.get("confirm_password", "")):
+            return HTMLResponse(
+                _account_page(
+                    caller,
+                    [{"field": "confirm_password", "message": "Ulangi kata sandi baru yang sama."}],
+                ),
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            )
         try:
             change_own_password.execute(
                 caller.user.user_id,
                 str(form.get("current_password", "")),
-                str(form.get("new_password", "")),
+                new_password,
             )
         except IdentityValidationError as error:
             field = "new_password" if error.field == "password" else error.field
             return HTMLResponse(
-                _own_password_page(caller, [{"field": field, "message": error.message}]),
+                _account_page(caller, [{"field": field, "message": error.message}]),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         # Every session ended with the old password, this one included, so

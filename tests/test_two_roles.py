@@ -87,7 +87,7 @@ def test_an_operators_menu_is_the_two_daily_groups(operator_client: TestClient) 
     for hidden in ("Pemantauan", "Pengelolaan Model", "Pengaturan", "Agen Saya", "Pengguna"):
         assert f">{hidden}<" not in page
     # The sidebar still offers the one account action everyone has.
-    assert 'href="/kata-sandi"' in page
+    assert 'href="/akun"' in page
 
 
 def test_pages_outside_the_operators_job_are_refused(operator_client: TestClient) -> None:
@@ -110,7 +110,7 @@ def test_pages_outside_the_operators_job_are_refused(operator_client: TestClient
         "/riwayat-prediksi",
         "/bahan-bakar-aktual",
         "/bahan-bakar-aktual-massal",
-        "/kata-sandi",
+        "/akun",
     ):
         assert operator_client.get(path).status_code == 200, path
 

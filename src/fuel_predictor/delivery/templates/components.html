@@ -47,14 +47,36 @@
 {%- for error in errors or [] -%}{%- if error.field == name -%}{{ error.message }}{%- endif -%}{%- endfor -%}
 {%- endmacro %}
 
+{# One reveal button, used by text_field and by the hand-written password
+   fields on the sign-in and reset pages. Hidden until app.js wires it: with no
+   script it could not switch the type, and a dead button is worse than none.
+   The caller opens <div class="password-input"> and this closes nothing. #}
+{% macro password_reveal(field_id) -%}
+<button type="button" class="password-reveal" data-password-reveal="{{ field_id }}"
+        aria-controls="{{ field_id }}" aria-pressed="false"
+        aria-label="Tampilkan kata sandi" title="Tampilkan kata sandi" hidden>
+  <svg class="password-reveal__show" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+  </svg>
+  <svg class="password-reveal__hide" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+    <line x1="1" y1="1" x2="23" y2="23"/>
+  </svg>
+</button>
+{%- endmacro %}
+
 {% macro text_field(name, label, value='', hint=none, errors=none, required=false, type='text', autocomplete=none) -%}
 {% set message = _error_for(errors, name) | trim %}
 <div class="field">
   <label for="field-{{ name }}">{{ label }}{% if required %} <span aria-hidden="true">*</span><span class="visually-hidden">wajib diisi</span>{% endif %}</label>
+  {# A password field is wrapped so the reveal button can sit inside it. The
+     input itself is the same one either way, never a second copy. #}
+  {% if type == 'password' %}<div class="password-input">{% endif %}
   <input id="field-{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value }}"
     {% if required %} required{% endif %}
     {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
     {% if message %} aria-invalid="true" aria-describedby="error-{{ name }}"{% elif hint %} aria-describedby="hint-{{ name }}"{% endif %}>
+  {% if type == 'password' %}{{ password_reveal('field-' ~ name) }}</div>{% endif %}
   {% if hint %}<span class="hint" id="hint-{{ name }}">{{ hint }}</span>{% endif %}
   {% if message %}<span class="field-error" id="error-{{ name }}">{{ message }}</span>{% endif %}
 </div>

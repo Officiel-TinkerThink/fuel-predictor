@@ -1,9 +1,11 @@
+{% import "components.html" as ui %}
 <!DOCTYPE html>
-<html lang="id">
+{# Signed out means one appearance: the switch belongs behind the door. #}
+<html lang="id" data-theme="light" data-theme-locked>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Masuk · Perencana Operasi Harian</title>
+  <title>Masuk · Fuel Matrix Calculation</title>
   <script src="/statis/theme.js"></script>
   <link rel="stylesheet" href="/statis/app.css">
   <link rel="icon" href="data:,">
@@ -11,9 +13,7 @@
 <body>
 <div class="signin">
   <main class="signin__card">
-    {% include "theme-picker.html" %}
     <h1>Masuk</h1>
-    <p class="lead">Gunakan akun yang diberikan administrator untuk membuka Perencana Operasi Harian.</p>
 
     {% if notice %}
     <div class="banner banner--success" role="status"><p>{{ notice }}</p></div>
@@ -35,8 +35,11 @@
       </div>
       <div class="field">
         <label for="field-password">Kata sandi</label>
-        <input id="field-password" name="password" type="password" required
-               autocomplete="current-password">
+        <div class="password-input">
+          <input id="field-password" name="password" type="password" required
+                 autocomplete="current-password">
+          {{ ui.password_reveal('field-password') }}
+        </div>
       </div>
       <button type="submit" class="button">Masuk</button>
     </form>

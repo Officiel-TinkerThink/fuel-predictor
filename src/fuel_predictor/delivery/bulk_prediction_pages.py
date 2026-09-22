@@ -71,8 +71,6 @@ def build_bulk_prediction_pages_router(
                 caller=caller,
                 page_title="Prediksi Operasi Massal Selesai",
                 active_path="/prediksi-operasi-massal",
-                eyebrow="PREDIKSI MASSAL SELESAI",
-                page_lead="Rencana operasi sudah diproses.",
                 result=result,
                 results_csv=_results_csv(result),
                 results_filename=_results_filename(file.filename),

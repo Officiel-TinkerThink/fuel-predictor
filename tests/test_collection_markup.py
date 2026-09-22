@@ -16,13 +16,17 @@ def test_record_tables_declare_how_they_are_paged_and_sorted() -> None:
             assert sum(strategies) == 1, f"{path.name}: missing or conflicting list controls"
 
 
-def test_every_document_loads_theme_before_styles_and_offers_a_picker() -> None:
+def test_every_document_loads_theme_before_styles_and_offers_a_switch() -> None:
     for path in TEMPLATE_DIRECTORY.glob("*.html"):
         source = path.read_text()
         if "<!DOCTYPE html>" not in source:
             continue
         assert source.index("/statis/theme.js") < source.index("/statis/app.css"), path.name
-        assert '{% include "theme-picker.html" %}' in source, path.name
+        # A page either offers the switch or pins its own appearance, never
+        # both and never neither.
+        offers = '{% include "theme-toggle.html" %}' in source
+        pinned = "data-theme-locked" in source
+        assert offers != pinned, path.name
 
 
 def test_all_templates_compile() -> None:

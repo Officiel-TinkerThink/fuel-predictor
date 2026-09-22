@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{{ ui.error_summary(errors, 'Kata sandi belum dapat diubah') }}
+
+<section class="card">
+  <h2>Detail akun</h2>
+  <dl class="detail-list">
+    <dt>Nama</dt><dd>{{ caller_user.full_name }}</dd>
+    <dt>Nama pengguna</dt><dd>{{ caller_user.username }}</dd>
+    <dt>Peran</dt><dd>{{ role_label }}</dd>
+    <dt>Email</dt><dd>{% if caller_user.email %}{{ caller_user.email }}{% else %}Belum diisi{% endif %}</dd>
+    <dt>Status</dt><dd>{{ ui.badge('Aktif', 'success') if caller_user.is_active else ui.badge('Nonaktif', 'neutral') }}</dd>
+    <dt>Dibuat</dt><dd>{{ caller_user.created_at | waktu }}</dd>
+    <dt>Terakhir masuk</dt><dd>{% if caller_user.last_sign_in_at %}{{ caller_user.last_sign_in_at | waktu }}{% else %}Belum pernah{% endif %}</dd>
+  </dl>
+  {% if caller_user.role.value == 'administrator' %}
+  <div class="button-row">
+    <a class="button button--secondary" href="/pengguna/{{ caller_user.user_id }}">Ubah nama atau email</a>
+  </div>
+  {% else %}
+  <p class="hint">Nama, email, dan peran diubah oleh administrator melalui halaman Pengguna.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Ubah kata sandi</h2>
+  <p class="hint">Setelah diubah, semua sesi Anda diakhiri dan Anda masuk lagi dengan kata sandi baru.</p>
+  <form method="post" action="/akun" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="username" value="{{ caller_user.username }}" autocomplete="username">
+    {{ ui.text_field('current_password', 'Kata sandi saat ini', '', errors=errors, required=true, type='password', autocomplete='current-password') }}
+    {{ ui.text_field('new_password', 'Kata sandi baru', '', hint='Minimal 12 karakter, dan berbeda dari kata sandi saat ini.', errors=errors, required=true, type='password', autocomplete='new-password') }}
+    {{ ui.text_field('confirm_password', 'Ulangi kata sandi baru', '', errors=errors, required=true, type='password', autocomplete='new-password') }}
+    <button type="submit" class="button">Ubah kata sandi</button>
+  </form>
+</section>
+
+{% endblock %}

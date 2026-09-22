@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="id">
+{# Signed out means one appearance: the switch belongs behind the door. #}
+<html lang="id" data-theme="light" data-theme-locked>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lupa Kata Sandi · Perencana Operasi Harian</title>
+  <title>Lupa Kata Sandi · Fuel Matrix Calculation</title>
   <script src="/statis/theme.js"></script>
   <link rel="stylesheet" href="/statis/app.css">
   <link rel="icon" href="data:,">
@@ -11,7 +12,6 @@
 <body>
 <div class="signin">
   <main class="signin__card">
-    {% include "theme-picker.html" %}
     <h1>Lupa kata sandi</h1>
     {% if not available %}
     <p class="lead">Pengiriman tautan lewat email belum diaktifkan pada instalasi ini.

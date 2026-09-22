@@ -123,22 +123,24 @@ def test_an_administrator_cannot_switch_off_their_own_account(tmp_path: Path) ->
 def test_a_user_changes_their_own_password_with_the_current_one(tmp_path: Path) -> None:
     with TestClient(_app(tmp_path)) as client:
         _sign_in(client, *_ADMIN)
-        form = client.get("/kata-sandi")
+        form = client.get("/akun")
         token = _csrf(form.text)
 
         wrong = client.post(
-            "/kata-sandi",
+            "/akun",
             data={
                 "current_password": "bukan-kata-sandinya",
                 "new_password": "kata-sandi-baru-99",
+                "confirm_password": "kata-sandi-baru-99",
                 "csrf_token": token,
             },
         )
         right = client.post(
-            "/kata-sandi",
+            "/akun",
             data={
                 "current_password": _ADMIN[1],
                 "new_password": "kata-sandi-baru-99",
+                "confirm_password": "kata-sandi-baru-99",
                 "csrf_token": token,
             },
             follow_redirects=False,
@@ -155,9 +157,43 @@ def test_a_user_changes_their_own_password_with_the_current_one(tmp_path: Path) 
     assert signed_in_again.status_code == 303
 
 
-def test_the_sidebar_links_to_the_own_password_page(tmp_path: Path) -> None:
+def test_a_new_password_has_to_be_typed_twice_and_has_to_be_new(tmp_path: Path) -> None:
+    with TestClient(_app(tmp_path)) as client:
+        _sign_in(client, *_ADMIN)
+        token = _csrf(client.get("/akun").text)
+
+        mistyped = client.post(
+            "/akun",
+            data={
+                "current_password": _ADMIN[1],
+                "new_password": "kata-sandi-baru-99",
+                "confirm_password": "kata-sandi-baru-98",
+                "csrf_token": token,
+            },
+        )
+        unchanged = client.post(
+            "/akun",
+            data={
+                "current_password": _ADMIN[1],
+                "new_password": _ADMIN[1],
+                "confirm_password": _ADMIN[1],
+                "csrf_token": token,
+            },
+        )
+        # Neither attempt may have taken: the old password still signs in.
+        client.post("/keluar", data={"csrf_token": token}, follow_redirects=False)
+        still_works = _sign_in(client, *_ADMIN)
+
+    assert mistyped.status_code == 422
+    assert "Ulangi kata sandi baru yang sama." in mistyped.text
+    assert unchanged.status_code == 422
+    assert "harus berbeda dari kata sandi saat ini" in unchanged.text
+    assert still_works.status_code == 303
+
+
+def test_the_sidebar_links_to_the_account_page(tmp_path: Path) -> None:
     with TestClient(_app(tmp_path)) as client:
         _sign_in(client, *_ADMIN)
         page = client.get("/")
 
-    assert 'href="/kata-sandi"' in page.text
+    assert 'href="/akun"' in page.text

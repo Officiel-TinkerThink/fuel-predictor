@@ -189,7 +189,9 @@ a:hover {
   position: sticky;
   top: 0;
   height: 100dvh;
-  overflow-y: auto;
+  /* The masthead and the account row are fixed furniture; only the list of
+     links between them scrolls, so the account never leaves the bottom. */
+  overflow: hidden;
 }
 
 .app__brand {
@@ -239,6 +241,17 @@ a:hover {
   flex-direction: column;
   gap: var(--space-5);
   flex: 1;
+  /* Without this a flex child refuses to shrink below its content, and the
+     list would push the account off the bottom instead of scrolling. */
+  min-height: 0;
+}
+
+.app__drawer > [data-nav-scroll] {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* Room for the last item to clear the account row's top border. */
+  padding-bottom: var(--space-2);
 }
 
 .nav-group {
@@ -305,6 +318,12 @@ a:hover {
   gap: 2px;
 }
 
+/* Every item steps in, including a group with no heading above it, so the
+   whole menu reads as one level below the section labels. */
+.nav-list {
+  padding-left: var(--space-3);
+}
+
 .nav-list a {
   display: flex;
   align-items: center;
@@ -332,7 +351,11 @@ a:hover {
 /* Who is signed in: initial, name and role, and a single sign-out glyph on
    the right - no button, no label; the row reads as one line. */
 .app__account {
-  margin-top: 0;
+  /* Spare height collects above, so a short menu still leaves this on the
+     bottom edge; the scroller above means a long one cannot displace it. */
+  margin-top: auto;
+  flex: 0 0 auto;
+  background: var(--color-surface);
   border-top: 1px solid var(--color-border);
   padding-top: var(--space-4);
   font-size: 0.82rem;
@@ -372,15 +395,29 @@ a:hover {
   font-size: 0.8rem;
 }
 
+/* The avatar and the name are one target, so the row itself opens the
+   account page rather than hiding a small link inside it. */
 .app__account-link {
-  display: inline-block;
-  margin-top: 2px;
-  color: var(--color-text-muted);
-  font-size: 0.78rem;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  margin: calc(var(--space-2) * -1);
+  border-radius: var(--radius-md);
+  color: inherit;
+  text-decoration: none;
 }
 
 .app__account-link:hover {
-  color: var(--color-brand);
+  background: var(--color-surface-sunken);
+  color: var(--color-brand-strong);
+}
+
+.app__account-link[aria-current="page"] {
+  background: var(--color-brand-soft);
+  color: var(--color-brand-strong);
 }
 
 .app__signout {
@@ -417,14 +454,31 @@ a:hover {
 
 .app__main {
   min-width: 0;
-  padding: var(--space-7) clamp(1.5rem, 4vw, 4rem);
+  padding: var(--space-5) clamp(1.5rem, 4vw, 4rem) var(--space-6);
   width: 100%;
   max-width: 90rem;
   margin-inline: auto;
 }
 
+.app__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+/* The switch holds the right edge even on a page with no crumbs. */
+.app__topbar .theme-toggle {
+  margin-left: auto;
+}
+
+.app__topbar .breadcrumbs {
+  margin-bottom: 0;
+}
+
 .page-header {
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-5);
 }
 
 .page-header .eyebrow {
@@ -469,7 +523,7 @@ a:hover {
   border-radius: var(--radius-lg);
   padding: var(--space-5);
   box-shadow: var(--shadow-sm);
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-3);
 }
 
 .card > :last-child {
@@ -680,7 +734,7 @@ fieldset {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
-  margin: 0 0 var(--space-4);
+  margin: 0 0 var(--space-3);
 }
 
 legend {
@@ -770,6 +824,59 @@ textarea {
   border-radius: var(--radius-md);
 }
 
+/* The reveal button sits inside the field, so the input reserves room for it
+   rather than running underneath. Sized off the input's own type-agnostic
+   rules, because revealing swaps the type to text. */
+.password-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input input {
+  padding-right: 2.6rem;
+}
+
+.password-reveal {
+  position: absolute;
+  right: 0.3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.password-reveal:hover,
+.password-reveal:focus-visible {
+  background: var(--color-brand-soft);
+  color: var(--color-brand-strong);
+}
+
+.password-reveal[hidden] {
+  display: none;
+}
+
+/* Showing the eye means "reveal"; once revealed it becomes the struck-out
+   eye, which is what the next click would do. */
+.password-reveal__hide {
+  display: none;
+}
+
+.password-reveal[aria-pressed="true"] .password-reveal__show {
+  display: none;
+}
+
+.password-reveal[aria-pressed="true"] .password-reveal__hide {
+  display: block;
+}
+
 input[aria-invalid="true"],
 select[aria-invalid="true"] {
   border-color: var(--color-danger);
@@ -825,16 +932,19 @@ select[aria-invalid="true"] {
   color: var(--color-on-brand);
 }
 
+/* Secondary is the most common button here by far, so it carries the brand
+   tint rather than a grey outline that reads as an input, and fills in on
+   hover like every other button. */
 .button--secondary {
-  background: var(--color-surface);
+  background: var(--color-brand-soft);
   color: var(--color-brand-strong);
-  border-color: var(--color-border-strong);
+  border-color: var(--color-brand);
 }
 
 .button--secondary:hover {
-  background: var(--color-surface-sunken);
-  border-color: var(--color-border-strong);
-  color: var(--color-brand-strong);
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+  color: var(--color-on-brand);
 }
 
 /* tone='primary' on the confirm macro: the ordinary brand button. */
@@ -1799,7 +1909,8 @@ dialog::backdrop {
 }
 
 .signin__card h1 {
-  margin-bottom: var(--space-2);
+  text-align: center;
+  margin-bottom: var(--space-5);
 }
 
 .signin__card .lead {
@@ -2084,29 +2195,56 @@ dialog::backdrop {
 
 /* ---------- Appearance and collection controls ---------- */
 
-.app__preferences {
-  margin-top: auto;
-}
-
-.theme-picker {
-  display: flex;
-  flex-wrap: wrap;
+/* One glyph, naming the destination: a moon on a light page, a sun on a dark
+   one. The pair lives in the markup and CSS shows whichever applies, so the
+   icon is already right on the first paint. */
+.theme-toggle {
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: 0.8rem;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.theme-picker select {
-  width: auto;
-  flex: 1;
-  min-width: 7rem;
+.theme-toggle:hover {
+  background: var(--color-brand-soft);
+  border-color: var(--color-border-strong);
+  color: var(--color-brand-strong);
 }
 
-.signin__card .theme-picker {
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+.theme-toggle__sun {
+  display: none;
+}
+
+:root[data-theme="dark"] .theme-toggle__moon {
+  display: none;
+}
+
+:root[data-theme="dark"] .theme-toggle__sun {
+  display: block;
+}
+
+.signin__card .theme-toggle {
+  display: flex;
+  width: max-content;
+  margin-left: auto;
   margin-bottom: var(--space-5);
 }
 
-.theme-picker[hidden],
+.theme-toggle[hidden],
 [data-list] [hidden] {
   display: none !important;
 }
@@ -2237,7 +2375,7 @@ th[aria-sort="descending"] .collection-sort::after { content: " ↓"; }
   .table-toolbar,
   .collection-toolbar,
   .collection-pagination,
-  .theme-picker {
+  .app__topbar .theme-toggle {
     display: none;
   }
 

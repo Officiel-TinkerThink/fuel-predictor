@@ -153,12 +153,12 @@ class SmtpPasswordResetMailer:
 
     def send_reset_link(self, email: str, link: str) -> None:
         message = EmailMessage()
-        message["Subject"] = "Atur ulang kata sandi Perencana Operasi Harian"
+        message["Subject"] = "Atur ulang kata sandi Fuel Matrix Calculation"
         message["From"] = self.sender
         message["To"] = email
         message.set_content(
             "Seseorang meminta pengaturan ulang kata sandi untuk akun dengan alamat ini "
-            "di Perencana Operasi Harian.\n\n"
+            "di Fuel Matrix Calculation.\n\n"
             f"Buka tautan berikut untuk memilih kata sandi baru:\n{link}\n\n"
             "Tautan berlaku 30 menit dan hanya bisa dipakai sekali. Bila bukan Anda yang "
             "meminta, abaikan surel ini; kata sandi Anda tidak berubah."

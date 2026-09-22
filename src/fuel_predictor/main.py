@@ -524,7 +524,7 @@ def create_app(
             engine.dispose()
 
     app = FastAPI(
-        title="Perencana Operasi Harian",
+        title="Fuel Matrix Calculation",
         version="1.0.0",
         lifespan=application_lifespan,
     )

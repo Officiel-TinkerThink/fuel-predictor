@@ -136,7 +136,7 @@ def _compose(
         # Numeric, matching the rest of the application. `%B` would render an
         # English month name into an otherwise Indonesian message, because the
         # server process has no Indonesian locale to rely on.
-        f"Laporan pemantauan Perencana Operasi Harian — {now:%d/%m/%Y %H:%M}.",
+        f"Laporan pemantauan Fuel Matrix Calculation — {now:%d/%m/%Y %H:%M}.",
         "",
     ]
 

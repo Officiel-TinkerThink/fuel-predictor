@@ -178,31 +178,53 @@ def test_row_lists_have_sorting_and_pagination(page: Page) -> None:
     assert page.locator("#pending li:visible").first.text_content() == "Operasi 7"
 
 
-def test_theme_persists_across_pages_and_tracks_system(
+def test_theme_follows_the_system_until_the_toggle_is_clicked(
     page: Page, site: str, tmp_path: Path
 ) -> None:
+    toggle = page.locator("[data-theme-toggle]")
+    moon = page.locator(".theme-toggle__moon")
+    sun = page.locator(".theme-toggle__sun")
+
+    # Untouched, the toggle has no opinion and the system decides.
     page.emulate_media(color_scheme="dark")
     playwright.expect(page.locator("html")).to_have_attribute("data-theme", "dark")
-    page.get_by_label("Tampilan").select_option("light")
-    page.reload()
-    assert page.locator("html").get_attribute("data-theme") == "light"
-    page.goto(site + "/masuk.html")
-    assert page.get_by_label("Tampilan").input_value() == "light"
-    page.get_by_label("Tampilan").select_option("dark")
-    page.goto(site)
-    assert page.locator("html").get_attribute("data-theme") == "dark"
-    page.screenshot(path=str(tmp_path / "dark-desktop.png"), full_page=True)
-    page.get_by_label("Tampilan").select_option("system")
+    assert sun.is_visible() and not moon.is_visible()
     page.emulate_media(color_scheme="light")
     playwright.expect(page.locator("html")).to_have_attribute("data-theme", "light")
+
+    # One glyph at a time, and it names where the click leads.
+    assert moon.is_visible() and not sun.is_visible()
+    assert toggle.get_attribute("aria-label") == "Ganti ke mode gelap"
+    toggle.click()
+    assert page.locator("html").get_attribute("data-theme") == "dark"
+    assert sun.is_visible() and not moon.is_visible()
+    assert toggle.get_attribute("aria-label") == "Ganti ke mode terang"
+    page.screenshot(path=str(tmp_path / "dark-desktop.png"), full_page=True)
+    page.reload()
+    assert page.locator("html").get_attribute("data-theme") == "dark"
+
+    # Signed out, the sign-in page pins itself to light and offers no switch -
+    # without disturbing the preference waiting behind it.
+    page.goto(site + "/masuk.html")
+    assert page.locator("html").get_attribute("data-theme") == "light"
+    assert page.locator("[data-theme-toggle]").count() == 0
+    page.goto(site)
+    assert page.locator("html").get_attribute("data-theme") == "dark"
+
+    # And a chosen theme outranks a system that says otherwise.
+    page.emulate_media(color_scheme="light")
+    assert page.locator("html").get_attribute("data-theme") == "dark"
+    page.locator("[data-theme-toggle]").click()
+    assert page.locator("html").get_attribute("data-theme") == "light"
 
 
 @pytest.mark.parametrize("theme", ["light", "dark"])
 def test_phone_layout_keeps_hidden_rows_hidden(page: Page, theme: str, tmp_path: Path) -> None:
     page.set_viewport_size({"width": 320, "height": 844})
-    page.get_by_role("button", name="Menu", exact=True).click()
-    page.get_by_label("Tampilan").select_option(theme)
-    page.get_by_role("button", name="Menu", exact=True).click()
+    # The switch sits in the top bar, so a phone reaches it without the menu.
+    if page.locator("html").get_attribute("data-theme") != theme:
+        page.locator("[data-theme-toggle]").click()
+    assert page.locator("html").get_attribute("data-theme") == theme
     assert page.locator("#first tbody tr:visible").count() == 5
     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
     assert page.locator("#first th").first.is_visible()
@@ -217,7 +239,7 @@ def test_without_javascript_all_rows_and_actions_remain_available(
     page.goto(site)
     assert page.locator("#first tbody tr:visible").count() == 12
     assert page.locator("#pending li:visible").count() == 12
-    assert not page.get_by_label("Tampilan").is_visible()
+    assert not page.locator("[data-theme-toggle]").is_visible()
     assert page.locator("#first").get_by_role("link", name="Buka").count() == 12
     context.close()
 
@@ -229,7 +251,7 @@ def test_theme_still_works_when_storage_is_blocked(browser: Browser, site: str) 
     )
     page = context.new_page()
     page.goto(site)
-    page.get_by_label("Tampilan").select_option("dark")
+    page.locator("[data-theme-toggle]").click()
     assert page.locator("html").get_attribute("data-theme") == "dark"
     assert page.locator("#first tbody tr:visible").count() == 5
     context.close()
@@ -270,4 +292,138 @@ def test_server_page_size_keeps_a_no_javascript_fallback(browser: Browser, site:
     with page.expect_navigation():
         pager.get_by_role("button", name="Ubah jumlah").click()
     assert parse_qs(urlsplit(page.url).query)["per"] == ["20"]
+    context.close()
+
+
+@pytest.fixture(scope="module")
+def shell(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
+    """Two pages of the signed-in shell, with a sidebar tall enough to scroll."""
+    root = tmp_path_factory.mktemp("ui-shell")
+    shutil.copytree(STATIC_DIRECTORY, root / "statis")
+    environment = build_environment()
+    template = environment.from_string(
+        '{% extends "base.html" %}{% block content %}'
+        '<section class="card"><h2>{{ page_title }}</h2></section>{% endblock %}'
+    )
+
+    def group(
+        title: str | None, items: list[tuple[str, str]], collapsible: bool = False
+    ) -> SimpleNamespace:
+        return SimpleNamespace(
+            title=title,
+            collapsible=collapsible,
+            items=[SimpleNamespace(href=href, label=label) for href, label in items],
+        )
+
+    navigation = [
+        group(None, [("/index.html", "Ringkasan")]),
+        group("Operasi harian", [("/a.html", "Buat Prediksi"), ("/b.html", "Prediksi Massal")]),
+        group("BBM aktual", [("/c.html", "Catat Aktual"), ("/target.html", "Impor Massal")]),
+        group("Pemantauan", [("/d.html", "Operasi dan Alert")], collapsible=True),
+        group("Model", [("/e.html", "Katalog Model")], collapsible=True),
+        group("Pengaturan", [("/f.html", "Pengguna")], collapsible=True),
+    ]
+    for name, title in [("index.html", "Ringkasan"), ("target.html", "Impor Massal")]:
+        (root / name).write_text(
+            template.render(
+                page_title=title,
+                page_lead=None,
+                eyebrow=None,
+                navigation=navigation,
+                active_path="/" + name,
+                caller_user=SimpleNamespace(full_name="Administrator"),
+                role_label="Administrator",
+                csrf_token="test",
+                breadcrumbs=[],
+            )
+        )
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0), partial(SimpleHTTPRequestHandler, directory=root)
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    yield f"http://127.0.0.1:{server.server_port}"
+    server.shutdown()
+    server.server_close()
+    thread.join()
+
+
+NAV_SCROLL_TOP = "() => document.querySelector('[data-nav-scroll]').scrollTop"
+SCROLL_NAV_TO_END = (
+    "() => {const n = document.querySelector('[data-nav-scroll]'); n.scrollTop = n.scrollHeight;}"
+)
+
+
+@pytest.fixture
+def shell_page(browser: Browser, shell: str) -> Iterator[Page]:
+    context = browser.new_context(viewport={"width": 1180, "height": 560})
+    page = context.new_page()
+    page.goto(shell + "/index.html")
+    yield page
+    context.close()
+
+
+def test_sidebar_keeps_its_scroll_offset_across_a_menu_click(shell_page: Page) -> None:
+    shell_page.evaluate(SCROLL_NAV_TO_END)
+    shell_page.wait_for_timeout(200)
+    scrolled = shell_page.evaluate(NAV_SCROLL_TOP)
+    assert scrolled > 0, "the sidebar must overflow for this test to mean anything"
+
+    shell_page.get_by_role("link", name="Impor Massal").click()
+    shell_page.wait_for_load_state()
+    # Restoring too early clamps the offset against a taller, not-yet-final
+    # scroller, which lands the sidebar somewhere in the middle instead.
+    assert shell_page.evaluate(NAV_SCROLL_TOP) == scrolled
+
+
+def test_account_row_holds_the_bottom_while_the_menu_scrolls(shell_page: Page) -> None:
+    account = shell_page.locator(".app__account")
+    resting = account.bounding_box()
+    shell_page.evaluate(SCROLL_NAV_TO_END)
+    shell_page.wait_for_timeout(200)
+    assert shell_page.evaluate(NAV_SCROLL_TOP) > 0
+    assert account.is_visible()
+    assert account.bounding_box() == resting
+    sidebar = shell_page.locator(".app__nav").bounding_box()
+    assert resting["y"] + resting["height"] <= sidebar["y"] + sidebar["height"]
+
+
+def test_menu_items_sit_indented_under_their_section_heading(shell_page: Page) -> None:
+    heading = shell_page.locator(".nav-group__title", has_text="Operasi harian").first
+    item = shell_page.get_by_role("link", name="Buat Prediksi").first
+    assert item.bounding_box()["x"] > heading.bounding_box()["x"]
+    # Every item shares that step, including one in a group with no heading.
+    headless = shell_page.get_by_role("link", name="Ringkasan").first
+    assert headless.bounding_box()["x"] == item.bounding_box()["x"]
+
+
+def test_a_password_can_be_revealed_and_hidden_again(browser: Browser, site: str) -> None:
+    context = browser.new_context()
+    page = context.new_page()
+    page.goto(site + "/masuk.html")
+    field = page.locator("#field-password")
+    reveal = page.locator("[data-password-reveal]")
+    field.fill("rahasia-yang-panjang")
+
+    assert field.get_attribute("type") == "password"
+    reveal.click()
+    # The same input throughout, so what was typed survives the switch.
+    assert field.get_attribute("type") == "text"
+    assert reveal.get_attribute("aria-pressed") == "true"
+    assert field.input_value() == "rahasia-yang-panjang"
+    reveal.click()
+    assert field.get_attribute("type") == "password"
+    assert reveal.get_attribute("aria-pressed") == "false"
+    assert field.input_value() == "rahasia-yang-panjang"
+    context.close()
+
+
+def test_without_javascript_the_reveal_button_stays_out_of_the_way(
+    browser: Browser, site: str
+) -> None:
+    context = browser.new_context(java_script_enabled=False)
+    page = context.new_page()
+    page.goto(site + "/masuk.html")
+    assert page.locator("#field-password").count() == 1
+    assert not page.locator("[data-password-reveal]").is_visible()
     context.close()

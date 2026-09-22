@@ -1,25 +1,39 @@
 /* Run before the stylesheet so a remembered dark theme never flashes light. */
 (function () {
   "use strict";
+  /* A page that fixes its own appearance - the signed-out ones - keeps it.
+     Nothing here reads, writes or overrides a preference there. */
+  if (document.documentElement.hasAttribute("data-theme-locked")) {
+    return;
+  }
   var key = "fuel-predictor-theme";
   var system = window.matchMedia("(prefers-color-scheme: dark)");
-  var preference = "system";
-  var choices = ["system", "light", "dark"];
+  var choices = ["light", "dark"];
+  /* Null means nobody has flipped the switch yet, so the system decides. */
+  var preference = null;
 
   function readPreference() {
     try {
       var saved = window.localStorage.getItem(key);
-      return choices.includes(saved) ? saved : "system";
+      return choices.includes(saved) ? saved : null;
     } catch (error) {
-      return "system";
+      return null;
     }
   }
 
+  function currentTheme() {
+    return preference || (system.matches ? "dark" : "light");
+  }
+
   function apply() {
-    document.documentElement.dataset.theme = preference === "system"
-      ? (system.matches ? "dark" : "light") : preference;
-    document.querySelectorAll("[data-theme-select]").forEach(function (select) {
-      select.value = preference;
+    var theme = currentTheme();
+    document.documentElement.dataset.theme = theme;
+    /* The label names the destination, because that is what the one visible
+       glyph is showing. */
+    var next = theme === "dark" ? "Ganti ke mode terang" : "Ganti ke mode gelap";
+    document.querySelectorAll("[data-theme-toggle]").forEach(function (toggle) {
+      toggle.setAttribute("aria-label", next);
+      toggle.setAttribute("title", next);
     });
   }
 
@@ -33,19 +47,18 @@
     }
   });
   document.addEventListener("DOMContentLoaded", function () {
-    document.querySelectorAll("[data-theme-picker]").forEach(function (picker) {
-      var select = picker.querySelector("[data-theme-select]");
-      select.value = preference;
-      select.addEventListener("change", function () {
-        preference = select.value;
+    document.querySelectorAll("[data-theme-toggle]").forEach(function (toggle) {
+      toggle.addEventListener("click", function () {
+        preference = currentTheme() === "dark" ? "light" : "dark";
         try {
           window.localStorage.setItem(key, preference);
         } catch (error) {
-          // The selection still works for this page when storage is unavailable.
+          // The switch still works for this page when storage is unavailable.
         }
         apply();
       });
-      picker.hidden = false;
+      toggle.hidden = false;
     });
+    apply();
   });
 })();

@@ -426,6 +426,12 @@ class ChangeOwnPassword:
             raise IdentityValidationError("user_id", "Pengguna tidak ditemukan.")
         if not self.password_hasher.verify(current_password, user.password_hash):
             raise IdentityValidationError("current_password", "Kata sandi saat ini salah.")
+        # Checked against the hash rather than the two strings, so it still
+        # holds if the new password arrives differently cased or padded.
+        if self.password_hasher.verify(new_password, user.password_hash):
+            raise IdentityValidationError(
+                "new_password", "Kata sandi baru harus berbeda dari kata sandi saat ini."
+            )
         return self.change_password.execute(user_id, new_password, changed_by=user.username)
 
 
