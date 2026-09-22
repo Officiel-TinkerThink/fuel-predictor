@@ -13,10 +13,15 @@
 {{ ui.banner('warning', 'Jarak manual dipakai', 'Penyedia rute tidak tersedia saat perencanaan; prediksi ini memakai jarak total manual.') }}
 {% endif %}
 
-<div class="grid grid--metrics">
+<div class="grid grid--metrics result-metrics">
   {{ ui.metric('Alokasi rekomendasi', prediction.recommended_allocation_liters | angka, unit='L', context='Jumlah yang disarankan untuk disiapkan.') }}
-  {{ ui.metric('Estimasi kebutuhan BBM', prediction.estimated_fuel_requirement_liters | angka, unit='L', context='Perkiraan konsumsi menurut model.') }}
+  {{ ui.metric('Estimasi kebutuhan BBM', prediction.estimated_fuel_requirement_liters | angka, unit='L', context='Perkiraan BBM yang perlu disiapkan.') }}
   {{ ui.metric('Rentang ketidakpastian', (prediction.uncertainty_lower_liters | angka) ~ '–' ~ (prediction.uncertainty_upper_liters | angka), unit='L') }}
+</div>
+
+<div class="button-row result-actions">
+  <a class="button" href="/prediksi">Buat operasi lain</a>
+  <a class="button button--secondary" href="/bahan-bakar-aktual?operation_id={{ prediction.operation_id }}">Catat BBM aktual untuk operasi ini</a>
 </div>
 
 <section class="card">
@@ -31,13 +36,13 @@
     <dt>Jarak total</dt><dd>{{ operation.total_distance_km | angka }} km</dd>
     {% endif %}
   </dl>
-  <p class="hint">Setelah operasi selesai, catat bahan bakar aktualnya — lewat tombol di bawah atau
+  <p class="hint">Setelah operasi selesai, catat bahan bakar aktualnya — lewat tombol Catat BBM aktual atau
     dari menu Riwayat Prediksi — agar model bisa belajar dari hasilnya.</p>
-  <p class="hint">{{ prediction.safety_policy }}</p>
   {# Version identifiers matter for an audit, not for the planner reading the
      number, so they sit behind a fold. #}
   <details class="technical">
-    <summary>Detail teknis</summary>
+    <summary>Detail teknis &amp; kebijakan alokasi</summary>
+    <p class="hint">{{ prediction.safety_policy }}</p>
     <dl class="detail-list">
       <dt>Sumber jarak rute</dt><dd>{{ prediction.route_distance_source.value }}</dd>
       <dt>Model</dt><dd>{{ prediction.model.model_version_id }} · {{ prediction.model.algorithm }}</dd>
@@ -48,8 +53,8 @@
 </section>
 
 {% if operation and operation.vehicle %}
-<section class="card">
-  <h2>Operasi serupa sebelumnya</h2>
+<details class="card disclosure">
+  <summary>Operasi serupa sebelumnya <span class="hint">Lihat pembanding</span></summary>
   {% if similar %}
   <p class="hint">Hari-hari yang paling mirip dengan rencana ini, dari unit yang sama dulu, lalu
     tipe dan grupnya. Bandingkan angka di atas dengan yang pernah disiapkan atau benar-benar terpakai.</p>
@@ -88,12 +93,7 @@
     lain tidak ditampilkan karena tidak sebanding. Setiap operasi yang disimpan dan riwayat yang
     diimpor untuk unit ini akan muncul di sini pada rencana berikutnya.</p>
   {% endif %}
-</section>
+</details>
 {% endif %}
-
-<div class="button-row">
-  <a class="button" href="/prediksi">Buat operasi lain</a>
-  <a class="button button--secondary" href="/bahan-bakar-aktual?operation_id={{ prediction.operation_id }}">Catat BBM aktual untuk operasi ini</a>
-</div>
 
 {% endblock %}

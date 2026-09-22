@@ -124,7 +124,7 @@
 {% set has_route = (stop_values | select | list | length) >= 2 %}
 <fieldset class="stops-field" id="field-stop_sequence" tabindex="-1"
           aria-describedby="stops-help{% if message %} error-stop_sequence{% endif %}">
-  <legend>Rute &amp; pemberhentian</legend>
+  <legend class="form-section-heading"><span aria-hidden="true">2</span> Rute &amp; pemberhentian</legend>
   <p id="stops-help" class="hint">Ketik nama lokasi; daftar akan menyaring sambil Anda mengetik.
     Urutan terakhir adalah tujuan akhir.</p>
   {% if message %}<p class="field-error" id="error-stop_sequence">{{ message }}</p>{% endif %}
@@ -332,4 +332,20 @@
   {% endif %}
   {% endfor %}
 </svg>
+{%- endmacro %}
+
+{% macro icon(name) -%}
+<svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == 'route' %}<circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M6 9v6a3 3 0 0 0 3 3h6M15 6h6m-3-3v6"/>
+{% elif name == 'fuel' %}<path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h12M4 10h10m0 3h2a2 2 0 0 1 2 2v2a2 2 0 0 0 4 0V8l-3-3"/>
+{% elif name == 'upload' %}<path d="M12 16V3m-4 4 4-4 4 4M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/>
+{% elif name == 'pulse' %}<path d="M2 12h5l3-8 4 16 3-8h5"/>
+{% elif name == 'layers' %}<path d="m12 3 10 5-10 5L2 8l10-5ZM2 12l10 5 10-5M2 16l10 5 10-5"/>
+{% elif name == 'home' %}<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>
+{% else %}<path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3M8 8h8M8 12h6M8 16h4"/>{% endif %}
+</svg>
+{%- endmacro %}
+
+{% macro nav_icon(href) -%}
+{{ icon({'/': 'home', '/prediksi': 'route', '/prediksi-operasi-massal': 'upload', '/bahan-bakar-aktual': 'fuel', '/bahan-bakar-aktual-massal': 'upload', '/pengelolaan-model': 'layers', '/pemantauan/kesehatan-sistem': 'pulse'}.get(href, 'document')) }}
 {%- endmacro %}
