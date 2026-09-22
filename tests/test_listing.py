@@ -76,7 +76,7 @@ def test_sort_key_and_direction_come_from_the_url_and_bad_values_fall_back() -> 
     assert [row.name for row in by_name.items][:2] == ["alpha", "bravo"]
     assert bad.sort == "size" and bad.direction == "desc"
     # A page past the end is the last page; a nonsense size is the default.
-    assert bad.page == bad.pages == 1 and bad.per_page == 20
+    assert bad.page == bad.pages == 1 and bad.per_page == 5
 
 
 def test_page_links_keep_the_other_parameters() -> None:
@@ -95,12 +95,26 @@ def test_page_links_keep_the_other_parameters() -> None:
     assert listing.url(sort="size", direction="desc") == "?cari=a&urut=size&arah=desc&per=2"
 
 
-def test_only_the_offered_page_sizes_are_accepted() -> None:
-    listing = paginate(
-        _ROWS, _query(per="50"), search=lambda row: [row.name], sorts=_SORTS, default_sort="size"
-    )
-    odd = paginate(
-        _ROWS, _query(per="7"), search=lambda row: [row.name], sorts=_SORTS, default_sort="size"
+def test_only_the_offered_page_sizes_are_accepted_and_five_is_the_default() -> None:
+    search = lambda row: [row.name]  # noqa: E731 - a tiny key, three times over
+    listing = paginate(_ROWS, _query(per="50"), search=search, sorts=_SORTS, default_sort="size")
+    odd = paginate(_ROWS, _query(per="7"), search=search, sorts=_SORTS, default_sort="size")
+    default = paginate(_ROWS, _query(), search=search, sorts=_SORTS, default_sort="size")
+
+    assert listing.per_page == 50 and odd.per_page == 5 and default.per_page == 5
+
+
+def test_a_column_header_link_sorts_by_it_and_flips_the_active_column() -> None:
+    by_size = paginate(
+        _ROWS,
+        _query(urut="size", arah="desc"),
+        search=lambda row: [row.name],
+        sorts=_SORTS,
+        default_sort="size",
     )
 
-    assert listing.per_page == 50 and odd.per_page == 20
+    # Clicking the active column reverses it; another column starts as it declares.
+    assert by_size.sort_url("size") == "?urut=size&arah=asc"
+    assert by_size.sort_url("name") == "?urut=name&arah=desc"
+    assert by_size.sort_state("size") == "descending"
+    assert by_size.sort_state("name") == "none"

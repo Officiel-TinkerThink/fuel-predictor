@@ -30,8 +30,8 @@ from fuel_predictor.domain.identity import Capability
 _AUDIT_MAX = 5000
 _AUDIT_SORTS = (
     SortOption("waktu", "Waktu", lambda r: r["occurred_at"]),
-    SortOption("pelaku", "Pelaku", lambda r: r["actor"]),
-    SortOption("tindakan", "Tindakan", lambda r: r["action_label"]),
+    SortOption("pelaku", "Pelaku", lambda r: r["actor"], default_direction="asc"),
+    SortOption("tindakan", "Tindakan", lambda r: r["action_label"], default_direction="asc"),
 )
 
 # The day's work, in the order it happens: plan, then report what was burned.

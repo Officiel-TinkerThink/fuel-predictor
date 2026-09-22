@@ -53,7 +53,7 @@ _HISTORY_SORTS = (
     SortOption("waktu", "Waktu prediksi", lambda e: e.predicted_at),
     SortOption("alokasi", "Alokasi (L)", lambda e: e.recommended_allocation_liters),
     SortOption("jarak", "Jarak (km)", lambda e: e.total_distance_km),
-    SortOption("kendaraan", "Kendaraan", lambda e: e.vehicle),
+    SortOption("kendaraan", "Kendaraan", lambda e: e.vehicle, default_direction="asc"),
 )
 _MODE_LABELS = {
     "transport": "Angkut",

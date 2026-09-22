@@ -31,9 +31,11 @@ Kalau ada langkah yang meminta Anda mengetik perintah, itu ada di
 2. Isi nama pengguna **atau email** akun Anda dan kata sandi, lalu tekan **Masuk**.
 
 Setiap halaman daftar — riwayat prediksi, pengguna, catatan audit, versi model — punya
-kotak **Cari**, pilihan **Urutkan** dan **Arah**, jumlah baris **Per halaman**, dan tombol
-halaman di bawahnya. Alamat halaman ikut berubah, jadi tampilan yang sama bisa dibuka lagi
-dari riwayat peramban atau dibagikan.
+kotak **Cari**, jumlah baris **Per halaman** (5 baris bila tidak diubah), dan tombol halaman
+di bawahnya. Untuk mengurutkan, tekan **judul kolom** yang bertanda panah: tekan sekali
+untuk mengurutkan menurut kolom itu, tekan lagi untuk membalik arahnya. Di layar sempit,
+judul-judul itu tampil sebagai pilihan **Urutkan** di atas daftar. Alamat halaman ikut
+berubah, jadi tampilan yang sama bisa dibuka lagi dari riwayat peramban atau dibagikan.
 
 Menu di sebelah kiri hanya menampilkan halaman yang boleh Anda buka. Ada dua peran:
 

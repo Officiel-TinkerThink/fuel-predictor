@@ -40,14 +40,14 @@
   --radius-md: 8px;
   --radius-lg: 14px;
 
-  --shadow-sm: 0 1px 2px rgba(22, 32, 42, 0.08);
-  --shadow-md: 0 4px 12px rgba(22, 32, 42, 0.1);
+  --shadow-sm: 0 1px 2px rgba(22, 32, 42, 0.05);
+  --shadow-md: 0 8px 24px rgba(22, 32, 42, 0.1);
 
   --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
 
   --measure: 68ch;
-  --nav-width: 17rem;
+  --nav-width: 15.5rem;
 }
 
 *,
@@ -59,8 +59,10 @@
 body {
   margin: 0;
   font-family: var(--font-body);
-  font-size: 1rem;
-  line-height: 1.55;
+  /* 14px: dense enough that a table or a form reads as one screen, large
+     enough on a phone. Everything else is sized from this. */
+  font-size: 0.875rem;
+  line-height: 1.5;
   color: var(--color-text);
   background: var(--color-surface-sunken);
   -webkit-text-size-adjust: 100%;
@@ -77,13 +79,14 @@ h4 {
 }
 
 h1 {
-  font-size: 1.6rem;
+  font-size: 1.45rem;
+  letter-spacing: -0.01em;
 }
 h2 {
-  font-size: 1.25rem;
+  font-size: 1.05rem;
 }
 h3 {
-  font-size: 1.05rem;
+  font-size: 0.95rem;
 }
 
 p {
@@ -154,15 +157,15 @@ a:hover {
   color: var(--color-text-inverse);
   text-decoration: none;
   font-weight: 700;
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   line-height: 1.3;
 }
 
 .app__brand span {
   display: block;
   font-weight: 400;
-  font-size: 0.8rem;
-  opacity: 0.75;
+  font-size: 0.74rem;
+  opacity: 0.7;
 }
 
 .app__masthead {
@@ -190,7 +193,7 @@ a:hover {
 }
 
 .nav-group__title {
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   opacity: 0.7;
@@ -251,11 +254,11 @@ a:hover {
 
 .nav-list a {
   display: block;
-  padding: var(--space-2) var(--space-3);
+  padding: 0.4rem var(--space-3);
   border-radius: var(--radius-md);
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(255, 255, 255, 0.85);
   text-decoration: none;
-  font-size: 0.94rem;
+  font-size: 0.86rem;
 }
 
 .nav-list a:hover {
@@ -275,21 +278,21 @@ a:hover {
   margin-top: auto;
   border-top: 1px solid rgba(255, 255, 255, 0.2);
   padding-top: var(--space-4);
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   display: flex;
   align-items: center;
   gap: var(--space-3);
 }
 
 .app__avatar {
-  flex: 0 0 34px;
-  width: 34px;
-  height: 34px;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.16);
   color: var(--color-text-inverse);
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.86rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -359,14 +362,15 @@ a:hover {
 .app__main {
   min-width: 0;
   padding: var(--space-5) var(--space-6) var(--space-7);
+  max-width: 88rem;
 }
 
 .page-header {
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-4);
 }
 
 .page-header .eyebrow {
-  font-size: 0.74rem;
+  font-size: 0.68rem;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -405,9 +409,9 @@ a:hover {
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: var(--space-5);
+  padding: var(--space-4) var(--space-5);
   box-shadow: var(--shadow-sm);
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-4);
 }
 
 .card > :last-child {
@@ -418,14 +422,19 @@ a:hover {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-3);
   flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+
+.card__title h2 {
+  margin-bottom: 0;
 }
 
 .grid {
   display: grid;
-  gap: var(--space-4);
-  margin-bottom: var(--space-5);
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .grid--metrics {
@@ -448,7 +457,7 @@ a:hover {
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: var(--space-4);
+  padding: var(--space-3) var(--space-4);
   box-shadow: var(--shadow-sm);
 }
 
@@ -471,13 +480,13 @@ a:hover {
 }
 
 .metric__label {
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   color: var(--color-text-muted);
   margin: 0 0 var(--space-1);
 }
 
 .metric__value {
-  font-size: 1.7rem;
+  font-size: 1.5rem;
   font-weight: 680;
   line-height: 1.15;
   margin: 0;
@@ -498,7 +507,7 @@ a:hover {
 }
 
 .metric__context {
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   color: var(--color-text-muted);
   margin: var(--space-2) 0 0;
 }
@@ -509,9 +518,9 @@ a:hover {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 0.15rem var(--space-2);
+  padding: 0.1rem var(--space-2);
   border-radius: 999px;
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   font-weight: 600;
   border: 1px solid transparent;
   white-space: nowrap;
@@ -570,10 +579,10 @@ a:hover {
 
 .banner {
   border: 1px solid;
-  border-left-width: 5px;
+  border-left-width: 4px;
   border-radius: var(--radius-md);
-  padding: var(--space-4);
-  margin-bottom: var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 .banner > :last-child {
@@ -581,8 +590,8 @@ a:hover {
 }
 
 .banner__title {
-  margin: 0 0 var(--space-2);
-  font-size: 1rem;
+  margin: 0 0 var(--space-1);
+  font-size: 0.92rem;
 }
 
 .banner__action {
@@ -612,8 +621,8 @@ a:hover {
 fieldset {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: var(--space-4);
-  margin: 0 0 var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  margin: 0 0 var(--space-4);
 }
 
 legend {
@@ -622,7 +631,7 @@ legend {
 }
 
 .field {
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-3);
   max-width: 34rem;
 }
 
@@ -644,7 +653,7 @@ legend {
 }
 
 .hint {
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   color: var(--color-text-muted);
 }
 
@@ -663,13 +672,13 @@ legend {
 
 .field .hint {
   display: block;
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   margin-top: var(--space-1);
 }
 
 .field-error {
   display: block;
-  font-size: 0.86rem;
+  font-size: 0.8rem;
   color: var(--color-danger);
   font-weight: 600;
 }
@@ -695,7 +704,7 @@ input[type="file"],
 select,
 textarea {
   width: 100%;
-  padding: 0.5rem var(--space-3);
+  padding: 0.42rem var(--space-3);
   font: inherit;
   color: inherit;
   background: var(--color-surface);
@@ -741,7 +750,7 @@ select[aria-invalid="true"] {
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  padding: 0.55rem var(--space-5);
+  padding: 0.45rem var(--space-4);
   font: inherit;
   font-weight: 600;
   color: var(--color-text-inverse);
@@ -788,8 +797,8 @@ select[aria-invalid="true"] {
 }
 
 .button--small {
-  padding: 0.3rem var(--space-3);
-  font-size: 0.86rem;
+  padding: 0.22rem 0.6rem;
+  font-size: 0.8rem;
 }
 
 .button-row {
@@ -841,7 +850,7 @@ select[aria-invalid="true"] {
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.92rem;
+  font-size: 0.86rem;
 }
 
 caption {
@@ -853,19 +862,70 @@ caption {
 
 th,
 td {
-  padding: var(--space-3) var(--space-4);
+  padding: 0.55rem var(--space-3);
   text-align: left;
   border-bottom: 1px solid var(--color-border);
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 thead th {
   background: var(--color-surface-sunken);
-  font-size: 0.82rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   color: var(--color-text-muted);
   white-space: nowrap;
+}
+
+tbody tr:hover td {
+  background: rgba(16, 85, 111, 0.03);
+}
+
+/* A sortable header is a link; the arrow shows the active direction. */
+th .sort-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+th .sort-link:hover {
+  color: var(--color-brand-strong);
+}
+
+th .sort-icon::after {
+  content: "\2195";
+  opacity: 0.35;
+  font-size: 0.9em;
+}
+
+th[aria-sort="ascending"] .sort-link,
+th[aria-sort="descending"] .sort-link {
+  color: var(--color-brand-strong);
+}
+
+th[aria-sort="ascending"] .sort-icon::after {
+  content: "\25B2";
+  opacity: 1;
+}
+
+th[aria-sort="descending"] .sort-icon::after {
+  content: "\25BC";
+  opacity: 1;
+}
+
+/* A person in a table cell: initial beside name and username. */
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.person .avatar {
+  width: 1.9rem;
+  height: 1.9rem;
+  font-size: 0.8rem;
 }
 
 tbody tr:last-child td {
@@ -968,8 +1028,8 @@ dialog[open]:not(:modal) {
 
 .quick-actions .button {
   flex: 1 1 14rem;
-  padding-block: var(--space-4);
-  font-size: 1.02rem;
+  padding-block: var(--space-3);
+  font-size: 0.95rem;
 }
 
 .empty-state {
@@ -1047,7 +1107,7 @@ dialog[open]:not(:modal) {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2) var(--space-4);
-  padding: var(--space-3) var(--space-4);
+  padding: 0.6rem var(--space-4);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -1076,7 +1136,7 @@ dialog[open]:not(:modal) {
 
 .row-list__meta {
   display: block;
-  font-size: 0.86rem;
+  font-size: 0.8rem;
   color: var(--color-text-muted);
   overflow-wrap: anywhere;
 }
@@ -1122,8 +1182,8 @@ dialog[open]:not(:modal) {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  margin-top: var(--space-4);
-  font-size: 0.9rem;
+  margin-top: var(--space-3);
+  font-size: 0.82rem;
 }
 
 .pagination__summary {
@@ -1143,8 +1203,8 @@ dialog[open]:not(:modal) {
 .pagination__pages a,
 .pagination__pages span {
   display: inline-block;
-  min-width: 2rem;
-  padding: 0.3rem 0.6rem;
+  min-width: 1.9rem;
+  padding: 0.25rem 0.5rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   text-align: center;
@@ -1179,11 +1239,11 @@ dialog[open]:not(:modal) {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
+  padding: 0.3rem var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: 999px;
   background: var(--color-surface-raised);
-  font-size: 0.88rem;
+  font-size: 0.8rem;
   color: var(--color-text-muted);
 }
 
@@ -1230,7 +1290,7 @@ dialog[open]:not(:modal) {
 
 .detail-list dt {
   color: var(--color-text-muted);
-  font-size: 0.9rem;
+  font-size: 0.84rem;
 }
 
 .detail-list dd {
@@ -1490,6 +1550,112 @@ dialog::backdrop {
   .route-preview__canvas iframe {
     min-height: 240px;
     height: 240px;
+  }
+}
+
+/* On a phone a sortable table stacks: every row is a card of "label: value"
+   lines (the label comes from the cell's data-label), and the header row turns
+   into a strip of sort chips, so sorting stays one tap away. Cells without a
+   label - a person, an action - stand on their own line. */
+@media (max-width: 40rem) {
+  .table--sortable,
+  .table--sortable thead,
+  .table--sortable tbody,
+  .table--sortable tr,
+  .table--sortable td {
+    display: block;
+  }
+
+  .table--sortable thead tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-surface-sunken);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .table--sortable thead tr::before {
+    content: "Urutkan:";
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    margin-right: var(--space-1);
+  }
+
+  .table--sortable thead th {
+    display: none;
+  }
+
+  .table--sortable thead th[aria-sort] {
+    display: inline-flex;
+    padding: 0.15rem 0.6rem;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: var(--color-surface-raised);
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.78rem;
+  }
+
+  .table--sortable thead th[aria-sort="ascending"],
+  .table--sortable thead th[aria-sort="descending"] {
+    border-color: var(--color-brand);
+    background: var(--color-brand-soft);
+  }
+
+  .table--sortable tbody tr {
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .table--sortable tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  /* The label hangs in the left margin so a value keeps its own line breaks
+     (a time over an id, a name over a username). */
+  .table--sortable tbody td,
+  .table--sortable tbody td.numeric {
+    position: relative;
+    padding: 0.2rem 0 0.2rem 7.5rem;
+    border: 0;
+    text-align: left;
+    background: none;
+    overflow-wrap: anywhere;
+  }
+
+  .table--sortable tbody td[data-label]::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    top: 0.2rem;
+    width: 7rem;
+    color: var(--color-text-muted);
+    font-size: 0.68rem;
+    line-height: 1.9;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .table--sortable tbody td:not([data-label]) {
+    padding-left: 0;
+    padding-top: 0.35rem;
+  }
+
+  .table--sortable tbody td:not([data-label]) + td:not([data-label]) {
+    padding-top: 0.2rem;
+  }
+
+  /* Nothing scrolls sideways in a stacked row, so an id wraps again. */
+  .table--sortable .mono-id {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 

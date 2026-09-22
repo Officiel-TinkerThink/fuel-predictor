@@ -11,8 +11,8 @@ from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlencode
 
-PAGE_SIZES = (20, 50, 100)
-DEFAULT_PAGE_SIZE = 20
+PAGE_SIZES = (5, 10, 20, 50)
+DEFAULT_PAGE_SIZE = 5
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,6 +20,9 @@ class SortOption:
     key: str
     label: str
     value_of: Callable[[Any], Any]
+    # Where a first click on this column starts: names read best A-Z, dates
+    # and amounts newest or largest first.
+    default_direction: str = "desc"
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,6 +82,23 @@ class Listing:
         """The current page with two neighbours each side, plus the ends."""
         around = {n for n in range(self.page - 2, self.page + 3) if 1 <= n <= self.pages}
         return sorted(around | {1, self.pages})
+
+    def sort_url(self, key: str) -> str:
+        """The address that sorts by this column: clicking the active column
+        flips its direction, any other column starts descending for dates and
+        numbers and ascending for names - whatever that option declared."""
+        if key == self.sort:
+            direction = "asc" if self.direction == "desc" else "desc"
+        else:
+            option = next((o for o in self.sorts if o.key == key), None)
+            direction = option.default_direction if option else "desc"
+        return self.url(sort=key, direction=direction)
+
+    def sort_state(self, key: str) -> str:
+        """The aria-sort value for this column's header."""
+        if key != self.sort:
+            return "none"
+        return "ascending" if self.direction == "asc" else "descending"
 
     def url(
         self,

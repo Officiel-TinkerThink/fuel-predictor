@@ -30,8 +30,8 @@ from fuel_predictor.domain.prediction import ModelLifecycleStatus
 
 _VERSION_SORTS = (
     SortOption("waktu", "Dilatih", lambda m: m.trained_at),
-    SortOption("status", "Status", lambda m: m.lifecycle_status.value),
-    SortOption("versi", "Versi", lambda m: m.model_version_id),
+    SortOption("status", "Status", lambda m: m.lifecycle_status.value, default_direction="asc"),
+    SortOption("versi", "Versi", lambda m: m.model_version_id, default_direction="asc"),
 )
 
 

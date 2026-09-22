@@ -251,11 +251,14 @@
 </div>
 {%- endmacro %}
 
-{# The one list toolbar: search, sort, page size. A plain GET form, so it
-   works without a script and the resulting address can be bookmarked.
-   `extra` renders as hidden fields so the page's own filters survive. #}
+{# The one list toolbar: search and page size. Sorting lives in the column
+   headers (sort_th). A plain GET form, so it works without a script and the
+   resulting address can be bookmarked. Hidden fields carry the current sort
+   and the page's own filters. #}
 {% macro listing_toolbar(listing, placeholder='Cari…', extra_fields=none) -%}
 <form method="get" class="listing-toolbar" role="search">
+  <input type="hidden" name="urut" value="{{ listing.sort }}">
+  <input type="hidden" name="arah" value="{{ listing.direction }}">
   {% for key, value in (extra_fields or {}).items() %}
   <input type="hidden" name="{{ key }}" value="{{ value }}">
   {% endfor %}
@@ -263,34 +266,27 @@
     <label for="cari">Cari</label>
     <input id="cari" name="cari" type="search" value="{{ listing.q }}" placeholder="{{ placeholder }}">
   </div>
-  <div class="field">
-    <label for="urut">Urutkan</label>
-    <select id="urut" name="urut">
-      {% for option in listing.sorts %}
-      <option value="{{ option.key }}"{% if option.key == listing.sort %} selected{% endif %}>{{ option.label }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="field">
-    <label for="arah">Arah</label>
-    <select id="arah" name="arah">
-      <option value="desc"{% if listing.direction == 'desc' %} selected{% endif %}>Menurun</option>
-      <option value="asc"{% if listing.direction == 'asc' %} selected{% endif %}>Menaik</option>
-    </select>
-  </div>
+  {{ caller() if caller is defined else '' }}
   <div class="field">
     <label for="per">Per halaman</label>
     <select id="per" name="per">
-      {% for size in (20, 50, 100) %}
+      {% for size in (5, 10, 20, 50) %}
       <option value="{{ size }}"{% if size == listing.per_page %} selected{% endif %}>{{ size }}</option>
       {% endfor %}
     </select>
   </div>
-  {{ caller() if caller is defined else '' }}
   <div class="listing-toolbar__submit">
     <button type="submit" class="button button--secondary">Terapkan</button>
   </div>
 </form>
+{%- endmacro %}
+
+{# A sortable column header: the whole label is the link, the arrow shows
+   the current direction, and aria-sort tells a screen reader the same. #}
+{% macro sort_th(listing, key, label, numeric=false) -%}
+<th{% if numeric %} class="numeric"{% endif %} aria-sort="{{ listing.sort_state(key) }}">
+  <a class="sort-link" href="{{ listing.sort_url(key) }}">{{ label }}<span class="sort-icon" aria-hidden="true"></span></a>
+</th>
 {%- endmacro %}
 
 {# "Menampilkan 21–40 dari 134" and the page links, preserving the search

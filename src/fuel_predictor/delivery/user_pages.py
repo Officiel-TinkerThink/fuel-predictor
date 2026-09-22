@@ -34,10 +34,10 @@ _ROLE_LABELS = {
 _ROLE_OPTIONS = [(role.value, _ROLE_LABELS[role]) for role in UserRole]
 
 _DIRECTORY_SORTS = (
-    SortOption("nama", "Nama", lambda e: e.user.full_name),
+    SortOption("nama", "Nama", lambda e: e.user.full_name, default_direction="asc"),
     SortOption("masuk", "Terakhir masuk", lambda e: e.activity.last_sign_in),
     SortOption("prediksi", "Prediksi 30 hari", lambda e: e.activity.operations_recent),
-    SortOption("peran", "Peran", lambda e: e.user.role.value),
+    SortOption("peran", "Peran", lambda e: e.user.role.value, default_direction="asc"),
 )
 
 # What a redirect back to the page says happened.

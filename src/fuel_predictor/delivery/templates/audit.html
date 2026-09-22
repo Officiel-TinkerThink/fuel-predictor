@@ -17,22 +17,22 @@
   {% endcall %}
   {% if listing.items %}
   <div class="table-wrap">
-    <table id="tabel-audit">
-      <thead><tr><th>Waktu</th><th>Pelaku</th><th>Tindakan</th><th>Subjek</th><th>Hasil</th></tr></thead>
+    <table id="tabel-audit" class="table--sortable">
+      <thead><tr>{{ ui.sort_th(listing, 'waktu', 'Waktu') }}{{ ui.sort_th(listing, 'pelaku', 'Pelaku') }}{{ ui.sort_th(listing, 'tindakan', 'Tindakan') }}<th>Subjek</th><th>Hasil</th></tr></thead>
       <tbody>
         {% for record in listing.items %}
         <tr data-outcome="{{ record.outcome }}">
-          <td>{{ record.occurred_at | waktu }}</td>
-          <td>{{ record.actor }}<br><span class="hint">{{ record.actor_kind }}</span></td>
-          <td>{{ record.action_label }}<br><code class="mono-id">{{ record.action }}</code>
+          <td data-label="Waktu">{{ record.occurred_at | waktu }}</td>
+          <td data-label="Pelaku">{{ record.actor }}<br><span class="hint">{{ record.actor_kind }}</span></td>
+          <td data-label="Tindakan">{{ record.action_label }}<br><code class="mono-id">{{ record.action }}</code>
             {% if record.details %}
             <ul class="detail-inline">
               {% for label, value in record.details %}<li><span class="hint">{{ label }}:</span> {{ value }}</li>{% endfor %}
             </ul>
             {% endif %}
           </td>
-          <td>{{ record.subject or '-' }}</td>
-          <td>
+          <td data-label="Subjek">{{ record.subject or '-' }}</td>
+          <td data-label="Hasil">
             {% if record.outcome == 'succeeded' %}{{ ui.badge('Berhasil', 'success') }}
             {% elif record.outcome == 'denied' %}{{ ui.badge('Ditolak', 'warning') }}
             {% else %}{{ ui.badge('Gagal', 'danger') }}{% endif %}

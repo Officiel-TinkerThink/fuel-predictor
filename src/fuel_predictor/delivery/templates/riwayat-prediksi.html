@@ -6,23 +6,35 @@
 <section class="card">
   {{ ui.listing_toolbar(listing, placeholder='Kendaraan, lokasi, atau ID operasi') }}
   {% if listing.items %}
-  <ul class="row-list" id="daftar-riwayat">
-    {% for item in listing.items %}
-    <li>
-      <div class="row-list__main">
-        <strong><a href="/operasi-harian/{{ item.operation_id }}">{{ item.vehicle or item.vehicle_category.value }}{% if item.departure %} · {{ item.departure }} → {{ item.destination }}{% endif %}</a></strong>
-        <span class="row-list__meta">{{ item.predicted_at | waktu }} · {{ item.total_distance_km | angka }} km{% if item.stop_count > 2 %} · {{ item.stop_count - 2 }} pemberhentian di antaranya{% endif %}
-          · <code>{{ item.operation_id }}</code></span>
-      </div>
-      <span class="row-list__figure">{{ item.recommended_allocation_liters | angka }} L <span class="hint">dialokasikan</span></span>
-      {% if item.actual_fuel_liters is not none %}
-      <span class="row-list__figure">{{ ui.badge('Aktual ' ~ (item.actual_fuel_liters | angka) ~ ' L', 'success') }}</span>
-      {% else %}
-      <a class="button button--secondary button--small row-list__action" href="/bahan-bakar-aktual?operation_id={{ item.operation_id }}">Catat aktual</a>
-      {% endif %}
-    </li>
-    {% endfor %}
-  </ul>
+  <div class="table-wrap">
+    <table class="table--sortable">
+      <thead>
+        <tr>
+          {{ ui.sort_th(listing, 'waktu', 'Diprediksi') }}
+          {{ ui.sort_th(listing, 'kendaraan', 'Kendaraan') }}
+          <th>Rute</th>
+          {{ ui.sort_th(listing, 'jarak', 'Jarak', numeric=true) }}
+          {{ ui.sort_th(listing, 'alokasi', 'Alokasi', numeric=true) }}
+          <th>Aktual</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in listing.items %}
+        <tr>
+          <td data-label="Diprediksi">{{ item.predicted_at | waktu }}<br><code class="mono-id">{{ item.operation_id }}</code></td>
+          <td data-label="Kendaraan"><a href="/operasi-harian/{{ item.operation_id }}">{{ item.vehicle or item.vehicle_category.value }}</a></td>
+          <td data-label="Rute">{% if item.departure %}{{ item.departure }} → {{ item.destination }}{% if item.stop_count > 2 %} <span class="hint">(+{{ item.stop_count - 2 }})</span>{% endif %}{% else %}—{% endif %}</td>
+          <td class="numeric" data-label="Jarak">{{ item.total_distance_km | angka }} km</td>
+          <td class="numeric" data-label="Alokasi">{{ item.recommended_allocation_liters | angka }} L</td>
+          <td data-label="Aktual">
+            {% if item.actual_fuel_liters is not none %}{{ ui.badge((item.actual_fuel_liters | angka) ~ ' L', 'success') }}
+            {% else %}<a class="button button--secondary button--small" href="/bahan-bakar-aktual?operation_id={{ item.operation_id }}">Catat</a>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {{ ui.pagination(listing) }}
   {% elif listing.q %}
   {{ ui.empty_state('Tidak ada prediksi yang cocok dengan "' ~ listing.q ~ '".', 'Tampilkan semua', '/riwayat-prediksi') }}

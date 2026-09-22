@@ -110,11 +110,11 @@ def test_the_directory_shows_who_is_active_and_what_they_did_lately(tmp_path: Pa
     assert "2 pengguna" in page and "2 aktif" in page
     assert 'name="cari"' in page and 'name="status"' in page
     assert f'href="/pengguna/{user_id}"' in page
-    # Budi's card: signed in just now, planned one, reported one.
+    # Budi's row: signed in just now, planned one, reported one.
     budi = page[
-        page.index('data-user="budi"') : page.index("</li>", page.index('data-user="budi"'))
+        page.index('data-user="budi"') : page.index("</tr>", page.index('data-user="budi"'))
     ]
-    assert "Terakhir masuk" in budi and "Belum pernah masuk" not in budi
+    assert "Belum pernah" not in budi
     assert "1 prediksi" in budi and "1 aktual" in budi
     # Adding is a dialog, not a permanent form.
     assert 'data-dialog="tambah-pengguna"' in page

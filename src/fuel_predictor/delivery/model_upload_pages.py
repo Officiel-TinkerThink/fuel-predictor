@@ -48,8 +48,8 @@ class ArtifactStore:
 _HISTORY_MAX = 5000
 _HISTORY_SORTS = (
     SortOption("waktu", "Waktu", lambda r: r.validated_at),
-    SortOption("versi", "Versi model", lambda r: r.model_version),
-    SortOption("pelaku", "Pelaku", lambda r: r.actor),
+    SortOption("versi", "Versi model", lambda r: r.model_version, default_direction="asc"),
+    SortOption("pelaku", "Pelaku", lambda r: r.actor, default_direction="asc"),
 )
 
 

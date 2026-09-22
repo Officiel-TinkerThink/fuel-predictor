@@ -7,16 +7,16 @@
   {{ ui.listing_toolbar(listing, placeholder='Versi model, pelaku, atau alasan') }}
   {% if listing.items %}
   <div class="table-wrap">
-    <table>
-      <thead><tr><th>Waktu</th><th>Versi model</th><th>Pelaku</th><th>Hasil</th><th>Kelayakan</th></tr></thead>
+    <table class="table--sortable">
+      <thead><tr>{{ ui.sort_th(listing, 'waktu', 'Waktu') }}{{ ui.sort_th(listing, 'versi', 'Versi model') }}{{ ui.sort_th(listing, 'pelaku', 'Pelaku') }}<th>Hasil</th><th>Kelayakan</th></tr></thead>
       <tbody>
         {% for record in listing.items %}
         <tr>
-          <td>{{ record.validated_at | waktu }}</td>
-          <td><code class="mono-id">{{ record.model_version }}</code></td>
-          <td>{{ record.actor }}</td>
-          <td>{% if record.was_accepted %}{{ ui.badge('Diterima', 'success') }}{% else %}{{ ui.badge('Ditolak', 'danger') }}{% endif %}</td>
-          <td>
+          <td data-label="Waktu">{{ record.validated_at | waktu }}</td>
+          <td data-label="Versi model"><code class="mono-id">{{ record.model_version }}</code></td>
+          <td data-label="Pelaku">{{ record.actor }}</td>
+          <td data-label="Hasil">{% if record.was_accepted %}{{ ui.badge('Diterima', 'success') }}{% else %}{{ ui.badge('Ditolak', 'danger') }}{% endif %}</td>
+          <td data-label="Kelayakan">
             {% if not record.was_accepted %}—
             {% elif record.eligible %}{{ ui.badge('Layak', 'success') }}
             {% else %}{{ ui.badge('Belum layak', 'warning') }}{% endif %}

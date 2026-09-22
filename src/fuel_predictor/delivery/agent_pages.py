@@ -39,8 +39,8 @@ if TYPE_CHECKING:
 
 _GRANT_SORTS = (
     SortOption("waktu", "Disambungkan", lambda g: g.grant.granted_at),
-    SortOption("pengguna", "Pengguna", lambda g: g.username),
-    SortOption("agen", "Agen", lambda g: g.display_name),
+    SortOption("pengguna", "Pengguna", lambda g: g.username, default_direction="asc"),
+    SortOption("agen", "Agen", lambda g: g.display_name, default_direction="asc"),
 )
 
 

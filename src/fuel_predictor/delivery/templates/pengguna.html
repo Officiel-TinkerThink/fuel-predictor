@@ -29,29 +29,38 @@
   {% endcall %}
 
   {% if listing.items %}
-  <ul class="row-list" id="daftar-pengguna">
-    {% for entry in listing.items %}
-    {% set user = entry.user %}{% set activity = entry.activity %}
-    <li data-user="{{ user.username }}" data-user-id="{{ user.user_id }}" data-status="{{ 'aktif' if user.is_active else 'nonaktif' }}">
-      <span class="avatar" aria-hidden="true">{{ user.full_name[:1] | upper }}</span>
-      <div class="row-list__main">
-        <strong><a href="/pengguna/{{ user.user_id }}">{{ user.full_name }}</a>
-          {% if user.user_id == caller_user.user_id %}<span class="hint">(Anda)</span>{% endif %}</strong>
-        <span class="row-list__meta">{{ user.username }}{% if user.email %} · {{ user.email }}{% endif %}</span>
-        <span class="row-list__meta">
-          {% if activity.last_sign_in %}Terakhir masuk {{ activity.last_sign_in | waktu }}{% else %}Belum pernah masuk{% endif %}
-          · 30 hari: {{ activity.operations_recent }} prediksi · {{ activity.actuals_recent }} aktual
-          {% if activity.failed_sign_ins_recent %}· <span class="text-danger">{{ activity.failed_sign_ins_recent }} kali gagal masuk</span>{% endif %}
-        </span>
-      </div>
-      <span class="row-list__figure">
-        {{ ui.badge(role_labels[user.role], 'info' if user.role.value == 'administrator' else 'neutral') }}
-        {{ ui.badge('Aktif', 'success') if user.is_active else ui.badge('Nonaktif', 'neutral') }}
-      </span>
-      <a class="button button--secondary button--small row-list__action" href="/pengguna/{{ user.user_id }}">Buka</a>
-    </li>
-    {% endfor %}
-  </ul>
+  <div class="table-wrap">
+    <table class="table--sortable" id="daftar-pengguna">
+      <thead>
+        <tr>
+          {{ ui.sort_th(listing, 'nama', 'Nama') }}
+          {{ ui.sort_th(listing, 'peran', 'Peran') }}
+          <th>Status</th>
+          {{ ui.sort_th(listing, 'masuk', 'Terakhir masuk') }}
+          {{ ui.sort_th(listing, 'prediksi', '30 hari', numeric=true) }}
+          <th><span class="visually-hidden">Tindakan</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in listing.items %}
+        {% set user = entry.user %}{% set activity = entry.activity %}
+        <tr data-user="{{ user.username }}" data-user-id="{{ user.user_id }}" data-status="{{ 'aktif' if user.is_active else 'nonaktif' }}">
+          <td>
+            <span class="person"><span class="avatar" aria-hidden="true">{{ user.full_name[:1] | upper }}</span>
+              <span><a href="/pengguna/{{ user.user_id }}">{{ user.full_name }}</a>{% if user.user_id == caller_user.user_id %} <span class="hint">(Anda)</span>{% endif %}<br>
+                <span class="hint">{{ user.username }}{% if user.email %} · {{ user.email }}{% endif %}</span></span></span>
+          </td>
+          <td data-label="Peran">{{ ui.badge(role_labels[user.role], 'info' if user.role.value == 'administrator' else 'neutral') }}</td>
+          <td data-label="Status">{{ ui.badge('Aktif', 'success') if user.is_active else ui.badge('Nonaktif', 'neutral') }}</td>
+          <td data-label="Terakhir masuk">{% if activity.last_sign_in %}{{ activity.last_sign_in | waktu }}{% else %}<span class="hint">Belum pernah</span>{% endif %}
+            {% if activity.failed_sign_ins_recent %}<br><span class="text-danger">{{ activity.failed_sign_ins_recent }}× gagal masuk</span>{% endif %}</td>
+          <td class="numeric" data-label="30 hari">{{ activity.operations_recent }} prediksi<br><span class="hint">{{ activity.actuals_recent }} aktual</span></td>
+          <td><a class="button button--secondary button--small" href="/pengguna/{{ user.user_id }}">Buka</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {{ ui.pagination(listing) }}
   {% elif listing.q or status_filter %}
   {{ ui.empty_state('Tidak ada pengguna yang cocok.', 'Tampilkan semua', '/pengguna') }}
