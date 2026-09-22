@@ -28,3 +28,6 @@ dist/
 .mcptest/
 .mcpc/
 .e2e/
+
+# Local editor and agent settings, including the dev-server launch config.
+.claude/
