@@ -8,12 +8,22 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
+from fuel_predictor.delivery.listing import ListingQuery, SortOption, paginate
 from fuel_predictor.delivery.rendering import STATIC_DIRECTORY, build_environment
 
 playwright = pytest.importorskip("playwright.sync_api")
+
+# Playwright is deliberately not a declared dependency: these checks are
+# optional and skip themselves above when it is absent, so the type checker
+# never sees the real `Browser` and `Page` either. The aliases keep the
+# signatures self-describing without claiming precision mypy cannot back.
+type Browser = Any
+type Page = Any
 
 
 @pytest.fixture(scope="module")
@@ -22,6 +32,7 @@ def site(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
     shutil.copytree(STATIC_DIRECTORY, root / "statis")
     environment = build_environment()
     template = environment.from_string("""{% extends "base.html" %}
+{% import "components.html" as ui %}
 {% block content %}
 {% for name in ['first', 'second'] %}
 <section class="card"><h2>{{ name }}</h2><div class="table-wrap">
@@ -39,9 +50,13 @@ def site(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
 {% for row in rows %}
 <li data-sort-amount="{{ loop.index }}">Operasi {{ loop.index }}</li>{% endfor %}
 </ul></section>
-<section class="card"><table id="server" class="table--sortable"><thead><tr>
+<section class="card" id="server-section">
+{{ ui.listing_toolbar(server_listing) }}
+<table id="server" class="table--sortable"><thead><tr>
 <th aria-sort="ascending"><a href="?urut=name">Nama</a></th></tr></thead>
-<tbody><tr><td>Already paged</td></tr></tbody></table></section>
+<tbody><tr><td>Already paged</td></tr></tbody></table>
+{{ ui.pagination(server_listing) }}
+</section>
 {% endblock %}""")
     amounts = ["2 L", "10 L", "1.234,5 L", "Belum cukup data"] + [f"{n} L" for n in range(4, 12)]
     rows = [
@@ -64,6 +79,15 @@ def site(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
             caller_user=None,
             breadcrumbs=[],
             rows=rows,
+            server_listing=paginate(
+                rows,
+                ListingQuery(
+                    q="Unit", sort="name", direction="asc", page=2, extra={"status": "active"}
+                ),
+                search=lambda row: ["Unit"],
+                sorts=[SortOption("name", "Nama", lambda row: row["amount"])],
+                default_sort="name",
+            ),
         )
     )
     (root / "masuk.html").write_text(
@@ -87,7 +111,7 @@ def site(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
 
 
 @pytest.fixture(scope="module")
-def browser():
+def browser() -> Iterator[Browser]:
     with playwright.sync_playwright() as engine:
         executable = os.environ.get("FUEL_UI_BROWSER_EXECUTABLE", engine.chromium.executable_path)
         if not Path(executable).is_file():
@@ -98,7 +122,7 @@ def browser():
 
 
 @pytest.fixture
-def page(browser, site):
+def page(browser: Browser, site: str) -> Iterator[Page]:
     context = browser.new_context(viewport={"width": 1280, "height": 960})
     page = context.new_page()
     errors = []
@@ -109,7 +133,7 @@ def page(browser, site):
     assert not errors
 
 
-def test_sort_page_search_and_independent_collections(page):
+def test_sort_page_search_and_independent_collections(page: Page) -> None:
     visible = page.locator("#first tbody tr:visible")
     assert visible.count() == 5
     pager = page.get_by_role("navigation", name="Halaman first", exact=True)
@@ -144,7 +168,7 @@ def test_sort_page_search_and_independent_collections(page):
     assert page.locator("#first th").last.locator("button").count() == 0
 
 
-def test_row_lists_have_sorting_and_pagination(page):
+def test_row_lists_have_sorting_and_pagination(page: Page) -> None:
     assert page.locator("#pending li:visible").count() == 5
     page.locator("#pending-sort").select_option("amount:desc")
     assert page.locator("#pending li:visible").first.text_content() == "Operasi 12"
@@ -154,7 +178,9 @@ def test_row_lists_have_sorting_and_pagination(page):
     assert page.locator("#pending li:visible").first.text_content() == "Operasi 7"
 
 
-def test_theme_persists_across_pages_and_tracks_system(page, site, tmp_path):
+def test_theme_persists_across_pages_and_tracks_system(
+    page: Page, site: str, tmp_path: Path
+) -> None:
     page.emulate_media(color_scheme="dark")
     playwright.expect(page.locator("html")).to_have_attribute("data-theme", "dark")
     page.get_by_label("Tampilan").select_option("light")
@@ -172,7 +198,7 @@ def test_theme_persists_across_pages_and_tracks_system(page, site, tmp_path):
 
 
 @pytest.mark.parametrize("theme", ["light", "dark"])
-def test_phone_layout_keeps_hidden_rows_hidden(page, theme, tmp_path):
+def test_phone_layout_keeps_hidden_rows_hidden(page: Page, theme: str, tmp_path: Path) -> None:
     page.set_viewport_size({"width": 320, "height": 844})
     page.get_by_role("button", name="Menu", exact=True).click()
     page.get_by_label("Tampilan").select_option(theme)
@@ -183,7 +209,9 @@ def test_phone_layout_keeps_hidden_rows_hidden(page, theme, tmp_path):
     page.screenshot(path=str(tmp_path / (theme + "-phone.png")), full_page=True)
 
 
-def test_without_javascript_all_rows_and_actions_remain_available(browser, site):
+def test_without_javascript_all_rows_and_actions_remain_available(
+    browser: Browser, site: str
+) -> None:
     context = browser.new_context(java_script_enabled=False)
     page = context.new_page()
     page.goto(site)
@@ -194,7 +222,7 @@ def test_without_javascript_all_rows_and_actions_remain_available(browser, site)
     context.close()
 
 
-def test_theme_still_works_when_storage_is_blocked(browser, site):
+def test_theme_still_works_when_storage_is_blocked(browser: Browser, site: str) -> None:
     context = browser.new_context()
     context.add_init_script(
         "Object.defineProperty(window, 'localStorage', {get() {throw Error('blocked')}})"
@@ -204,4 +232,42 @@ def test_theme_still_works_when_storage_is_blocked(browser, site):
     page.get_by_label("Tampilan").select_option("dark")
     assert page.locator("html").get_attribute("data-theme") == "dark"
     assert page.locator("#first tbody tr:visible").count() == 5
+    context.close()
+
+
+def test_page_size_is_in_pager_and_updates_client_list_immediately(page: Page) -> None:
+    pager = page.get_by_role("navigation", name="Halaman first", exact=True)
+    assert page.locator(".collection-toolbar select#first-size").count() == 0
+    pager.get_by_role("button", name="Berikutnya").click()
+    pager.get_by_label("Item per halaman").select_option("10")
+    assert page.locator("#first tbody tr:visible").count() == 10
+    assert "Halaman 1 dari 2" in pager.text_content()
+    assert page.locator("#second tbody tr:visible").count() == 5
+
+
+def test_server_page_size_is_independent_of_unsubmitted_search(page: Page) -> None:
+    section = page.locator("#server-section")
+    assert section.locator('form[role="search"] select[name="per"]').count() == 0
+    assert section.locator('form[role="search"] input[name="per"]').input_value() == "5"
+    section.get_by_label("Cari", exact=True).fill("Unsubmitted search")
+    with page.expect_navigation():
+        section.get_by_role("navigation").get_by_label("Item per halaman").select_option("10")
+    assert parse_qs(urlsplit(page.url).query) == {
+        "cari": ["Unit"],
+        "urut": ["name"],
+        "arah": ["asc"],
+        "status": ["active"],
+        "per": ["10"],
+    }
+
+
+def test_server_page_size_keeps_a_no_javascript_fallback(browser: Browser, site: str) -> None:
+    context = browser.new_context(java_script_enabled=False)
+    page = context.new_page()
+    page.goto(site)
+    pager = page.locator("#server-section").get_by_role("navigation")
+    pager.get_by_label("Item per halaman").select_option("20")
+    with page.expect_navigation():
+        pager.get_by_role("button", name="Ubah jumlah").click()
+    assert parse_qs(urlsplit(page.url).query)["per"] == ["20"]
     context.close()

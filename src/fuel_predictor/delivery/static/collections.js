@@ -71,9 +71,8 @@
     field(toolbar, "Cari", search, id + "-search");
     var size = element("select");
     [5, 10, 20, 50].forEach(function (count) {
-      size.add(new Option(count + " baris", String(count)));
+      size.add(new Option(String(count), String(count)));
     });
-    field(toolbar, "Per halaman", size, id + "-size");
 
     var pager = element("nav", "pagination collection-pagination");
     pager.setAttribute("aria-label", "Halaman " + name);
@@ -89,7 +88,9 @@
     next.setAttribute("aria-controls", id);
     var position = element("span", "hint");
     controls.append(previous, position, next);
-    pager.append(status, controls);
+    var sizeControl = element("div", "pagination__size");
+    field(sizeControl, "Item per halaman", size, id + "-size");
+    pager.append(sizeControl, status, controls);
     var empty = element("p", "empty-state", "Tidak ada hasil yang cocok. Coba kata lain.");
     empty.hidden = true;
     var page = 1;
@@ -189,6 +190,14 @@
     anchor.after(empty, pager);
     render();
   }
+
+  // Separate GET forms preserve the applied filters, not unsubmitted search edits.
+  // Omitting the page number restarts at page one when the size changes.
+  document.querySelectorAll("[data-page-size-form]").forEach(function (form) {
+    form.querySelector('select[name="per"]').addEventListener("change", function () {
+      form.requestSubmit();
+    });
+  });
 
   document.querySelectorAll("[data-list]").forEach(enhance);
 })();

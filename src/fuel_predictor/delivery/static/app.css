@@ -1245,6 +1245,27 @@ dialog[open]:not(:modal) {
   font-size: 0.82rem;
 }
 
+.pagination__size,
+.pagination__size label,
+.pagination__size .field {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.pagination__size label {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 400;
+}
+
+.pagination__size select {
+  width: auto;
+  min-width: 4rem;
+}
+
 .pagination__summary {
   margin: 0;
   color: var(--color-text-muted);

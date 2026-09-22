@@ -251,7 +251,7 @@
 </div>
 {%- endmacro %}
 
-{# The one list toolbar: search and page size. Sorting lives in the column
+{# The list toolbar: search and filters. Sorting lives in the column
    headers (sort_th). A plain GET form, so it works without a script and the
    resulting address can be bookmarked. Hidden fields carry the current sort
    and the page's own filters. #}
@@ -267,14 +267,7 @@
     <input id="cari" name="cari" type="search" value="{{ listing.q }}" placeholder="{{ placeholder }}">
   </div>
   {{ caller() if caller is defined else '' }}
-  <div class="field">
-    <label for="per">Per halaman</label>
-    <select id="per" name="per">
-      {% for size in (5, 10, 20, 50) %}
-      <option value="{{ size }}"{% if size == listing.per_page %} selected{% endif %}>{{ size }}</option>
-      {% endfor %}
-    </select>
-  </div>
+  <input type="hidden" name="per" value="{{ listing.per_page }}">
   <div class="listing-toolbar__submit">
     <button type="submit" class="button button--secondary">Terapkan</button>
   </div>
@@ -294,6 +287,22 @@
 {% macro pagination(listing) -%}
 {% if listing.total %}
 <nav class="pagination" aria-label="Halaman">
+  <form method="get" class="pagination__size" data-page-size-form>
+    <input type="hidden" name="cari" value="{{ listing.q }}">
+    <input type="hidden" name="urut" value="{{ listing.sort }}">
+    <input type="hidden" name="arah" value="{{ listing.direction }}">
+    {% for key, value in listing.extra.items() %}
+    <input type="hidden" name="{{ key }}" value="{{ value }}">
+    {% endfor %}
+    <label>Item per halaman
+      <select name="per">
+        {% for size in (5, 10, 20, 50) %}
+        <option value="{{ size }}"{% if size == listing.per_page %} selected{% endif %}>{{ size }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <noscript><button type="submit" class="button button--secondary button--small">Ubah jumlah</button></noscript>
+  </form>
   <p class="pagination__summary">Menampilkan {{ listing.first_index }}–{{ listing.last_index }} dari {{ listing.total }}{% if listing.q %} yang cocok dengan "{{ listing.q }}"{% endif %}</p>
   {% if listing.pages > 1 %}
   <ul class="pagination__pages">
