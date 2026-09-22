@@ -20,6 +20,7 @@ from fuel_predictor.application.model_package_records import (
 )
 from fuel_predictor.application.model_package_validation import ValidateModelPackage
 from fuel_predictor.application.retained_package_activation import RegisterIngestedPackage
+from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.model_package import ModelPackageValidationError
@@ -49,6 +50,8 @@ def build_model_upload_pages_router(
     artifact_store: Any,
     register_package: RegisterIngestedPackage,
     guard: SecurityGuard,
+    *,
+    events: ImportantEvents,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -73,6 +76,9 @@ def build_model_upload_pages_router(
             # Recorded before the response is rendered: a rejection is the
             # thing an operator asks about later, and it must survive even
             # though nothing was accepted.
+            events.model_package_uploaded(
+                caller.user.username, file.filename or "paket.zip", None, False
+            )
             validation_records.add(
                 ModelPackageValidationRecord(
                     validation_id=validation_id,
@@ -97,6 +103,12 @@ def build_model_upload_pages_router(
         # version row are unreachable: nothing could activate them, and nothing
         # could roll back to them.
         register_package.execute(validated.manifest, artifact_uri=str(stored_path))
+        events.model_package_uploaded(
+            caller.user.username,
+            file.filename or "paket.zip",
+            validated.manifest.model_version,
+            True,
+        )
         validation_records.add(
             ModelPackageValidationRecord(
                 validation_id=validation_id,
@@ -143,9 +155,7 @@ def build_model_upload_pages_router(
     return router
 
 
-def _render_upload(
-    caller: "ActiveCaller", errors: tuple[tuple[str, str], ...] | None
-) -> str:
+def _render_upload(caller: "ActiveCaller", errors: tuple[tuple[str, str], ...] | None) -> str:
     return render(
         "model-unggah.html",
         caller=caller,

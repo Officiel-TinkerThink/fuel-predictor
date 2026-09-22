@@ -14,6 +14,7 @@ from fuel_predictor.application.bulk_operation_predictions import (
     BulkOperationPredictionResult,
 )
 from fuel_predictor.application.historical_datasets import HistoricalDatasetImportError
+from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
 
@@ -31,6 +32,8 @@ _PAGE_LEAD = (
 def build_bulk_prediction_pages_router(
     bulk_operation_prediction: BulkOperationPrediction,
     guard: SecurityGuard,
+    *,
+    events: ImportantEvents,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -42,11 +45,11 @@ def build_bulk_prediction_pages_router(
     async def submit_form(request: Request, file: UploadFile = _UPLOAD_FILE) -> HTMLResponse:
         caller = guard.require_caller(request)
         try:
+            filename = file.filename or "berkas-prediksi-operasi"
             result = bulk_operation_prediction.execute(
-                file.filename or "berkas-prediksi-operasi",
-                await file.read(),
-                actor=caller.user.username,
+                filename, await file.read(), actor=caller.user.username
             )
+            events.bulk_prediction_imported(caller.user.username, filename, result)
         except HistoricalDatasetImportError as error:
             return HTMLResponse(
                 _render_form(caller, error.message),

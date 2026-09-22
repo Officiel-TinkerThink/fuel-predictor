@@ -52,6 +52,8 @@ class UserRepository(Protocol):
 
     def replace(self, user: User) -> None: ...
 
+    def record_sign_in(self, user_id: str, moment: datetime) -> None: ...
+
 
 class SessionRepository(Protocol):
     def add(self, session: AuthenticatedSession) -> None: ...
@@ -73,8 +75,6 @@ class AuditRepository(Protocol):
     def list_recent(self, limit: int) -> Sequence[AuditRecord]: ...
 
     def count_recent(self, action: str, subject: str, since: datetime) -> int: ...
-
-    def last_occurrence(self, action: str, subject: str) -> datetime | None: ...
 
     def list_for_user(self, username: str, limit: int) -> Sequence[AuditRecord]:
         """Records where the person was the actor or the subject, newest first."""
@@ -210,13 +210,10 @@ class SignIn:
                 csrf_token=csrf_token,
             )
         )
-        self.record_audit.execute(
-            actor=user.username,
-            action="sign_in_succeeded",
-            outcome=AuditOutcome.SUCCEEDED,
-            subject=user.username,
-            details={"role": str(user.role)},
-        )
+        # A successful sign-in is not an audit event - it would be the
+        # commonest row in the trail and say nothing anyone acts on. What is
+        # kept is when the person was last here, on the account itself.
+        self.user_repository.record_sign_in(user.user_id, moment)
         return SignedInSession(
             session_token=session_token,
             csrf_token=csrf_token,
@@ -246,16 +243,9 @@ class SignIn:
 @dataclass(frozen=True, slots=True)
 class SignOut:
     session_repository: SessionRepository
-    record_audit: RecordAuditEvent
 
     def execute(self, session_token: str, username: str) -> None:
         self.session_repository.delete(hash_session_token(session_token))
-        self.record_audit.execute(
-            actor=username,
-            action="sign_out",
-            outcome=AuditOutcome.SUCCEEDED,
-            subject=username,
-        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -372,6 +362,7 @@ class SetUserActivation:
             is_active=is_active,
             created_at=user.created_at,
             email=user.email,
+            last_sign_in_at=user.last_sign_in_at,
         )
         self.user_repository.replace(updated)
         if not is_active:
@@ -407,6 +398,7 @@ class ChangePassword:
             is_active=user.is_active,
             created_at=user.created_at,
             email=user.email,
+            last_sign_in_at=user.last_sign_in_at,
         )
         self.user_repository.replace(updated)
         self.session_repository.delete_for_user(user.user_id)

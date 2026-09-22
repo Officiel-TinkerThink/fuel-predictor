@@ -53,7 +53,6 @@ class UserActivityReader(Protocol):
 @dataclass(frozen=True, slots=True)
 class UserActivity:
     last_sign_in: datetime | None
-    sign_ins_recent: int
     failed_sign_ins_recent: int
     operations_total: int
     operations_recent: int
@@ -169,6 +168,7 @@ class UpdateUserProfile:
             is_active=user.is_active,
             created_at=user.created_at,
             email=normalized_email,
+            last_sign_in_at=user.last_sign_in_at,
         )
         self.users.replace(updated)
         changes = {
@@ -205,8 +205,7 @@ def _activity_for(
     user: User, audit: AuditRepository, counts: _Counts, since: datetime
 ) -> UserActivity:
     return UserActivity(
-        last_sign_in=audit.last_occurrence("sign_in_succeeded", user.username),
-        sign_ins_recent=audit.count_recent("sign_in_succeeded", user.username, since),
+        last_sign_in=user.last_sign_in_at,
         failed_sign_ins_recent=audit.count_recent("sign_in_failed", user.username, since),
         operations_total=counts.operations_total.get(user.username, 0),
         operations_recent=counts.operations_recent.get(user.username, 0),

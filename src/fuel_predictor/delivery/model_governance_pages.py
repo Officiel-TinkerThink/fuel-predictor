@@ -17,6 +17,7 @@ from fuel_predictor.application.model_lifecycle import (
 from fuel_predictor.application.retained_package_activation import (
     ActivateRetainedModelPackage,
 )
+from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.delivery.rendering import format_decimal, render
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.model_activation import (
@@ -33,6 +34,8 @@ def build_model_governance_pages_router(
     get_candidate_model_comparison: GetCandidateModelComparison,
     get_model_governance_dashboard: GetModelGovernanceDashboard,
     guard: SecurityGuard,
+    *,
+    events: ImportantEvents,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -100,6 +103,7 @@ def build_model_governance_pages_router(
         if activate_retained_package.can_activate(model_version_id):
             return _activate_package(model_version_id, caller)
 
+        previous = get_model_governance_dashboard.execute().active_model
         try:
             model = promote_candidate_model.execute(model_version_id)
         except CandidateModelNotFoundError:
@@ -128,6 +132,9 @@ def build_model_governance_pages_router(
                 ),
                 status_code=status.HTTP_409_CONFLICT,
             )
+        events.model_promoted(
+            caller.user.username, model, previous.model_version_id if previous else None
+        )
         return HTMLResponse(
             render(
                 "model-dipromosikan.html",
@@ -197,6 +204,7 @@ def build_model_governance_pages_router(
                 ),
                 status_code=status.HTTP_409_CONFLICT,
             )
+        events.model_promoted(caller.user.username, result.activated, result.previous_version_id)
         return HTMLResponse(
             render(
                 "model-dipromosikan.html",

@@ -38,7 +38,8 @@ def test_actions_are_labelled_and_details_shown(tmp_path: Path) -> None:
 
     assert page.status_code == 200
     assert "Masuk gagal" in page.text
-    assert "Masuk berhasil" in page.text
+    # The successful sign-in that followed is not in the trail at all.
+    assert "Masuk berhasil" not in page.text and "sign_in_succeeded" not in page.text
     # The raw code stays available for anyone grepping a log against the page.
     assert "sign_in_failed" in page.text
     # A filter on outcome, so failures can be read on their own.

@@ -16,6 +16,7 @@ from fuel_predictor.application.historical_datasets import (
     HistoricalDatasetImportError,
     ImportHistoricalDataset,
 )
+from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
 
@@ -39,6 +40,8 @@ def build_historical_dataset_pages_router(
     import_historical_dataset: ImportHistoricalDataset,
     train_baseline_candidate: TrainBaselineCandidate,
     guard: SecurityGuard,
+    *,
+    events: ImportantEvents,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -61,6 +64,7 @@ def build_historical_dataset_pages_router(
             result = import_historical_dataset.execute(
                 file.filename or "berkas-impor", await file.read()
             )
+            events.historical_dataset_imported(caller.user.username, result.dataset_version)
         except HistoricalDatasetImportError as error:
             return HTMLResponse(
                 _render_form(caller, error.message),
@@ -87,6 +91,7 @@ def build_historical_dataset_pages_router(
         caller = guard.require_caller(request)
         try:
             model = train_baseline_candidate.execute(dataset_version_id)
+            events.model_candidate_trained(caller.user.username, model)
         except (BaselineTrainingError, DatasetVersionNotFoundError) as error:
             return HTMLResponse(
                 render(

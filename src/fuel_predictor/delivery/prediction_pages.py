@@ -34,6 +34,7 @@ from fuel_predictor.application.similar_operations import (
     VehicleMatch,
 )
 from fuel_predictor.application.vehicles import VehicleCatalog
+from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.delivery.http import (
     CreateDailyOperationRequest,
     execute_create,
@@ -73,6 +74,8 @@ def build_prediction_pages_router(
     vehicle_catalog: VehicleCatalog,
     route_preview: RoutePreviewProvider | None = None,
     find_similar_operations: FindSimilarOperations | None = None,
+    *,
+    events: ImportantEvents,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -226,10 +229,12 @@ def build_prediction_pages_router(
         try:
             prediction = generate_fuel_prediction.execute(operation.operation_id)
         except BaselineModelNotFoundError:
+            events.operation_planned(caller.user.username, operation, None)
             return HTMLResponse(
                 _render_saved_operation(caller, operation, no_active_model=True),
                 status_code=status.HTTP_201_CREATED,
             )
+        events.operation_planned(caller.user.username, operation, prediction)
         return HTMLResponse(
             _render_estimate(caller, prediction, operation, similar=_similar(operation)),
             status_code=status.HTTP_201_CREATED,
@@ -309,6 +314,8 @@ def build_prediction_pages_router(
                 status_code=status.HTTP_409_CONFLICT,
             )
         operation = generate_fuel_prediction.operation_reader.get(operation_id)
+        if operation is not None:
+            events.operation_planned(caller.user.username, operation, prediction)
         return HTMLResponse(
             _render_estimate(caller, prediction, operation, similar=_similar(operation)),
             status_code=status.HTTP_201_CREATED,

@@ -39,7 +39,9 @@
     <dl class="detail-list">
       <dt>Status</dt><dd>{{ ui.badge('Aktif', 'success') if user.is_active else ui.badge('Nonaktif', 'neutral') }}</dd>
       <dt>Terakhir masuk</dt><dd>{% if activity.last_sign_in %}{{ activity.last_sign_in | waktu }}{% else %}Belum pernah{% endif %}</dd>
-      <dt>Masuk 30 hari terakhir</dt><dd>{{ activity.sign_ins_recent }} kali{% if activity.failed_sign_ins_recent %} · <span class="text-danger">{{ activity.failed_sign_ins_recent }} kali gagal</span>{% endif %}</dd>
+      {% if activity.failed_sign_ins_recent %}
+      <dt>Gagal masuk (30 hari)</dt><dd><span class="text-danger">{{ activity.failed_sign_ins_recent }} kali</span></dd>
+      {% endif %}
     </dl>
     <div class="button-row">
       <button type="button" class="button button--secondary" data-dialog="atur-ulang">Atur ulang kata sandi</button>

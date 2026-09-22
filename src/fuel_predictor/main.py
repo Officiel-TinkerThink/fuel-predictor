@@ -110,6 +110,7 @@ from fuel_predictor.delivery.authentication import (
 )
 from fuel_predictor.delivery.bulk_prediction_pages import build_bulk_prediction_pages_router
 from fuel_predictor.delivery.dashboard import build_dashboard_router
+from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.delivery.health import build_health_router
 from fuel_predictor.delivery.historical_dataset_pages import (
     build_historical_dataset_pages_router,
@@ -354,7 +355,7 @@ def create_app(
     password_hasher = ScryptPasswordHasher()
     record_audit = RecordAuditEvent(audit_repository)
     sign_in = SignIn(user_repository, session_repository, password_hasher, record_audit)
-    sign_out = SignOut(session_repository, record_audit)
+    sign_out = SignOut(session_repository)
     resolve_session = ResolveSession(
         user_repository,
         session_repository,
@@ -372,6 +373,7 @@ def create_app(
     )
     change_own_password = ChangeOwnPassword(user_repository, password_hasher, change_password)
     user_activity = SqlAlchemyUserActivityRepository(session_factory)
+    events = ImportantEvents(record_audit)
     reset_mailer = (
         password_reset_mailer
         if password_reset_mailer is not None
@@ -582,12 +584,14 @@ def create_app(
             resolved_vehicle_catalog,
             resolved_route_preview,
             find_similar_operations,
+            events=events,
         )
     )
     app.include_router(
         build_bulk_prediction_pages_router(
             bulk_operation_prediction,
             guard,
+            events=events,
         )
     )
     app.include_router(
@@ -596,6 +600,7 @@ def create_app(
             bulk_actual_fuel,
             list_awaiting_actual,
             guard,
+            events=events,
         )
     )
     app.include_router(
@@ -614,6 +619,7 @@ def create_app(
             get_candidate_model_comparison,
             get_model_governance_dashboard,
             get_monitoring_dashboard,
+            events=events,
         )
     )
     app.include_router(
@@ -621,6 +627,7 @@ def create_app(
             import_historical_dataset,
             train_baseline_candidate,
             guard,
+            events=events,
         )
     )
     app.include_router(
@@ -630,6 +637,7 @@ def create_app(
             get_candidate_model_comparison,
             get_model_governance_dashboard,
             guard,
+            events=events,
         )
     )
     app.include_router(
@@ -639,6 +647,7 @@ def create_app(
             artifact_store,
             register_ingested_package,
             guard,
+            events=events,
         )
     )
     app.include_router(

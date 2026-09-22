@@ -141,7 +141,9 @@ def test_authentication_and_privileged_actions_are_audited(tmp_path: Path) -> No
     assert audit.status_code == 200
     actions = [record["action"] for record in audit.json()["records"]]
     assert "sign_in_failed" in actions
-    assert "sign_in_succeeded" in actions
+    # A successful sign-in is not an audit event: the trail records what an
+    # administrator would want to reconstruct, not traffic.
+    assert "sign_in_succeeded" not in actions
     assert "user_created" in actions
     for record in audit.json()["records"]:
         assert record["occurred_at"]

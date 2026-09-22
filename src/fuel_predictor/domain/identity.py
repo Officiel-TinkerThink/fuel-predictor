@@ -91,6 +91,9 @@ class User:
     # Stored normalised (trimmed, lower-cased) and unique when present, so it
     # can stand in for the username at sign-in.
     email: str | None = None
+    # Kept here rather than as an audit row per sign-in: a sign of life is
+    # one value per person, not a log entry per day.
+    last_sign_in_at: datetime | None = None
 
     def allows(self, capability: Capability) -> bool:
         return self.is_active and role_allows(self.role, capability)

@@ -77,6 +77,12 @@ class SqlAlchemyUserRepository:
             row.password_hash = user.password_hash
             row.is_active = user.is_active
 
+    def record_sign_in(self, user_id: str, moment: datetime) -> None:
+        with self._session_factory.begin() as session:
+            row = session.get(UserRow, user_id)
+            if row is not None:
+                row.last_sign_in_at = moment
+
 
 class SqlAlchemyPasswordResetTokenRepository:
     def __init__(self, session_factory: SessionFactory) -> None:
@@ -218,15 +224,6 @@ class SqlAlchemyAuditRepository:
             )
         return tuple(_audit_record(row) for row in rows)
 
-    def last_occurrence(self, action: str, subject: str) -> datetime | None:
-        with self._session_factory() as session:
-            moment = session.execute(
-                select(func.max(AuditRecordRow.occurred_at)).where(
-                    AuditRecordRow.action == action, AuditRecordRow.subject == subject
-                )
-            ).scalar_one_or_none()
-        return _aware(moment) if moment is not None else None
-
     def count_recent_by_actor(self, actor: str, action_prefix: str, since: datetime) -> int:
         with self._session_factory() as session:
             return int(
@@ -266,6 +263,7 @@ def _user(row: UserRow) -> User:
         is_active=row.is_active,
         created_at=_aware(row.created_at),
         email=row.email,
+        last_sign_in_at=_aware(row.last_sign_in_at) if row.last_sign_in_at is not None else None,
     )
 
 
@@ -306,9 +304,11 @@ class SqlAlchemyAgentClientRepository:
 
     def list_clients(self) -> tuple[AgentClient, ...]:
         with self._session_factory() as session:
-            rows = session.execute(
-                select(AgentClientRow).order_by(AgentClientRow.created_at.desc())
-            ).scalars().all()
+            rows = (
+                session.execute(select(AgentClientRow).order_by(AgentClientRow.created_at.desc()))
+                .scalars()
+                .all()
+            )
         return tuple(_agent(row) for row in rows)
 
     def replace(self, client: AgentClient) -> None:

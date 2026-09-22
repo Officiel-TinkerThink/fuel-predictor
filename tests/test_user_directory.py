@@ -135,7 +135,8 @@ def test_a_persons_page_shows_profile_activity_operations_and_trail(tmp_path: Pa
     assert 'name="full_name"' in page and 'name="email"' in page and 'name="role"' in page
     assert "Atur ulang kata sandi" in page and "Nonaktifkan" in page
     assert f'href="/operasi-harian/{operation_id}"' in page
-    assert "Masuk berhasil" in page  # the audit trail, in words
+    assert "Pengguna dibuat" in page  # the audit trail, in words
+    assert "Operasi direncanakan" in page and "BBM aktual dicatat" in page
     assert missing.status_code == 404
 
 

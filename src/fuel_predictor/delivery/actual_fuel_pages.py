@@ -16,6 +16,7 @@ from fuel_predictor.application.actual_fuel import (
 from fuel_predictor.application.bulk_actual_fuel import BulkActualFuel
 from fuel_predictor.application.daily_operations import DailyOperationNotFoundError
 from fuel_predictor.application.historical_datasets import HistoricalDatasetImportError
+from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.delivery.http import ActualFuelRequest, translate_validation_errors
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
@@ -32,6 +33,8 @@ def build_actual_fuel_pages_router(
     bulk_actual_fuel: BulkActualFuel,
     list_awaiting_actual: ListOperationsAwaitingActualFuel,
     guard: SecurityGuard,
+    *,
+    events: ImportantEvents,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -62,6 +65,7 @@ def build_actual_fuel_pages_router(
                     recorded_by=caller.user.username,
                 )
             )
+            events.actual_fuel_recorded(caller.user.username, record)
         except ValidationError as error:
             return HTMLResponse(
                 _form(caller, submitted, translate_validation_errors(error.errors())),
@@ -116,11 +120,11 @@ def build_actual_fuel_pages_router(
     async def submit_bulk_form(request: Request, file: UploadFile = _UPLOAD_FILE) -> HTMLResponse:
         caller = guard.require_caller(request)
         try:
+            filename = file.filename or "berkas-bbm-aktual"
             result = bulk_actual_fuel.execute(
-                file.filename or "berkas-bbm-aktual",
-                await file.read(),
-                actor=caller.user.username,
+                filename, await file.read(), actor=caller.user.username
             )
+            events.bulk_actual_imported(caller.user.username, filename, result)
         except HistoricalDatasetImportError as error:
             return HTMLResponse(
                 _render_bulk_form(caller, error.message),

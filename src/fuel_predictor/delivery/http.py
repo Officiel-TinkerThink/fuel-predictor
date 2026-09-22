@@ -47,6 +47,7 @@ from fuel_predictor.application.model_lifecycle import (
     PromoteCandidateModel,
 )
 from fuel_predictor.application.monitoring import GetMonitoringDashboard, MonitoringDashboard
+from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.domain.actual_fuel import ActualFuelMeasurementSource, ActualFuelRecord
 from fuel_predictor.domain.daily_operation import (
     ActivityMode,
@@ -388,6 +389,7 @@ def build_router(
     get_candidate_model_comparison: GetCandidateModelComparison,
     get_model_governance_dashboard: GetModelGovernanceDashboard,
     get_monitoring_dashboard: GetMonitoringDashboard,
+    events: ImportantEvents,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -403,6 +405,7 @@ def build_router(
         operation = execute_create(
             request, create_daily_operation, created_by=actor_of(http_request)
         )
+        events.operation_planned(actor_of(http_request), operation, None)
         return _operation_response(operation)
 
     @router.get(
@@ -419,10 +422,13 @@ def build_router(
         response_model=HistoricalDatasetImportResponse,
         status_code=status.HTTP_201_CREATED,
     )
-    async def import_dataset(file: UploadFile = _UPLOAD_FILE) -> HistoricalDatasetImportResponse:
+    async def import_dataset(
+        http_request: Request, file: UploadFile = _UPLOAD_FILE
+    ) -> HistoricalDatasetImportResponse:
         result = import_historical_dataset.execute(
             file.filename or "berkas-impor", await file.read()
         )
+        events.historical_dataset_imported(actor_of(http_request), result.dataset_version)
         return _historical_dataset_import_response(result)
 
     @router.get("/api/v1/bulk-operation-predictions/template")
@@ -454,11 +460,11 @@ def build_router(
         http_request: Request,
         file: UploadFile = _UPLOAD_FILE,
     ) -> BulkOperationPredictionResponse:
+        filename = file.filename or "berkas-prediksi-operasi"
         result = bulk_operation_prediction.execute(
-            file.filename or "berkas-prediksi-operasi",
-            await file.read(),
-            actor=actor_of(http_request),
+            filename, await file.read(), actor=actor_of(http_request)
         )
+        events.bulk_prediction_imported(actor_of(http_request), filename, result)
         return _bulk_prediction_response(result)
 
     @router.get("/api/v1/bulk-actual-fuel/template")
@@ -485,9 +491,9 @@ def build_router(
     async def record_bulk_actual_fuel(
         http_request: Request, file: UploadFile = _UPLOAD_FILE
     ) -> BulkActualFuelResponse:
-        result = bulk_actual_fuel.execute(
-            file.filename or "berkas-bbm-aktual", await file.read(), actor=actor_of(http_request)
-        )
+        filename = file.filename or "berkas-bbm-aktual"
+        result = bulk_actual_fuel.execute(filename, await file.read(), actor=actor_of(http_request))
+        events.bulk_actual_imported(actor_of(http_request), filename, result)
         return _bulk_actual_fuel_response(result)
 
     @router.get(
@@ -505,8 +511,10 @@ def build_router(
         response_model=ModelVersionResponse,
         status_code=status.HTTP_201_CREATED,
     )
-    def train_baseline(dataset_version_id: str) -> ModelVersionResponse:
-        return _model_response(train_baseline_candidate.execute(dataset_version_id))
+    def train_baseline(dataset_version_id: str, http_request: Request) -> ModelVersionResponse:
+        model = train_baseline_candidate.execute(dataset_version_id)
+        events.model_candidate_trained(actor_of(http_request), model)
+        return _model_response(model)
 
     @router.get(
         "/api/v1/model-candidates/{model_version_id}/comparison",
@@ -519,8 +527,13 @@ def build_router(
         "/api/v1/model-candidates/{model_version_id}/promote",
         response_model=ModelVersionResponse,
     )
-    def promote_candidate(model_version_id: str) -> ModelVersionResponse:
-        return _model_response(promote_candidate_model.execute(model_version_id))
+    def promote_candidate(model_version_id: str, http_request: Request) -> ModelVersionResponse:
+        previous = get_model_governance_dashboard.execute().active_model
+        model = promote_candidate_model.execute(model_version_id)
+        events.model_promoted(
+            actor_of(http_request), model, previous.model_version_id if previous else None
+        )
+        return _model_response(model)
 
     @router.get(
         "/api/v1/model-governance-dashboard",
@@ -551,8 +564,11 @@ def build_router(
         response_model=FuelPredictionResponse,
         status_code=status.HTTP_201_CREATED,
     )
-    def generate_prediction(operation_id: str) -> FuelPredictionResponse:
-        return _prediction_response(generate_fuel_prediction.execute(operation_id))
+    def generate_prediction(operation_id: str, http_request: Request) -> FuelPredictionResponse:
+        prediction = generate_fuel_prediction.execute(operation_id)
+        operation = get_daily_operation.execute(operation_id)
+        events.operation_planned(actor_of(http_request), operation, prediction)
+        return _prediction_response(prediction)
 
     @router.post(
         "/api/v1/daily-operations/{operation_id}/actual-fuel",
@@ -562,16 +578,16 @@ def build_router(
     def record_actual(
         operation_id: str, request: ActualFuelRequest, http_request: Request
     ) -> ActualFuelResponse:
-        return _actual_fuel_response(
-            record_actual_fuel.execute(
-                RecordActualFuelCommand(
-                    operation_id=operation_id,
-                    actual_fuel_liters=request.actual_fuel_liters,
-                    measurement_source=request.measurement_source,
-                    recorded_by=actor_of(http_request),
-                )
+        record = record_actual_fuel.execute(
+            RecordActualFuelCommand(
+                operation_id=operation_id,
+                actual_fuel_liters=request.actual_fuel_liters,
+                measurement_source=request.measurement_source,
+                recorded_by=actor_of(http_request),
             )
         )
+        events.actual_fuel_recorded(actor_of(http_request), record)
+        return _actual_fuel_response(record)
 
     @router.get("/api/v1/prediction-performance", response_model=PredictionPerformanceResponse)
     def get_performance() -> PredictionPerformanceResponse:
