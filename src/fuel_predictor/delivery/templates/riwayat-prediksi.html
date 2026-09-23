@@ -4,7 +4,7 @@
 {% block content %}
 
 <section class="card">
-  {{ ui.listing_toolbar(listing, placeholder='Kendaraan, lokasi, atau ID operasi') }}
+  {{ ui.listing_toolbar(listing, placeholder='Kendaraan, lokasi, atau kode operasi') }}
   {% if listing.items %}
   <div class="table-wrap">
     <table class="table--sortable">
@@ -21,14 +21,14 @@
       <tbody>
         {% for item in listing.items %}
         <tr>
-          <td data-label="Diprediksi">{{ item.predicted_at | waktu }}<br><code class="mono-id">{{ item.operation_id }}</code></td>
+          <td data-label="Diprediksi">{{ item.predicted_at | waktu }}<br>{{ ui.operation_code(item) }}</td>
           <td data-label="Kendaraan"><a href="/operasi-harian/{{ item.operation_id }}">{{ item.vehicle or item.vehicle_category.value }}</a></td>
           <td data-label="Rute">{% if item.departure %}{{ item.departure }} → {{ item.destination }}{% if item.stop_count > 2 %} <span class="hint">(+{{ item.stop_count - 2 }})</span>{% endif %}{% else %}—{% endif %}</td>
           <td class="numeric" data-label="Jarak">{{ item.total_distance_km | angka }} km</td>
           <td class="numeric" data-label="Alokasi">{{ item.recommended_allocation_liters | angka }} L</td>
           <td data-label="Aktual">
             {% if item.actual_fuel_liters is not none %}{{ ui.badge((item.actual_fuel_liters | angka) ~ ' L', 'success') }}
-            {% else %}<a class="button button--secondary button--small" href="/bahan-bakar-aktual?operation_id={{ item.operation_id }}">Catat</a>{% endif %}
+            {% else %}<a class="button button--secondary button--small" href="/bahan-bakar-aktual?operation_id={{ ui.operation_ref(item) }}">Catat</a>{% endif %}
           </td>
         </tr>
         {% endfor %}

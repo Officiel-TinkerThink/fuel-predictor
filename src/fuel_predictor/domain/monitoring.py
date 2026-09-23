@@ -56,6 +56,7 @@ class MissingActualPrediction:
     operation_id: str
     created_at: datetime
     vehicle_category: VehicleCategory
+    operation_code: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

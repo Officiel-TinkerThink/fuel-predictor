@@ -38,6 +38,7 @@ class RecentOperation:
     vehicle: str | None
     total_distance_km: float
     has_actual: bool
+    operation_code: str | None = None
 
 
 class UserActivityReader(Protocol):

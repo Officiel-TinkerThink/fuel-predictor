@@ -21,20 +21,22 @@ def test_page_lists_predicted_operations_without_actual_fuel_newest_first(
 ) -> None:
     with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
         _train_baseline(client)
-        older = _operation_with_prediction(client, 24)["operation"]["operation_id"]
-        newer = _operation_with_prediction(client, 36)["operation"]["operation_id"]
+        older = _operation_with_prediction(client, 24)["operation"]["operation_code"]
+        newer = _operation_with_prediction(client, 36)["operation"]["operation_code"]
 
         page = client.get("/bahan-bakar-aktual").text
 
-    assert page.index(newer) < page.index(older)
+    # Made in the same minute, the codes differ only by a suffix, so each is
+    # matched with its closing quote.
+    assert page.index(f'operation_id={newer}"') < page.index(f'operation_id={older}"')
     assert f'href="/bahan-bakar-aktual?operation_id={newer}"' in page
 
 
 def test_an_operation_leaves_the_list_once_its_actual_fuel_is_recorded(tmp_path: Path) -> None:
     with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
         _train_baseline(client)
-        done = _operation_with_prediction(client, 24)["operation"]["operation_id"]
-        waiting = _operation_with_prediction(client, 36)["operation"]["operation_id"]
+        done = _operation_with_prediction(client, 24)["operation"]["operation_code"]
+        waiting = _operation_with_prediction(client, 36)["operation"]["operation_code"]
         client.post(
             f"/api/v1/daily-operations/{done}/actual-fuel",
             json={"actual_fuel_liters": 20, "measurement_source": "fuel_meter"},
@@ -42,8 +44,8 @@ def test_an_operation_leaves_the_list_once_its_actual_fuel_is_recorded(tmp_path:
 
         page = client.get("/bahan-bakar-aktual").text
 
-    assert waiting in page
-    assert done not in page
+    assert f'href="/bahan-bakar-aktual?operation_id={waiting}"' in page
+    assert f'href="/bahan-bakar-aktual?operation_id={done}"' not in page
 
 
 def test_an_operation_without_a_prediction_is_not_offered(tmp_path: Path) -> None:
@@ -85,12 +87,12 @@ def test_the_page_says_so_when_nothing_is_waiting(tmp_path: Path) -> None:
 def test_waiting_list_does_not_drop_operations_after_twenty(tmp_path: Path) -> None:
     with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
         _train_baseline(client)
-        ids = [
-            _operation_with_prediction(client, 20 + index)["operation"]["operation_id"]
+        codes = [
+            _operation_with_prediction(client, 20 + index)["operation"]["operation_code"]
             for index in range(21)
         ]
         page = client.get("/bahan-bakar-aktual").text
 
-    for operation_id in ids:
-        assert f'href="/bahan-bakar-aktual?operation_id={operation_id}"' in page
+    for code in codes:
+        assert f'href="/bahan-bakar-aktual?operation_id={code}"' in page
     assert 'data-list-label="Menunggu BBM aktual"' in page

@@ -19,14 +19,20 @@
   {{ ui.metric('Rentang ketidakpastian', (prediction.uncertainty_lower_liters | angka) ~ '–' ~ (prediction.uncertainty_upper_liters | angka), unit='L') }}
 </div>
 
+{% if operation and operation.operation_code %}
+{{ ui.operation_code_callout(operation) }}
+{% endif %}
+
 <div class="button-row result-actions">
   <a class="button" href="/prediksi">Buat operasi lain</a>
-  <a class="button button--secondary" href="/bahan-bakar-aktual?operation_id={{ prediction.operation_id }}">Catat BBM aktual untuk operasi ini</a>
+  <a class="button button--secondary" href="/bahan-bakar-aktual?operation_id={{ (operation and operation.operation_code) or prediction.operation_id }}">Catat BBM aktual untuk operasi ini</a>
 </div>
 
 <section class="card">
   <dl class="detail-list">
+    {% if not (operation and operation.operation_code) %}
     <dt>ID operasi</dt><dd><strong>{{ prediction.operation_id }}</strong> <button type="button" class="button button--secondary button--small" data-copy="{{ prediction.operation_id }}" hidden>Salin ID</button></dd>
+    {% endif %}
     {% if operation %}
     {% if operation.vehicle %}<dt>Kendaraan</dt><dd>{{ operation.vehicle }}{% if prediction.input_snapshot.vehicle_group and prediction.input_snapshot.vehicle_group != 'tidak diketahui' %} <span class="muted">· {{ prediction.input_snapshot.vehicle_type }} · {{ prediction.input_snapshot.vehicle_group }}</span>{% endif %}</dd>{% endif %}
     <dt>Aktivitas</dt><dd>{{ mode_label }}{% if operation.lifting_hours is not none %} · {{ operation.lifting_hours | angka }} jam lifting{% endif %}</dd>
@@ -44,6 +50,7 @@
     <summary>Detail teknis &amp; kebijakan alokasi</summary>
     <p class="hint">{{ prediction.safety_policy }}</p>
     <dl class="detail-list">
+      {% if operation and operation.operation_code %}<dt>ID operasi</dt><dd><code class="mono-id">{{ prediction.operation_id }}</code></dd>{% endif %}
       <dt>Sumber jarak rute</dt><dd>{{ prediction.route_distance_source.value }}</dd>
       <dt>Model</dt><dd>{{ prediction.model.model_version_id }} · {{ prediction.model.algorithm }}</dd>
       <dt>Versi dataset</dt><dd>{{ prediction.model.dataset_version_id }}</dd>

@@ -1,3 +1,4 @@
+import re
 from io import BytesIO
 from pathlib import Path
 
@@ -255,9 +256,7 @@ def test_demo_flow_downloads_imports_and_manually_trains_the_baseline(tmp_path: 
                 "distance_source": "manual",
             },
         )
-        operation_id = operation.text.split("<dt>ID operasi</dt><dd><strong>", 1)[1].split(
-            "</strong>", 1
-        )[0]
+        operation_id = re.findall(r"OPR-[0-9A-F]{32}", operation.text)[0]
         prediction = client.post(f"/operasi-harian/{operation_id}/prediksi")
 
     assert sample.status_code == 200

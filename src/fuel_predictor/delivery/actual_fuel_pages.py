@@ -59,7 +59,7 @@ def build_actual_fuel_pages_router(
             validated = ActualFuelRequest.model_validate(payload)
             record = record_actual_fuel.execute(
                 RecordActualFuelCommand(
-                    operation_id=submitted.get("operation_id", "").strip(),
+                    operation_reference=submitted.get("operation_id", "").strip(),
                     actual_fuel_liters=validated.actual_fuel_liters,
                     measurement_source=validated.measurement_source,
                     recorded_by=caller.user.username,
@@ -95,7 +95,15 @@ def build_actual_fuel_pages_router(
                 _form(
                     caller,
                     submitted,
-                    [{"field": "operation_id", "message": "ID operasi tidak ditemukan."}],
+                    [
+                        {
+                            "field": "operation_id",
+                            "message": (
+                                "Kode operasi tidak ditemukan. Periksa lagi kode yang "
+                                "dicatat saat estimasi dibuat."
+                            ),
+                        }
+                    ],
                 ),
                 status_code=status.HTTP_404_NOT_FOUND,
             )
@@ -108,6 +116,7 @@ def build_actual_fuel_pages_router(
                 active_path="/bahan-bakar-aktual",
                 eyebrow="UMPAN BALIK TERSIMPAN",
                 record=record,
+                operation_code=_operation_code(record_actual_fuel, record.operation_id),
             ),
             status_code=status.HTTP_201_CREATED,
         )
@@ -148,6 +157,11 @@ def build_actual_fuel_pages_router(
         )
 
     return router
+
+
+def _operation_code(record_actual_fuel: RecordActualFuel, operation_id: str) -> str | None:
+    operation = record_actual_fuel.operation_reader.get(operation_id)
+    return operation.operation_code if operation is not None else None
 
 
 def _render_form(

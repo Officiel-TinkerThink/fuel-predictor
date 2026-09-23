@@ -40,10 +40,10 @@
     <li>
       <div class="row-list__main">
         <strong>{{ item.vehicle or item.vehicle_category.value }}{% if item.departure %} · {{ item.departure }} → {{ item.destination }}{% endif %}</strong>
-        <span class="row-list__meta">Diprediksi {{ item.predicted_at | waktu }}</span>
+        <span class="row-list__meta">Diprediksi {{ item.predicted_at | waktu }} · {{ ui.operation_code(item) }}</span>
       </div>
       <span class="row-list__figure">{{ item.recommended_allocation_liters | angka }} L <span class="hint">dialokasikan</span></span>
-      <a class="button button--secondary button--small row-list__action" href="/bahan-bakar-aktual?operation_id={{ item.operation_id }}">Catat</a>
+      <a class="button button--secondary button--small row-list__action" href="/bahan-bakar-aktual?operation_id={{ ui.operation_ref(item) }}">Catat</a>
     </li>
     {% endfor %}
   </ul>

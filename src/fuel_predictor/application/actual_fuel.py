@@ -5,8 +5,8 @@ from math import sqrt
 from typing import Protocol
 
 from fuel_predictor.application.daily_operations import (
-    DailyOperationNotFoundError,
-    DailyOperationReader,
+    DailyOperationLookup,
+    find_daily_operation,
 )
 from fuel_predictor.domain.actual_fuel import (
     ActualFuelMeasurementSource,
@@ -36,7 +36,8 @@ class ActualFuelAlreadyRecordedError(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class RecordActualFuelCommand:
-    operation_id: str
+    # The operation code the operator wrote down, or the `OPR-…` id.
+    operation_reference: str
     actual_fuel_liters: float
     measurement_source: ActualFuelMeasurementSource
     source_filename: str | None = None
@@ -47,17 +48,16 @@ class RecordActualFuelCommand:
 
 @dataclass(frozen=True, slots=True)
 class RecordActualFuel:
-    operation_reader: DailyOperationReader
+    operation_reader: DailyOperationLookup
     actual_fuel_writer: ActualFuelWriter
     now: Callable[[], datetime] = lambda: datetime.now(UTC)
 
     def execute(self, command: RecordActualFuelCommand) -> ActualFuelRecord:
-        if self.operation_reader.get(command.operation_id) is None:
-            raise DailyOperationNotFoundError(command.operation_id)
+        operation = find_daily_operation(self.operation_reader, command.operation_reference)
         if command.actual_fuel_liters <= 0:
             raise ValueError("Bahan bakar aktual harus lebih besar dari 0.")
         record = ActualFuelRecord(
-            operation_id=command.operation_id,
+            operation_id=operation.operation_id,
             actual_fuel_liters=command.actual_fuel_liters,
             measurement_source=command.measurement_source,
             status=ActualFuelStatus.RECORDED,
@@ -88,6 +88,7 @@ class OperationAwaitingActualFuel:
     stop_count: int
     estimated_fuel_requirement_liters: float
     recommended_allocation_liters: float
+    operation_code: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

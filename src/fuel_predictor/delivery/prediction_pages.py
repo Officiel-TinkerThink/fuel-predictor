@@ -255,7 +255,13 @@ def build_prediction_pages_router(
         listing = paginate(
             list_recent_predictions.execute(_HISTORY_MAX),
             ListingQuery.from_params(request.query_params),
-            search=lambda e: [e.operation_id, e.vehicle, e.departure, e.destination],
+            search=lambda e: [
+                e.operation_code,
+                e.operation_id,
+                e.vehicle,
+                e.departure,
+                e.destination,
+            ],
             sorts=_HISTORY_SORTS,
             default_sort="waktu",
         )

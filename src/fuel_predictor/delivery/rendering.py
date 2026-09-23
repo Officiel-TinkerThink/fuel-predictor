@@ -6,7 +6,8 @@ use case, or a domain object's behaviour.
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime, tzinfo
+from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -200,10 +201,22 @@ def format_decimal(value: float | None, digits: int = 2) -> str:
     return f"{grouped},{fraction_part}" if fraction_part else grouped
 
 
-def format_datetime(value: datetime | None) -> str:
+def format_datetime(value: datetime | None, zone: tzinfo = UTC) -> str:
+    """Day and minute in the site's time zone. A naive value is a stored UTC time."""
     if value is None:
         return "-"
-    return value.strftime("%d/%m/%Y %H:%M")
+    aware = value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+    return aware.astimezone(zone).strftime("%d/%m/%Y %H:%M")
+
+
+def configure_site_timezone(zone: tzinfo) -> None:
+    """Show every time on every page in the zone the operators work in.
+
+    One zone per deployment, set once when the application is built; operation
+    codes are formed in the same zone, so the time in a code and the time on
+    the screen next to it always agree.
+    """
+    _ENVIRONMENT.filters["waktu"] = partial(format_datetime, zone=zone)
 
 
 _ENVIRONMENT = build_environment()

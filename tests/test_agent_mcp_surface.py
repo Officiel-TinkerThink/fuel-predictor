@@ -6,6 +6,7 @@ seam any lower would not prove the two halves agree about the token.
 """
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -301,6 +302,8 @@ def test_predict_fuel_returns_a_real_prediction_with_its_safety_framing(
     assert payload["model_version_id"].startswith("MDL-")
     # An agent must be able to tell prepared fuel from verified consumption.
     assert payload["safety_policy"]
+    # The planner writes this down to record the actual fuel later (ADR 0016).
+    assert re.fullmatch(r"\d{6}-\d{4}-TC01", payload["operation_code"])
 
     details = payload["details"]
     assert details["vehicle"] == "Truck Crane 01"

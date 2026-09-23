@@ -1,4 +1,5 @@
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -21,6 +22,10 @@ class ApplicationSettings(BaseSettings):
     initial_safety_margin_liters: float = Field(default=5.0, ge=0)
     max_active_model_mae_liters: float = Field(default=5.0, gt=0)
     missing_actual_after_days: int = Field(default=7, ge=1)
+    # The IANA zone the operators work in. Times are stored in UTC; screens
+    # and operation codes (ADR 0016) show them in this zone, so 09:14 on the
+    # dashboard is 09:14 on the fuel slip.
+    site_timezone: str = "Asia/Jakarta"
     monitoring_drift_share_threshold: float = Field(default=0.5, gt=0, le=1)
     monitoring_rolling_error_window: int = Field(default=7, ge=1)
     monitoring_min_matched_outcomes: int = Field(default=3, ge=1)
@@ -86,6 +91,21 @@ class ApplicationSettings(BaseSettings):
     alert_smtp_use_starttls: bool = True
     alert_email_sender: str = ""
     alert_email_recipients: str = ""
+
+    @field_validator("site_timezone")
+    @classmethod
+    def validate_site_timezone(cls, value: str) -> str:
+        try:
+            ZoneInfo(value.strip())
+        except (ZoneInfoNotFoundError, ValueError) as error:
+            raise ValueError(
+                f"Zona waktu '{value}' tidak dikenal. Gunakan nama IANA, misalnya Asia/Jakarta."
+            ) from error
+        return value.strip()
+
+    @property
+    def site_zone(self) -> ZoneInfo:
+        return ZoneInfo(self.site_timezone)
 
     @field_validator("mlflow_tracking_uri")
     @classmethod

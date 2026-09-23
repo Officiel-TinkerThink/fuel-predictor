@@ -7,7 +7,7 @@ from openpyxl.styles import Font, PatternFill
 from openpyxl.worksheet.worksheet import Worksheet
 
 BULK_ACTUAL_FUEL_TEMPLATE_HEADERS = (
-    "ID Operasi (wajib)",
+    "Kode Operasi (wajib)",
     "Bahan Bakar Aktual (L) (wajib)",
     "Sumber Pengukuran (opsional)",
 )
@@ -32,7 +32,14 @@ def xlsx_template() -> bytes:
     instructions = workbook.create_sheet("Petunjuk")
     instructions.append(("Kolom", "Status", "Petunjuk"))
     _style_header(instructions)
-    instructions.append(("ID Operasi", "Wajib", "Gunakan ID OPR-... yang sudah ada."))
+    instructions.append(
+        (
+            "Kode Operasi",
+            "Wajib",
+            "Kode yang dicatat saat estimasi dibuat, misalnya 260923-0914-VT01. "
+            "Huruf besar/kecil dan spasi tidak berpengaruh. ID OPR-... juga diterima.",
+        )
+    )
     instructions.append(("Bahan Bakar Aktual (L)", "Wajib", "Masukkan angka lebih besar dari 0."))
     instructions.append(
         (
@@ -42,7 +49,7 @@ def xlsx_template() -> bytes:
         )
     )
     instructions.append(
-        ("Hasil", "Informasi", "Baris tanpa ID yang cocok atau nilai tidak valid dikarantina.")
+        ("Hasil", "Informasi", "Baris tanpa kode yang cocok atau nilai tidak valid dikarantina.")
     )
     instructions.column_dimensions["A"].width = 30
     instructions.column_dimensions["B"].width = 18

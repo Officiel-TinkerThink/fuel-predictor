@@ -90,9 +90,18 @@ Hasilnya menampilkan:
 | Rentang ketidakpastian | Batas bawah dan atas yang masuk akal. Rentang lebar = model kurang yakin. |
 | Model yang dipakai | Versi model yang menghitung. Berguna saat menelusuri angka lama. |
 
-![Hasil estimasi: tiga kotak angka — alokasi rekomendasi, estimasi kebutuhan BBM, rentang ketidakpastian — lalu ID operasi dengan tombol Salin ID, kendaraan, aktivitas, rute, jarak total, dan tombol Catat BBM aktual untuk operasi ini.](images/02-hasil-prediksi.png)
+![Hasil estimasi: tiga kotak angka — alokasi rekomendasi, estimasi kebutuhan BBM, rentang ketidakpastian — lalu kode operasi dengan tombol Salin kode, kendaraan, aktivitas, rute, jarak total, dan tombol Catat BBM aktual untuk operasi ini.](images/02-hasil-prediksi.png)
 
 Perhatikan kotak hijau di atas: nilai ini **estimasi bahan bakar disiapkan**, bukan konsumsi aktual yang telah diverifikasi. Kalimat itu selalu ikut ditampilkan.
+
+**Catat kode operasinya.** Setiap operasi mendapat kode pendek, misalnya `260923-0914-VT01`:
+tanggal dan jam operasi itu dibuat (waktu setempat), lalu kendaraannya. Tulis kode ini di nota
+atau catatan BBM. Saat BBM aktualnya dilaporkan nanti, kode inilah yang diketik — huruf besar
+atau kecil tidak berpengaruh.
+
+Kalau kendaraan yang sama dibuatkan operasi dua kali dalam menit yang sama — misalnya tombol
+tertekan dua kali — operasi kedua mendapat akhiran `-2` (`260923-0914-VT01-2`). Catat BBM aktual
+untuk salah satunya saja.
 
 Estimasi yang sudah dibuat bisa dibuka lagi kapan saja dari menu **Riwayat Prediksi**:
 daftarnya terbaru di atas, ada kotak pencarian, dan tiap baris menunjukkan apakah BBM aktualnya
@@ -115,6 +124,9 @@ Aplikasi memproses baris yang benar dan **menahan** baris yang bermasalah. Baris
 ditampilkan beserta alasannya, misalnya `Jam lifting harus lebih besar dari 0 untuk mode yang
 mencakup lifting`.
 
+Setiap baris yang berhasil mendapat kode operasinya sendiri. Unduh hasilnya (CSV): kolom
+**Kode operasi** ada di sebelah baris sumbernya, jadi kode tiap operasi bisa langsung dicatat.
+
 Perbaiki baris tersebut di berkas asli, lalu unggah ulang. Baris yang sudah berhasil tidak
 terhitung dua kali.
 
@@ -132,10 +144,12 @@ Ini bagian yang paling sering terlewat, dan yang paling menentukan.
 memburuk berbulan-bulan tanpa ada yang tahu.
 
 - **Satu per satu:** menu **Catat Aktual**. Daftar *Menunggu BBM aktual* di halaman itu
-  memuat operasi yang belum dilaporkan, terbaru di atas. Tekan **Catat** di baris operasinya —
-  ID-nya terisi sendiri — lalu isi jumlah liter sebenarnya. Halaman hasil estimasi juga punya
+  memuat operasi yang belum dilaporkan, terbaru di atas, masing-masing dengan kode operasinya.
+  Ketik kode yang Anda catat, atau tekan **Catat** di baris operasinya — kodenya terisi sendiri —
+  lalu isi jumlah liter sebenarnya. Halaman hasil estimasi juga punya
   tombol **Catat BBM aktual untuk operasi ini** yang langsung ke formulir yang sama.
-- **Sekaligus:** menu **Impor Massal**, pakai templatnya, sama seperti prediksi massal.
+- **Sekaligus:** menu **Impor Massal**, pakai templatnya, sama seperti prediksi massal. Isi
+  kolom **Kode Operasi** dengan kode yang dicatat; ID lama `OPR-…` juga masih diterima.
 
 Lakukan ini rutin — mingguan sudah cukup.
 

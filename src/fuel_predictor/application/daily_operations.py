@@ -1,6 +1,6 @@
-from collections.abc import Callable
-from dataclasses import dataclass
-from datetime import UTC, datetime
+from collections.abc import Callable, Collection
+from dataclasses import dataclass, replace
+from datetime import UTC, datetime, tzinfo
 from typing import Protocol
 from uuid import uuid4
 
@@ -17,18 +17,42 @@ from fuel_predictor.domain.daily_operation import (
     VehicleCategory,
     validate_stop_sequence,
 )
+from fuel_predictor.domain.operation_code import (
+    next_free_operation_code,
+    normalize_operation_reference,
+    operation_code_base,
+)
 
 
 class DailyOperationWriter(Protocol):
-    def add(self, operation: DailyOperation) -> None: ...
+    def add(self, operation: DailyOperation) -> None:
+        """Store the operation; raise OperationCodeTakenError if its code is held."""
+        ...
+
+    def codes_taken(self, base: str) -> Collection[str]:
+        """The stored codes that are `base` itself or `base` with a suffix."""
+        ...
 
 
 class DailyOperationReader(Protocol):
     def get(self, operation_id: str) -> DailyOperation | None: ...
 
 
+class DailyOperationLookup(DailyOperationReader, Protocol):
+    def get_by_code(self, operation_code: str) -> DailyOperation | None: ...
+
+
 class DailyOperationNotFoundError(LookupError):
     pass
+
+
+class OperationCodeTakenError(ValueError):
+    """Another operation was stored with this code first."""
+
+
+# Each retry means another request stored the same vehicle in the same minute
+# between our lookup and our insert. More than a few in a row is not a race.
+_CODE_ATTEMPTS = 5
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,11 +79,13 @@ class CreateDailyOperation:
         routing_provider: RoutingProvider | None = None,
         operation_id_factory: Callable[[], str] | None = None,
         now: Callable[[], datetime] | None = None,
+        site_timezone: tzinfo = UTC,
     ) -> None:
         self._repository = repository
         self._routing_provider = routing_provider or UnavailableRoutingProvider()
         self._operation_id_factory = operation_id_factory or _new_operation_id
         self._now = now or (lambda: datetime.now(UTC))
+        self._site_timezone = site_timezone
 
     def execute(self, command: CreateDailyOperationCommand) -> DailyOperation:
         validate_stop_sequence(command.stop_sequence)
@@ -97,8 +123,24 @@ class CreateDailyOperation:
             created_by=command.created_by,
             created_at=self._now(),
         )
-        self._repository.add(operation)
-        return operation
+        return self._store_with_code(operation)
+
+    def _store_with_code(self, operation: DailyOperation) -> DailyOperation:
+        assert operation.created_at is not None
+        base = operation_code_base(
+            operation.created_at.astimezone(self._site_timezone), operation.vehicle
+        )
+        for _ in range(_CODE_ATTEMPTS):
+            coded = replace(
+                operation,
+                operation_code=next_free_operation_code(base, self._repository.codes_taken(base)),
+            )
+            try:
+                self._repository.add(coded)
+            except OperationCodeTakenError:
+                continue
+            return coded
+        raise OperationCodeTakenError(base)
 
 
 class GetDailyOperation:
@@ -110,6 +152,19 @@ class GetDailyOperation:
         if operation is None:
             raise DailyOperationNotFoundError(operation_id)
         return operation
+
+
+def find_daily_operation(lookup: DailyOperationLookup, reference: str) -> DailyOperation:
+    """The operation a person pointed at, by its operation code or its `OPR-…` id.
+
+    Codes are what people write down (ADR 0016); ids still arrive from links,
+    older sheets and API clients. Either is read ignoring case and spaces.
+    """
+    normalized = normalize_operation_reference(reference)
+    operation = lookup.get(reference.strip()) or lookup.get_by_code(normalized)
+    if operation is None:
+        raise DailyOperationNotFoundError(reference)
+    return operation
 
 
 def _new_operation_id() -> str:

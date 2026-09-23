@@ -5,6 +5,26 @@
 <span class="badge badge--{{ tone }}">{{ text }}</span>
 {%- endmacro %}
 
+{# An operation as a person refers to it: its operation code (ADR 0016), or the
+   OPR-… id for imported history, which has none. #}
+{% macro operation_code(item) -%}
+<code class="operation-code">{{ item.operation_code or item.operation_id }}</code>
+{%- endmacro %}
+
+{# The same, spelled plainly for links and form values. #}
+{% macro operation_ref(item) -%}{{ item.operation_code or item.operation_id }}{%- endmacro %}
+
+{# The code to write on the fuel slip, big enough to read off the screen, with
+   a copy button once scripts run. #}
+{% macro operation_code_callout(operation) -%}
+<section class="card operation-code-callout" aria-labelledby="operation-code-heading">
+  <p class="operation-code-callout__label" id="operation-code-heading">Kode operasi — catat kode ini</p>
+  <p class="operation-code-callout__code"><code class="operation-code">{{ operation.operation_code }}</code>
+    <button type="button" class="button button--secondary button--small" data-copy="{{ operation.operation_code }}" hidden>Salin kode</button></p>
+  <p class="hint">Tulis di nota atau catatan BBM. Kode ini yang diketik saat mencatat BBM aktual nanti.</p>
+</section>
+{%- endmacro %}
+
 {% macro metric(label, value, unit=none, context=none, unavailable=false, href=none) -%}
 {# With href the whole tile is the link to the page that explains the number. #}
 <{{ 'a' if href else 'div' }} class="metric{% if href %} metric--link{% endif %}"{% if href %} href="{{ href }}"{% endif %}>
