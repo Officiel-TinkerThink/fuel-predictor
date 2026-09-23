@@ -5,7 +5,9 @@
 - **Daily operation**: one row representing a vehicle category's complete activity sequence for a day, including travel, lifting where applicable, and return travel.
 - **ANGBER**: *Angkutan Berat*; the heavy-equipment category used for a daily operation.
 - **Prepared fuel**: fuel newly issued for a daily operation. It is the only current target label and is not yet verified actual consumption.
-- **Actual fuel**: post-operation, ground-truth fuel consumption recorded later against an operation ID.
+- **Actual fuel**: post-operation, ground-truth fuel consumption recorded later against an operation, named by its operation code or operation ID.
+- **Operation code** (kode operasi): the short identifier an operator writes down when a prediction is made and types back to record actual fuel — `260923-0914-VT01`: creation time in site-local time, then the vehicle. Fixed at creation; unique, with `-2`, `-3` for the same vehicle within one minute (ADR 0016). _Avoid_: prediction ID (actual fuel belongs to the operation, not to one of its predictions).
+- **Operation ID**: the internal `OPR-…` key of an operation. Still accepted wherever a code is, but never what a person is asked to copy.
 - **Stop sequence**: ordered locations supplied by a planner, such as depot → site A → site B → depot. The entered order is authoritative.
 - **Estimated fuel requirement**: the predicted fuel value shown while prepared fuel remains the training label.
 - **Recommended allocation**: a conservative fuel amount derived from the estimate and uncertainty, intended to reduce shortages.
