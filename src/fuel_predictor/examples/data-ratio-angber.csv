@@ -1,0 +1,25 @@
+﻿Data Konsumsi BBM,,Data Konsumsi BBM,,,,,,,,,,,,,,,
+No,Nama Kendaraan,Type Kendaraan,Tahun Pembuatan,HP,Rear Body,Rute,Drive Ratio (KM/L),Lift Ratio (L/Jam),Safety Factor (L),Estimasi Drive (Km),Estimasi Lift (Jam),Rekomendasi BBM (Liter),Daily Penggunaan Sebelum ada efisiensi,BBM Cons by Fuel Stick (KM/L),Berapa Lifting ? Jam,Berapa jaraka,Total BBM
+1.0,Truck Crane 01,Scania P410B 8x4,2020.0,410.0,Palfinger PK74002 20 Ton (2020) + Flat bed 8-9 Meter,Flexible by Request,2.4,10.6,1.0,34.6,1.0,35.0,100-120,,1.0,20.0,21
+2.0,Truck Crane 02,Scania P410B 8x4,Brand New,410.0,HIAB X-Hipro 858 EP-6 14 Ton (Brand New) + Flat bed 8-9 Meter,Flexible by Request,2.4,10.6,1.0,50.0,1.0,42.0,100-120,,1.0,20.0,21
+3.0,PM 01,Scania P460A 6x6 Tractor Head,2020.0,460.0,Low Bed 50 Ton 12 Meter,Flexible by Request,1.2,,1.0,50.0,,53.0,100-120,,1.0,20.0,19
+4.0,Wheel Crane,Kato NK600RX-60 Ton,2020.0,404.0,Boom Kato NK600RX-60 Ton,Flexible by Request,1.1,14.4,1.0,50.0,1.0,71.0,100-120,,1.0,20.0,36
+5.0,Whinch Truck OFT,Scania P410CB 6x6,2020.0,410.0,Flat Bed 8-9 Meter,Flexible by Request,1.2,,1.0,50.0,,54.0,100-120,,1.0,20.0,19
+6.0,Tronton OFT,HINO FM 260,,,,Flexible by Request,2.2,,1.0,,,,,,1.0,20.0,11
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+Data Konsumsi BBM,,Data Konsumsi BBM,,,,,,,,,,,,,,,
+No,Nama Kendaraan,Type Kendaraan,Tahun Pembuatan,HP,Rear Body,Rute,Drive Ratio (KM/L),Lift Ratio (L/Jam),Safety Factor (L),Estimasi Drive (Km),Estimasi Lift (Jam),Rekomendasi BBM (Liter),Daily Penggunaan Sebelum ada efisiensi,BBM Cons by Fuel Stick (KM/L),,,
+1.0,VT 01 - 12 Ton 6x6,Scania P410 6X6,2022 (Brand New),410.0,Vacuum Tank 12 KLiter,Flexible (Air Bersih),1.5,,1.0,59.4,,50.0,130.0,,,20.0,16
+2.0,VT 02 - 12 Ton 6x6,Scania P410 6X6,2022 (Brand New),410.0,Vacuum Tank 12 KLiter,Limau Timur,1.3,,1.0,2026-04-26T00:00:00,,35.0,130.0,,,20.0,18
+3.0,VT 03 - 12 Ton 6x6,Scania P410 6X6,2022 (Brand New),410.0,Vacuum Tank 12 KLiter,Limau Barat,1.5,,1.0,47.3,,45.0,130.0,,,20.0,16
+4.0,VT 04 - 12 Ton 6x4,UD Truck Quester CWE 280 64R,2022 (Brand New),280.0,Vacuum Tank 12 KLiter,Limau Barat,1.4,,1.0,45.1,,45.0,130.0,,,20.0,17
+5.0,VT 05 - 12 Ton 6x4,UD Truck Quester CWE 280 64R,2022 (Brand New),280.0,Vacuum Tank 12 KLiter,Limau Barat,1.4,,1.0,47.3,,45.0,130.0,,,20.0,17
+6.0,VT 06 - 12 Ton 6x4,UD Truck Quester CWE 280 64R,2022 (Brand New),280.0,Vacuum Tank 12 KLiter,Limau Barat,1.4,,1.0,73.7,,65.0,130.0,,,20.0,17
+7.0,VT 07 - 12 Ton 6x4,UD Truck Quester CWE 280 64R,2022 (Brand New),280.0,Vacuum Tank 12 KLiter,KRG - TMB - Limau Timur,2.0,,1.0,11.0,,20.0,130.0,,,20.0,12
+8.0,VT 08 - 12 Ton 6x4,UD Truck Quester CWE 280 64R,2022 (Brand New),280.0,Vacuum Tank 12 KLiter,Limau Timur,2.3,,1.0,2026-07-29T00:00:00,,25.0,130.0,,,20.0,11
+9.0,VT 09 - 5 Ton 4x4,Mitsubishi FE HDX Hi-Gear,2020.0,136.0,Vacuum Tank 5 KLiter,Pilona,3.8,,1.0,53.9,,20.0,130.0,,,20.0,7
+10.0,VT 10 - 12 Ton 6x4,Scania P380 6x4,,380.0,Vacuum Tank 12 KLiter,Limau Barat,1.4,,1.0,47.3,,45.0,130.0,,,20.0,17
+11.0,VT 11 - 12 Ton 6x4,Scania P380 6x4,,380.0,Vacuum Tank 12 KLiter,KRG - TMB - Limau Timur,1.3,,1.0,2026-02-13T00:00:00,,25.0,130.0,,,20.0,18
+12.0,VT 12 - 12 Ton 6x4,Scania P380 6x4,,380.0,Vacuum Tank 12 KLiter,Limau Barat,1.4,,1.0,47.3,,45.0,130.0,,,20.0,17
+13.0,VT 13 - 12 Ton 6x4,Scania P380 6x4,,380.0,Vacuum Tank 12 KLiter,Limau Barat,1.4,,1.0,40.7,,40.0,130.0,,,20.0,17
