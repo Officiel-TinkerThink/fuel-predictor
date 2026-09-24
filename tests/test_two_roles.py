@@ -11,6 +11,7 @@ settings page answer 403, and so does the OAuth consent screen, since an
 agent connected there would act with the operator's own access.
 """
 
+import re
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -210,7 +211,8 @@ def test_the_overview_lists_an_operators_operations_waiting_for_actual_fuel(
     overview = operator_client.get("/").text
 
     assert "Menunggu BBM aktual" in overview
-    assert 'href="/bahan-bakar-aktual?operation_id=OPR-' in overview
+    # Offered by the code the operator wrote down (ADR 0016).
+    assert re.search(r'href="/bahan-bakar-aktual\?operation_id=\d{6}-\d{4}', overview)
     assert "HARI INI" in overview
 
 

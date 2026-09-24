@@ -27,6 +27,8 @@ from fuel_predictor.domain.historical_dataset import (
 class BulkActualFuelAcceptedRow:
     source: SourceProvenance
     actual_fuel: ActualFuelRecord
+    # How the operator knows the operation; None only for imported history.
+    operation_code: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,7 +81,7 @@ class BulkActualFuel:
                     issues.append(
                         DataQualityIssue(
                             source,
-                            (CorrectionReason("operation_id", "ID operasi tidak ditemukan."),),
+                            (CorrectionReason("operation_id", "Kode operasi tidak ditemukan."),),
                         )
                     )
                 except ActualFuelAlreadyRecordedError:
@@ -89,22 +91,39 @@ class BulkActualFuel:
                             (
                                 CorrectionReason(
                                     "operation_id",
-                                    "Bahan bakar aktual untuk ID operasi ini sudah tercatat.",
+                                    "Bahan bakar aktual untuk operasi ini sudah tercatat.",
                                 ),
                             ),
                         )
                     )
                 else:
-                    accepted_rows.append(BulkActualFuelAcceptedRow(source, record))
+                    accepted_rows.append(
+                        BulkActualFuelAcceptedRow(source, record, self._operation_code(record))
+                    )
         return BulkActualFuelResult(
             accepted_rows=tuple(accepted_rows),
             correction_report=tuple(issues),
             ignored_blank_row_count=ignored_blank_row_count,
         )
 
+    def _operation_code(self, record: ActualFuelRecord) -> str | None:
+        operation = self._record_actual_fuel.operation_reader.get(record.operation_id)
+        return operation.operation_code if operation is not None else None
+
 
 _HEADER_ALIASES = {
-    "operation_id": {"id operasi", "id operasi wajib", "operation id", "operation_id"},
+    # "ID Operasi" is what the template said before operation codes (ADR 0016);
+    # sheets filled in from it still import.
+    "operation_id": {
+        "kode operasi",
+        "kode operasi wajib",
+        "kode",
+        "id operasi",
+        "id operasi wajib",
+        "operation code",
+        "operation id",
+        "operation_id",
+    },
     "actual_fuel_liters": {
         "bahan bakar aktual l",
         "bahan bakar aktual l wajib",
@@ -145,7 +164,7 @@ def _command_for_row(
     operation_header = mapped_headers.get("operation_id")
     actual_fuel_header = mapped_headers.get("actual_fuel_liters")
     if operation_header is None:
-        issues.append(CorrectionReason("operation_id", "Kolom ID operasi tidak ditemukan."))
+        issues.append(CorrectionReason("operation_id", "Kolom Kode operasi tidak ditemukan."))
     if actual_fuel_header is None:
         issues.append(
             CorrectionReason("actual_fuel_liters", "Kolom Bahan bakar aktual tidak ditemukan.")
@@ -158,7 +177,7 @@ def _command_for_row(
     raw_operation_id = raw_values[operation_header]
     operation_id = str(raw_operation_id).strip() if not is_blank(raw_operation_id) else ""
     if not operation_id:
-        issues.append(CorrectionReason("operation_id", "ID operasi wajib diisi."))
+        issues.append(CorrectionReason("operation_id", "Kode operasi wajib diisi."))
     actual_fuel = _parse_actual_fuel(raw_values[actual_fuel_header], issues)
     if actual_fuel is not None and actual_fuel <= 0:
         issues.append(
@@ -173,7 +192,7 @@ def _command_for_row(
     assert measurement_source is not None
     return (
         RecordActualFuelCommand(
-            operation_id=operation_id,
+            operation_reference=operation_id,
             actual_fuel_liters=actual_fuel,
             measurement_source=measurement_source,
             source_filename=source.source_filename,

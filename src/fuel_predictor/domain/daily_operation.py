@@ -47,6 +47,10 @@ class DailyOperation:
     # and for programs that identify themselves no further.
     created_by: str | None = None
     created_at: datetime | None = None
+    # What the operator writes down and types back (ADR 0016), fixed when the
+    # operation is planned. None on imported history, which nobody records
+    # actual fuel against.
+    operation_code: str | None = None
 
     def __post_init__(self) -> None:
         if not isfinite(self.total_distance_km) or self.total_distance_km <= 0:

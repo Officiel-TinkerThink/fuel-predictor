@@ -98,6 +98,7 @@ def _render_form(caller: "ActiveCaller", error: str | None) -> str:
 
 _RESULT_HEADERS = (
     "Baris sumber",
+    "Kode operasi",
     "ID operasi",
     "Kendaraan",
     "Aktivitas",
@@ -124,6 +125,7 @@ def _results_csv(result: BulkOperationPredictionResult) -> str:
         writer.writerow(
             (
                 f"{row.source.sheet_name} {row.source.row_number}",
+                operation.operation_code or "",
                 operation.operation_id,
                 operation.vehicle or "",
                 operation.activity_mode.value,

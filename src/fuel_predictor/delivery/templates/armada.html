@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+
+{% if not units %}
+{{ ui.empty_state('Katalog kendaraan masih kosong. Administrator memuatnya dengan perintah import-vehicles.') }}
+{% else %}
+
+<section class="card">
+  <h2>Cara membaca kode</h2>
+  {% if example %}
+  <p class="fleet-code-example"><code class="operation-code">260924-0914-{{ example.vehicle_code }}</code></p>
+  <dl class="detail-list">
+    <dt><code class="operation-code">260924-0914</code></dt><dd>Tanggal dan jam operasi dibuat (24 September 2026, 09:14)</dd>
+    <dt><code class="operation-code">{{ example.group_code }}</code></dt><dd>Grup: {{ example.group }}</dd>
+    <dt><code class="operation-code">{{ example.type_code }}</code></dt><dd>Tipe: {{ example.type }}</dd>
+    <dt><code class="operation-code">{{ example.unit_mark }}</code></dt><dd>Unit: {{ example.name }}</dd>
+  </dl>
+  {% endif %}
+  <p class="hint">Unit yang tipenya belum dicatat tidak punya bagian tipe, misalnya
+    <code class="operation-code">VT-VT14</code>. Kode yang sudah terbit tidak pernah berubah.</p>
+</section>
+
+<section class="card">
+  <h2>Grup dan tipe</h2>
+  <dl class="detail-list fleet-taxonomy">
+    {% for group in groups %}
+    <dt>{% if group.code %}<code class="operation-code">{{ group.code }}</code> {% endif %}{{ group.name }}</dt>
+    <dd>
+      <ul class="fleet-taxonomy__types">
+        {% for type in group.types %}
+        <li>{% if type.code %}<code class="operation-code">{{ type.code }}</code> {{ type.name }}{% else %}<span class="muted">Tipe belum dicatat</span>{% endif %}
+          <span class="hint">· {{ type.units | map(attribute='name') | join(', ') }}</span></li>
+        {% endfor %}
+      </ul>
+    </dd>
+    {% endfor %}
+  </dl>
+</section>
+
+<section class="card">
+  <div class="table-wrap">
+    <table data-list data-list-label="Kendaraan">
+      <caption>{{ units | length }} kendaraan</caption>
+      <thead>
+        <tr><th>Kode kendaraan</th><th>Kendaraan</th><th>Grup</th><th>Tipe</th><th>Ejaan lain</th></tr>
+      </thead>
+      <tbody>
+        {% for unit in units %}
+        <tr>
+          <td><code class="operation-code">{{ unit.vehicle_code }}</code></td>
+          <td>{{ unit.name }}</td>
+          <td>{{ unit.group }}</td>
+          <td>{% if unit.type != unit.group %}{{ unit.type }}{% else %}<span class="muted">Belum dicatat</span>{% endif %}</td>
+          <td>{{ unit.aliases | join(', ') or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% endif %}
+
+{% endblock %}

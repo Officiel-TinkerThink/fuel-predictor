@@ -372,6 +372,8 @@ def build_registry(
         similar_limit = int(arguments.get("similar_limit", _DEFAULT_SIMILAR_ON_PREDICT))
         return {
             "operation_id": prediction.operation_id,
+            # What the planner writes down and later records actual fuel against.
+            "operation_code": operation.operation_code,
             "estimated_fuel_requirement_liters": prediction.estimated_fuel_requirement_liters,
             "recommended_allocation_liters": prediction.recommended_allocation_liters,
             "uncertainty_interval_liters": {

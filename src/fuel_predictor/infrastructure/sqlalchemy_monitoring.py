@@ -101,6 +101,7 @@ class SqlAlchemyMonitoringRepository(MonitoringDataReader, MonitoringAlertStore)
                     PredictionRow.operation_id,
                     PredictionRow.created_at,
                     DailyOperationRow.vehicle_category,
+                    DailyOperationRow.operation_code,
                 )
                 .select_from(DailyOperationRow)
                 .join(PredictionRow, PredictionRow.prediction_id == latest_prediction_id)
@@ -120,6 +121,7 @@ class SqlAlchemyMonitoringRepository(MonitoringDataReader, MonitoringAlertStore)
                 operation_id=row.operation_id,
                 created_at=row.created_at,
                 vehicle_category=VehicleCategory(row.vehicle_category),
+                operation_code=row.operation_code,
             )
             for row in rows
         )

@@ -10,6 +10,7 @@ An administrator may change anyone's role except their own: demoting the
 account you are signed in with is how a system ends up with no administrator.
 """
 
+import re
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlencode
@@ -21,6 +22,7 @@ from fuel_predictor.main import create_app
 from tests.test_two_roles import _train_baseline_with_csrf
 
 _ADMIN = ("admin", "kata-sandi-admin-1")
+_OPERATION_ID = re.compile(r"OPR-[0-9A-F]{32}")
 
 
 def _csrf(html: str) -> str:
@@ -85,9 +87,8 @@ def _budi_plans_one(client: TestClient) -> str:
         ),
         headers={"content-type": "application/x-www-form-urlencoded"},
     )
-    operation_id: str = saved.text.split("<dt>ID operasi</dt><dd><strong>", 1)[1].split(
-        "</strong>"
-    )[0]
+    # The code leads the page now; the OPR-… id is still on it for an audit.
+    operation_id: str = _OPERATION_ID.findall(saved.text)[0]
     client.post(
         f"/api/v1/daily-operations/{operation_id}/actual-fuel",
         json={"actual_fuel_liters": 25, "measurement_source": "fuel_meter"},

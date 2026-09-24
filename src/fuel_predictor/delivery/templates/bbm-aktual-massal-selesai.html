@@ -10,12 +10,12 @@
   <div class="table-wrap">
     <table data-list data-list-label="Baris berhasil disimpan">
       <caption>Baris berhasil disimpan</caption>
-      <thead><tr><th>Baris sumber</th><th>ID operasi</th><th class="numeric">Aktual</th><th>Sumber</th></tr></thead>
+      <thead><tr><th>Baris sumber</th><th>Kode operasi</th><th class="numeric">Aktual</th><th>Sumber</th></tr></thead>
       <tbody>
         {% for row in result.accepted_rows %}
         <tr>
           <td>{{ row.source.sheet_name }} {{ row.source.row_number }}</td>
-          <td>{{ row.actual_fuel.operation_id }}</td>
+          <td><code class="operation-code">{{ row.operation_code or row.actual_fuel.operation_id }}</code></td>
           <td class="numeric">{{ row.actual_fuel.actual_fuel_liters | angka }} L</td>
           <td>{{ row.actual_fuel.measurement_source.value }}</td>
         </tr>

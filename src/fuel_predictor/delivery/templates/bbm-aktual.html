@@ -10,7 +10,7 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <fieldset>
       <legend>Hasil operasi</legend>
-      {{ ui.text_field('operation_id', 'ID operasi', values.get('operation_id', ''), hint='Pilih dari daftar di bawah, atau tempel ID OPR-… dari halaman estimasi.', errors=errors, required=true) }}
+      {{ ui.text_field('operation_id', 'Kode operasi', values.get('operation_id', ''), hint='Kode yang dicatat saat estimasi dibuat, misalnya 260924-0914-VT-P410-VT01. Atau pilih Catat di daftar di bawah.', errors=errors, required=true) }}
       {{ ui.number_field('actual_fuel_liters', 'Bahan bakar aktual', 'L', values.get('actual_fuel_liters', ''), hint='BBM yang benar-benar terpakai sepanjang operasi.', errors=errors, required=true, min=0.01) }}
       {{ ui.select_field('measurement_source', 'Sumber pengukuran', [('manual_entry', 'Catatan manual'), ('fuel_meter', 'Meter BBM'), ('receipt', 'Bukti/nota')], values.get('measurement_source', 'manual_entry'), errors=errors) }}
     </fieldset>
@@ -25,18 +25,18 @@
   </div>
   {% if awaiting %}
   <p class="hint">Operasi yang sudah diprediksi tetapi belum dilaporkan hasilnya, terbaru di atas.
-    Pilih <strong>Catat</strong> untuk mengisi ID-nya ke formulir.</p>
+    Pilih <strong>Catat</strong> untuk mengisi kodenya ke formulir.</p>
   <ul class="row-list" data-list data-list-label="Menunggu BBM aktual" data-list-sort="name:Kendaraan,time:Waktu:date,amount:Alokasi:number">
     {% for item in awaiting %}
-    <li data-sort-name="{{ item.vehicle or '' }}" data-sort-time="{{ item.predicted_at }}" data-sort-amount="{{ item.recommended_allocation_liters }}"{% if item.operation_id == values.get('operation_id') %} class="is-selected"{% endif %}>
+    <li data-sort-name="{{ item.vehicle or '' }}" data-sort-time="{{ item.predicted_at }}" data-sort-amount="{{ item.recommended_allocation_liters }}"{% if values.get('operation_id') in (item.operation_id, item.operation_code) %} class="is-selected"{% endif %}>
       <div class="row-list__main">
         <strong>{{ item.vehicle or item.vehicle_category.value }}
           {% if item.departure %}· {{ item.departure }} → {{ item.destination }}{% endif %}</strong>
         <span class="row-list__meta">Diprediksi {{ item.predicted_at | waktu }}{% if item.stop_count > 2 %} · {{ item.stop_count - 2 }} pemberhentian di antaranya{% endif %}
-          · <code>{{ item.operation_id }}</code></span>
+          · {{ ui.operation_code(item) }}</span>
       </div>
       <span class="row-list__figure">{{ item.recommended_allocation_liters | angka }} L <span class="hint">dialokasikan</span></span>
-      <a class="button button--secondary button--small row-list__action" href="/bahan-bakar-aktual?operation_id={{ item.operation_id }}">Catat</a>
+      <a class="button button--secondary button--small row-list__action" href="/bahan-bakar-aktual?operation_id={{ ui.operation_ref(item) }}">Catat</a>
     </li>
     {% endfor %}
   </ul>

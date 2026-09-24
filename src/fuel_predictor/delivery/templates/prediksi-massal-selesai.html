@@ -3,7 +3,7 @@
 
 {% block content %}
 
-{% set summary = accepted_count ~ ' baris valid memperoleh ID operasi dan prediksi.' %}
+{% set summary = accepted_count ~ ' baris valid memperoleh kode operasi dan prediksi. Catat kode tiap operasi, atau unduh hasilnya.' %}
 {% if quarantined_count %}{% set summary = summary ~ ' ' ~ quarantined_count ~ ' baris dikarantina — lihat laporan koreksi di bawah.' %}{% endif %}
 {% if ignored_count %}{% set summary = summary ~ ' ' ~ ignored_count ~ ' baris kosong diabaikan.' %}{% endif %}
 {{ ui.banner('success' if accepted_count else 'warning', 'Rencana operasi sudah diproses', summary) }}
@@ -19,13 +19,13 @@
   <div class="table-wrap">
     <table data-list data-list-label="Baris berhasil diprediksi">
       <thead>
-        <tr><th>Baris sumber</th><th>ID operasi</th><th class="numeric">Estimasi kebutuhan BBM</th><th class="numeric">Alokasi rekomendasi</th></tr>
+        <tr><th>Baris sumber</th><th>Kode operasi</th><th class="numeric">Estimasi kebutuhan BBM</th><th class="numeric">Alokasi rekomendasi</th></tr>
       </thead>
       <tbody>
         {% for row in result.accepted_rows %}
         <tr>
           <td>{{ row.source.sheet_name }} {{ row.source.row_number }}</td>
-          <td><a href="/operasi-harian/{{ row.operation.operation_id }}"><code class="mono-id">{{ row.operation.operation_id }}</code></a></td>
+          <td><a href="/operasi-harian/{{ row.operation.operation_id }}">{{ ui.operation_code(row.operation) }}</a></td>
           <td class="numeric">{{ row.prediction.estimated_fuel_requirement_liters | angka }} L</td>
           <td class="numeric">{{ row.prediction.recommended_allocation_liters | angka }} L</td>
         </tr>

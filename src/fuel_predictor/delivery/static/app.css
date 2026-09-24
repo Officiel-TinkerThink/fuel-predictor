@@ -1112,6 +1112,67 @@ tbody tr.is-selected td {
   overflow-wrap: anywhere;
 }
 
+/* An operation code (ADR 0016) is meant to be read and copied by hand, so
+   unlike an internal id it is not muted, and never breaks mid-code. */
+.operation-code {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.operation-code-callout {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+.operation-code-callout__label {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.operation-code-callout__code {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  margin: var(--space-2) 0;
+}
+
+.fleet-code-example .operation-code {
+  font-size: clamp(1.1rem, 4vw, 1.5rem);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.fleet-taxonomy__types {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+
+.operation-code-callout__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0 0 var(--space-2);
+  font-size: 0.85rem;
+}
+
+.operation-code-callout__legend strong {
+  font-family: var(--font-mono);
+}
+
+.operation-code-callout__code .operation-code {
+  font-size: clamp(1.4rem, 5vw, 2rem);
+  letter-spacing: 0.04em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 /* In a table the wrapper scrolls sideways, so an id stays on one line rather
    than breaking into three; in a row list it must wrap for the phone. */
 table .mono-id {

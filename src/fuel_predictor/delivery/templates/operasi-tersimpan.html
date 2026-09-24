@@ -13,6 +13,10 @@
 {{ ui.banner('warning', 'Jarak manual dipakai', 'Penyedia rute tidak tersedia saat perencanaan. Jarak total manual dipakai untuk estimasi ini.') }}
 {% endif %}
 
+{% if operation.operation_code %}
+{{ ui.operation_code_callout(operation, vehicle) }}
+{% endif %}
+
 <section class="card">
   <dl class="detail-list">
     <dt>ID operasi</dt><dd><strong>{{ operation.operation_id }}</strong></dd>

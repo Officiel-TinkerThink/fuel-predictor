@@ -19,6 +19,8 @@ class SqlAlchemyVehicleRepository:
                 group=row.vehicle_group,
                 aliases=tuple(row.aliases or ()),
                 type=row.vehicle_type,
+                group_code=row.group_code,
+                type_code=row.type_code,
             )
             for row in rows
         )
@@ -48,6 +50,8 @@ class SqlAlchemyVehicleRepository:
                     vehicle_group=vehicle.group,
                     vehicle_type=vehicle.type,
                     aliases=list(vehicle.aliases),
+                    group_code=vehicle.group_code,
+                    type_code=vehicle.type_code,
                 )
                 for vehicle in vehicles
             )

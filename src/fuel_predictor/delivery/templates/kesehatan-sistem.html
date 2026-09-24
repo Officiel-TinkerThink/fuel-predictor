@@ -62,14 +62,14 @@
     hasilnya. Tanpa aktual, model tidak bisa belajar dari operasi ini.</p>
   <div class="table-wrap">
     <table data-list data-list-label="BBM aktual tertunda">
-      <thead><tr><th>Diprediksi</th><th>ID operasi</th><th>Kategori</th><th data-no-sort><span class="visually-hidden">Tindakan</span></th></tr></thead>
+      <thead><tr><th>Diprediksi</th><th>Kode operasi</th><th>Kategori</th><th data-no-sort><span class="visually-hidden">Tindakan</span></th></tr></thead>
       <tbody>
         {% for item in missing_actual_predictions %}
         <tr>
           <td data-sort-value="{{ item.created_at or '' }}">{{ item.created_at | waktu }}</td>
-          <td><code class="mono-id">{{ item.operation_id }}</code></td>
+          <td>{{ ui.operation_code(item) }}</td>
           <td>{{ item.vehicle_category.value }}</td>
-          <td><a class="button button--secondary button--small" href="/bahan-bakar-aktual?operation_id={{ item.operation_id }}">Catat aktual</a></td>
+          <td><a class="button button--secondary button--small" href="/bahan-bakar-aktual?operation_id={{ ui.operation_ref(item) }}">Catat aktual</a></td>
         </tr>
         {% endfor %}
       </tbody>

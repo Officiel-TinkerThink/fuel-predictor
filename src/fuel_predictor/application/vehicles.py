@@ -1,7 +1,10 @@
+import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from hashlib import sha256
 from typing import Protocol
+
+from fuel_predictor.domain.operation_code import vehicle_code, vehicle_mark
 
 # The value every level takes when a unit is not in the catalog. Its own
 # category rather than a missing value: a model can learn that operations with
@@ -30,10 +33,25 @@ class VehicleOption:
     # Defaults to the group: see the class docstring. Kept after `aliases` so
     # the many places that build an option positionally keep working.
     type: str = ""
+    # Short codes the owner gives the group and the type (VT, P410), which make
+    # up the vehicle code. Empty when not given: a type that is only its group
+    # has none, and the vehicle code skips it.
+    group_code: str = ""
+    type_code: str = ""
 
     def __post_init__(self) -> None:
         if not self.type:
             object.__setattr__(self, "type", self.group)
+
+    @property
+    def vehicle_code(self) -> str:
+        """Group - type - unit, as it appears in an operation code: `VT-P410-VT01`."""
+        return vehicle_code(self.group_code, self.type_code, self.name) or self.name
+
+    @property
+    def unit_mark(self) -> str:
+        """The unit's own part of the vehicle code: `VT 01` -> `VT01`."""
+        return vehicle_mark(self.name) or self.name
 
     @property
     def lineage(self) -> "VehicleLineage":
@@ -71,6 +89,47 @@ class VehicleCatalog(Protocol):
     def find(self, name: str) -> VehicleOption | None: ...
 
     def lineage_of(self, name: str | None) -> VehicleLineage: ...
+
+
+class VehicleCatalogError(ValueError):
+    """A fleet sheet whose codes contradict themselves; nothing of it is loaded."""
+
+
+_CODE = re.compile(r"[A-Z0-9]{1,8}")
+
+
+def check_catalog(options: Iterable[VehicleOption]) -> None:
+    """Refuse a fleet whose codes would make two vehicle codes ambiguous.
+
+    One group has one code and one type has one code, wherever they appear;
+    codes are capitals and digits; on a row that is coded, a type the owner
+    named (one that is not just its group) has a code too, or the vehicle code
+    could not tell it apart. A sheet from before codes existed has none and
+    still loads: its vehicle codes are the unit alone.
+    """
+    problems: list[str] = []
+    group_codes: dict[str, str] = {}
+    type_codes: dict[str, str] = {}
+    for option in options:
+        for code, column in ((option.group_code, "kode_grup"), (option.type_code, "kode_tipe")):
+            if code and not _CODE.fullmatch(code):
+                problems.append(
+                    f"{option.name}: {column} '{code}' hanya boleh huruf besar dan angka, "
+                    "paling banyak 8."
+                )
+        if option.group_code and option.type != option.group and not option.type_code:
+            problems.append(f"{option.name}: kode_tipe wajib diisi untuk tipe '{option.type}'.")
+        for name, code, seen, column in (
+            (option.group, option.group_code, group_codes, "kode_grup"),
+            (option.type, option.type_code, type_codes, "kode_tipe"),
+        ):
+            if code and seen.setdefault(name, code) != code:
+                problems.append(
+                    f"{option.name}: {column} '{code}' berbeda dari '{seen[name]}' "
+                    f"yang sudah dipakai untuk '{name}'."
+                )
+    if problems:
+        raise VehicleCatalogError(" ".join(problems))
 
 
 def catalog_fingerprint(options: Iterable[VehicleOption]) -> str:

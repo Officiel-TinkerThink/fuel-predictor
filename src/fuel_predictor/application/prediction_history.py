@@ -25,6 +25,7 @@ class PredictionHistoryEntry:
     estimated_fuel_requirement_liters: float
     recommended_allocation_liters: float
     actual_fuel_liters: float | None
+    operation_code: str | None = None
 
 
 class PredictionHistoryReader(Protocol):

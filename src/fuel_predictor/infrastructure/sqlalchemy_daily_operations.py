@@ -1,9 +1,11 @@
 from collections import defaultdict
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from fuel_predictor.application.daily_operations import OperationCodeTakenError
 from fuel_predictor.domain.daily_operation import (
     ActivityMode,
     DailyOperation,
@@ -24,10 +26,47 @@ class SqlAlchemyDailyOperationRepository:
         self._session_factory = session_factory
 
     def add(self, operation: DailyOperation) -> None:
+        try:
+            self._insert(operation)
+        except IntegrityError:
+            # Only a code that is now held is a lost race worth retrying; any
+            # other violation is a real error.
+            if operation.operation_code is not None and self._code_is_held(
+                operation.operation_code
+            ):
+                raise OperationCodeTakenError(operation.operation_code) from None
+            raise
+
+    def codes_taken(self, base: str) -> set[str]:
+        with self._session_factory() as session:
+            codes = session.scalars(
+                select(DailyOperationRow.operation_code).where(
+                    or_(
+                        DailyOperationRow.operation_code == base,
+                        DailyOperationRow.operation_code.startswith(f"{base}-", autoescape=True),
+                    )
+                )
+            )
+            return {code for code in codes if code is not None}
+
+    def get_by_code(self, operation_code: str) -> DailyOperation | None:
+        with self._session_factory() as session:
+            operation_id = session.scalar(
+                select(DailyOperationRow.operation_id).where(
+                    DailyOperationRow.operation_code == operation_code
+                )
+            )
+        return None if operation_id is None else self.get(operation_id)
+
+    def _code_is_held(self, operation_code: str) -> bool:
+        return self.get_by_code(operation_code) is not None
+
+    def _insert(self, operation: DailyOperation) -> None:
         with self._session_factory.begin() as session:
             session.add(
                 DailyOperationRow(
                     operation_id=operation.operation_id,
+                    operation_code=operation.operation_code,
                     vehicle_category=operation.vehicle_category.value,
                     vehicle=operation.vehicle,
                     activity_mode=operation.activity_mode.value,
@@ -121,4 +160,5 @@ def _to_domain(
         route_distance_manual_fallback=row.route_distance_manual_fallback,
         created_by=row.created_by,
         created_at=row.created_at,
+        operation_code=row.operation_code,
     )

@@ -23,6 +23,7 @@ def test_api_creates_daily_operation_and_returns_generated_id(tmp_path: Path) ->
     assert response.status_code == 201
     assert response.json() == {
         "operation_id": response.json()["operation_id"],
+        "operation_code": response.json()["operation_code"],
         "vehicle_category": "ANGBER",
         "activity_mode": "transport_and_lifting",
         "lifting_hours": 2.5,

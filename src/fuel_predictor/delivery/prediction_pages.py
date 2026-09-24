@@ -33,7 +33,7 @@ from fuel_predictor.application.similar_operations import (
     SimilarOperationsQuery,
     VehicleMatch,
 )
-from fuel_predictor.application.vehicles import VehicleCatalog
+from fuel_predictor.application.vehicles import VehicleCatalog, VehicleOption
 from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.delivery.http import (
     CreateDailyOperationRequest,
@@ -87,6 +87,12 @@ def build_prediction_pages_router(
     events: ImportantEvents,
 ) -> APIRouter:
     router = APIRouter()
+
+    def _vehicle(operation: DailyOperation | None) -> VehicleOption | None:
+        """The catalog's unit behind an operation, to explain its code's parts."""
+        if operation is None or not operation.vehicle:
+            return None
+        return vehicle_catalog.find(operation.vehicle)
 
     def _vehicle_options() -> list[tuple[str, list[tuple[str, str]]]]:
         """Units under their kind of machine (Crane, Truck, …) in the order the
@@ -240,12 +246,20 @@ def build_prediction_pages_router(
         except BaselineModelNotFoundError:
             events.operation_planned(caller.user.username, operation, None)
             return HTMLResponse(
-                _render_saved_operation(caller, operation, no_active_model=True),
+                _render_saved_operation(
+                    caller, operation, no_active_model=True, vehicle=_vehicle(operation)
+                ),
                 status_code=status.HTTP_201_CREATED,
             )
         events.operation_planned(caller.user.username, operation, prediction)
         return HTMLResponse(
-            _render_estimate(caller, prediction, operation, similar=_similar(operation)),
+            _render_estimate(
+                caller,
+                prediction,
+                operation,
+                similar=_similar(operation),
+                vehicle=_vehicle(operation),
+            ),
             status_code=status.HTTP_201_CREATED,
         )
 
@@ -255,7 +269,13 @@ def build_prediction_pages_router(
         listing = paginate(
             list_recent_predictions.execute(_HISTORY_MAX),
             ListingQuery.from_params(request.query_params),
-            search=lambda e: [e.operation_id, e.vehicle, e.departure, e.destination],
+            search=lambda e: [
+                e.operation_code,
+                e.operation_id,
+                e.vehicle,
+                e.departure,
+                e.destination,
+            ],
             sorts=_HISTORY_SORTS,
             default_sort="waktu",
         )
@@ -295,10 +315,19 @@ def build_prediction_pages_router(
             )
         prediction = get_latest_prediction.execute(operation_id)
         if prediction is None:
-            return HTMLResponse(_render_saved_operation(caller, operation, no_active_model=False))
+            return HTMLResponse(
+                _render_saved_operation(
+                    caller, operation, no_active_model=False, vehicle=_vehicle(operation)
+                )
+            )
         return HTMLResponse(
             _render_estimate(
-                caller, prediction, operation, similar=_similar(operation), just_created=False
+                caller,
+                prediction,
+                operation,
+                similar=_similar(operation),
+                just_created=False,
+                vehicle=_vehicle(operation),
             )
         )
 
@@ -327,7 +356,13 @@ def build_prediction_pages_router(
         if operation is not None:
             events.operation_planned(caller.user.username, operation, prediction)
         return HTMLResponse(
-            _render_estimate(caller, prediction, operation, similar=_similar(operation)),
+            _render_estimate(
+                caller,
+                prediction,
+                operation,
+                similar=_similar(operation),
+                vehicle=_vehicle(operation),
+            ),
             status_code=status.HTTP_201_CREATED,
         )
 
@@ -335,7 +370,11 @@ def build_prediction_pages_router(
 
 
 def _render_saved_operation(
-    caller: ActiveCaller, operation: DailyOperation, *, no_active_model: bool
+    caller: ActiveCaller,
+    operation: DailyOperation,
+    *,
+    no_active_model: bool,
+    vehicle: VehicleOption | None = None,
 ) -> str:
     return render(
         "operasi-tersimpan.html",
@@ -346,6 +385,7 @@ def _render_saved_operation(
         mode_label=_MODE_LABELS[operation.activity_mode.value],
         source_label=_SOURCE_LABELS[operation.distance_source.value],
         no_active_model=no_active_model,
+        vehicle=vehicle,
     )
 
 
@@ -356,6 +396,7 @@ def _render_estimate(
     *,
     similar: tuple[SimilarOperation, ...] = (),
     just_created: bool = True,
+    vehicle: VehicleOption | None = None,
 ) -> str:
     return render(
         "estimasi.html",
@@ -369,6 +410,7 @@ def _render_estimate(
         match_labels=_MATCH_LABELS,
         mode_labels=_MODE_LABELS,
         just_created=just_created,
+        vehicle=vehicle,
     )
 
 

@@ -106,6 +106,8 @@ class CreateDailyOperationRequest(BaseModel):
 
 class DailyOperationResponse(BaseModel):
     operation_id: str
+    # What a person writes down and types back; null on imported history.
+    operation_code: str | None = None
     vehicle_category: VehicleCategory
     vehicle: str | None = None
     activity_mode: ActivityMode
@@ -581,7 +583,7 @@ def build_router(
     ) -> ActualFuelResponse:
         record = record_actual_fuel.execute(
             RecordActualFuelCommand(
-                operation_id=operation_id,
+                operation_reference=operation_id,
                 actual_fuel_liters=request.actual_fuel_liters,
                 measurement_source=request.measurement_source,
                 recorded_by=actor_of(http_request),
@@ -651,6 +653,7 @@ def _model_comparison_response(comparison: ModelComparison) -> ModelComparisonRe
 def _operation_response(operation: DailyOperation) -> DailyOperationResponse:
     return DailyOperationResponse(
         operation_id=operation.operation_id,
+        operation_code=operation.operation_code,
         vehicle_category=operation.vehicle_category,
         vehicle=operation.vehicle,
         activity_mode=operation.activity_mode,

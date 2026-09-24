@@ -68,7 +68,7 @@ def xlsx_template() -> bytes:
         (
             "Hasil",
             "Informasi",
-            "Setiap baris valid menghasilkan ID operasi, estimasi kebutuhan BBM, "
+            "Setiap baris valid menghasilkan kode operasi, estimasi kebutuhan BBM, "
             "dan alokasi rekomendasi.",
         )
     )

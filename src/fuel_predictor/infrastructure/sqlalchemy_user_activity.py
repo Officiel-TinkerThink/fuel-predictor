@@ -44,6 +44,7 @@ class SqlAlchemyUserActivityRepository:
             rows = session.execute(
                 select(
                     DailyOperationRow.operation_id,
+                    DailyOperationRow.operation_code,
                     DailyOperationRow.created_at,
                     DailyOperationRow.vehicle,
                     DailyOperationRow.total_distance_km,
@@ -66,6 +67,7 @@ class SqlAlchemyUserActivityRepository:
                 vehicle=row.vehicle,
                 total_distance_km=row.total_distance_km,
                 has_actual=bool(row.has_actual),
+                operation_code=row.operation_code,
             )
             for row in rows
         ]

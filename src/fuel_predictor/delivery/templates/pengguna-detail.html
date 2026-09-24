@@ -98,7 +98,7 @@
     <li data-sort-name="{{ item.vehicle or '' }}" data-sort-time="{{ item.created_at or '' }}" data-sort-amount="{{ item.total_distance_km }}">
       <div class="row-list__main">
         <strong><a href="/operasi-harian/{{ item.operation_id }}">{{ item.vehicle or 'Operasi' }}</a></strong>
-        <span class="row-list__meta">{% if item.created_at %}{{ item.created_at | waktu }} · {% endif %}{{ item.total_distance_km | angka }} km · <code>{{ item.operation_id }}</code></span>
+        <span class="row-list__meta">{% if item.created_at %}{{ item.created_at | waktu }} · {% endif %}{{ item.total_distance_km | angka }} km · {{ ui.operation_code(item) }}</span>
       </div>
       <span class="row-list__figure">{{ ui.badge('Aktual tercatat', 'success') if item.has_actual else ui.badge('Menunggu aktual', 'warning') }}</span>
     </li>

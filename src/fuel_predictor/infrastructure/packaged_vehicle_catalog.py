@@ -2,7 +2,12 @@ import csv
 from importlib import resources
 from pathlib import Path
 
-from fuel_predictor.application.vehicles import VehicleLineage, VehicleOption, lineage_from
+from fuel_predictor.application.vehicles import (
+    VehicleLineage,
+    VehicleOption,
+    check_catalog,
+    lineage_from,
+)
 
 # Package data, for the same reason as the location catalog and the model
 # schemas: resolving it by walking up from __file__ works from a checkout and
@@ -40,8 +45,11 @@ class PackagedVehicleCatalog:
                         group=(row.get("grup") or "").strip(),
                         aliases=aliases,
                         type=(row.get("tipe") or "").strip(),
+                        group_code=(row.get("kode_grup") or "").strip(),
+                        type_code=(row.get("kode_tipe") or "").strip(),
                     )
                 )
+        check_catalog(options)
         self._options = tuple(options)
         self._by_key = {key: option for option in options for key in _keys(option)}
 

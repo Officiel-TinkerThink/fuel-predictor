@@ -10,6 +10,7 @@ It surfaced the first time someone did the right thing: reported the real
 consumption for a day the route service had been down.
 """
 
+import re
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -37,9 +38,7 @@ def test_overview_and_model_page_still_render(tmp_path: Path) -> None:
             ),
             headers={"content-type": "application/x-www-form-urlencoded"},
         )
-        operation_id = saved.text.split("<dt>ID operasi</dt><dd><strong>", 1)[1].split(
-            "</strong>", 1
-        )[0]
+        operation_id = re.findall(r"OPR-[0-9A-F]{32}", saved.text)[0]
         recorded = client.post(
             f"/api/v1/daily-operations/{operation_id}/actual-fuel",
             json={"actual_fuel_liters": 30, "measurement_source": "fuel_meter"},

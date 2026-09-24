@@ -33,6 +33,7 @@ class SqlAlchemyPredictionHistoryRepository:
             rows = session.execute(
                 select(
                     DailyOperationRow.operation_id,
+                    DailyOperationRow.operation_code,
                     DailyOperationRow.vehicle,
                     DailyOperationRow.vehicle_category,
                     DailyOperationRow.total_distance_km,
@@ -54,6 +55,7 @@ class SqlAlchemyPredictionHistoryRepository:
         return tuple(
             PredictionHistoryEntry(
                 operation_id=row.operation_id,
+                operation_code=row.operation_code,
                 predicted_at=row.created_at,
                 vehicle=row.vehicle,
                 vehicle_category=VehicleCategory(row.vehicle_category),

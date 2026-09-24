@@ -129,7 +129,7 @@ def test_bulk_actual_fuel_keeps_valid_rows_and_reports_unmatched_or_invalid_rows
     assert body["correction_report"][1]["reasons"][0]["field"] == "actual_fuel_liters"
     assert template.status_code == 200
     workbook = load_workbook(BytesIO(template.content), data_only=True)
-    assert workbook["Bahan Bakar Aktual"]["A1"].value == "ID Operasi (wajib)"
+    assert workbook["Bahan Bakar Aktual"]["A1"].value == "Kode Operasi (wajib)"
 
 
 def test_actual_fuel_form_and_api_reject_duplicate_records(tmp_path: Path) -> None:

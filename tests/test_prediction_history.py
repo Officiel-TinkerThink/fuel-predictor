@@ -20,8 +20,9 @@ def test_history_lists_predictions_newest_first_with_their_actual_status(
 ) -> None:
     with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
         _train_baseline(client)
-        older = _operation_with_prediction(client, 24)["operation"]["operation_id"]
-        newer = _operation_with_prediction(client, 36)["operation"]["operation_id"]
+        older_operation = _operation_with_prediction(client, 24)["operation"]
+        newer_operation = _operation_with_prediction(client, 36)["operation"]
+        older, newer = older_operation["operation_id"], newer_operation["operation_id"]
         client.post(
             f"/api/v1/daily-operations/{older}/actual-fuel",
             json={"actual_fuel_liters": 22.5, "measurement_source": "fuel_meter"},
@@ -32,9 +33,11 @@ def test_history_lists_predictions_newest_first_with_their_actual_status(
     assert page.status_code == 200
     assert page.text.index(newer) < page.text.index(older)
     assert f'href="/operasi-harian/{newer}"' in page.text
-    # The one without an actual offers to record it; the other shows the figure.
-    assert f'href="/bahan-bakar-aktual?operation_id={newer}"' in page.text
-    assert f'href="/bahan-bakar-aktual?operation_id={older}"' not in page.text
+    # The one without an actual offers to record it, by the code the operator
+    # knows; the other shows the figure.
+    newer_code, older_code = newer_operation["operation_code"], older_operation["operation_code"]
+    assert f'href="/bahan-bakar-aktual?operation_id={newer_code}"' in page.text
+    assert f'href="/bahan-bakar-aktual?operation_id={older_code}"' not in page.text
     assert "22,5" in page.text
 
 

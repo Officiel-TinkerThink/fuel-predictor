@@ -7,6 +7,7 @@ to the source row it came from - built into the page itself so nothing has
 to be stored server-side for a second request.
 """
 
+import re
 from html import unescape
 from pathlib import Path
 from urllib.parse import unquote
@@ -38,9 +39,10 @@ def test_result_page_offers_the_accepted_rows_as_csv(tmp_path: Path) -> None:
     start = page.text.index(marker) + len(marker)
     csv_text = unquote(unescape(page.text[start : page.text.index('"', start)]))
     lines = csv_text.splitlines()
-    assert lines[0].split(",")[:3] == ["Baris sumber", "ID operasi", "Kendaraan"]
+    # The code the planner writes down sits right next to the row it came from.
+    assert lines[0].split(",")[:4] == ["Baris sumber", "Kode operasi", "ID operasi", "Kendaraan"]
     assert "Alokasi rekomendasi (L)" in lines[0]
     # One accepted row; the quarantined one is not in the file.
     assert len(lines) == 2
-    assert lines[1].startswith("CSV 2,OPR-")
+    assert re.match(r"CSV 2,\d{6}-\d{4},OPR-", lines[1])
     assert 'download="hasil-prediksi-rencana.csv"' in page.text
