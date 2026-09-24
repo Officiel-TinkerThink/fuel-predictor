@@ -303,7 +303,7 @@ def test_predict_fuel_returns_a_real_prediction_with_its_safety_framing(
     # An agent must be able to tell prepared fuel from verified consumption.
     assert payload["safety_policy"]
     # The planner writes this down to record the actual fuel later (ADR 0016).
-    assert re.fullmatch(r"\d{6}-\d{4}-TC01", payload["operation_code"])
+    assert re.fullmatch(r"\d{6}-\d{4}-CR-P410B-TC01", payload["operation_code"])
 
     details = payload["details"]
     assert details["vehicle"] == "Truck Crane 01"
@@ -328,9 +328,10 @@ def test_predict_fuel_returns_a_real_prediction_with_its_safety_framing(
         "score": round(3 / 35, 4),
     }
     assert similar[0]["source_reference"].startswith("riwayat.csv / ")
-    # Another crane fills in only after this one's rows are exhausted.
+    # Another crane fills in only after this one's rows are exhausted - the
+    # same machine, a Scania P410B 8x4, so a type match, not just a group one.
     assert similar[4]["vehicle"] == "Truck Crane 02"
-    assert similar[4]["match"]["vehicle"] == "same_group"
+    assert similar[4]["match"]["vehicle"] == "same_type"
     assert any(
         record["action"] == "mcp_tool:predict_fuel" and record["outcome"] == "succeeded"
         for record in audit["records"]

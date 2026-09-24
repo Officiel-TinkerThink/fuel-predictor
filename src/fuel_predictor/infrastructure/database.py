@@ -32,8 +32,8 @@ class DailyOperationRow(Base):
     )
 
     operation_id: Mapped[str] = mapped_column(String(40), primary_key=True)
-    # The operator-facing handle (ADR 0016), e.g. 260923-0914-VT01.
-    operation_code: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    # The operator-facing handle (ADR 0016), e.g. 260924-0914-VT-P410-VT01.
+    operation_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     vehicle_category: Mapped[str] = mapped_column(String(64), nullable=False)
     # The individual unit. Null for operations recorded before the fleet was
     # identified, which is why the column is nullable rather than defaulted.
@@ -477,6 +477,10 @@ class VehicleRow(Base):
     # owner splits one.
     vehicle_type: Mapped[str] = mapped_column(String(64), nullable=False)
     aliases: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    # The short codes that make up a vehicle code, VT-P410-VT01 (ADR 0016).
+    # Empty when the sheet gives none: a type that is only its group has no code.
+    group_code: Mapped[str] = mapped_column(String(8), nullable=False, default="")
+    type_code: Mapped[str] = mapped_column(String(8), nullable=False, default="")
 
 
 type SessionFactory = sessionmaker[Session]

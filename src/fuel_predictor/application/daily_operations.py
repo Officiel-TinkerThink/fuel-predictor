@@ -9,6 +9,7 @@ from fuel_predictor.application.routing import (
     RoutingProviderUnavailable,
     UnavailableRoutingProvider,
 )
+from fuel_predictor.application.vehicles import VehicleCatalog
 from fuel_predictor.domain.daily_operation import (
     ActivityMode,
     DailyOperation,
@@ -21,6 +22,7 @@ from fuel_predictor.domain.operation_code import (
     next_free_operation_code,
     normalize_operation_reference,
     operation_code_base,
+    vehicle_code,
 )
 
 
@@ -80,12 +82,14 @@ class CreateDailyOperation:
         operation_id_factory: Callable[[], str] | None = None,
         now: Callable[[], datetime] | None = None,
         site_timezone: tzinfo = UTC,
+        vehicle_catalog: VehicleCatalog | None = None,
     ) -> None:
         self._repository = repository
         self._routing_provider = routing_provider or UnavailableRoutingProvider()
         self._operation_id_factory = operation_id_factory or _new_operation_id
         self._now = now or (lambda: datetime.now(UTC))
         self._site_timezone = site_timezone
+        self._vehicle_catalog = vehicle_catalog
 
     def execute(self, command: CreateDailyOperationCommand) -> DailyOperation:
         validate_stop_sequence(command.stop_sequence)
@@ -128,7 +132,8 @@ class CreateDailyOperation:
     def _store_with_code(self, operation: DailyOperation) -> DailyOperation:
         assert operation.created_at is not None
         base = operation_code_base(
-            operation.created_at.astimezone(self._site_timezone), operation.vehicle
+            operation.created_at.astimezone(self._site_timezone),
+            self._vehicle_code(operation.vehicle),
         )
         for _ in range(_CODE_ATTEMPTS):
             coded = replace(
@@ -141,6 +146,12 @@ class CreateDailyOperation:
                 continue
             return coded
         raise OperationCodeTakenError(base)
+
+    def _vehicle_code(self, vehicle: str | None) -> str | None:
+        """The catalog's group - type - unit code for the unit, under whatever
+        spelling it was written; a unit the catalog does not know keeps its mark."""
+        option = self._vehicle_catalog.find(vehicle) if vehicle and self._vehicle_catalog else None
+        return option.vehicle_code if option is not None else vehicle_code("", "", vehicle)
 
 
 class GetDailyOperation:

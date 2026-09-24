@@ -19,6 +19,7 @@ from fuel_predictor.application.daily_operations import (
     CreateDailyOperation,
     CreateDailyOperationCommand,
     OperationCodeTakenError,
+    find_daily_operation,
 )
 from fuel_predictor.domain.daily_operation import (
     ActivityMode,
@@ -31,6 +32,7 @@ from fuel_predictor.infrastructure.database import (
     build_session_factory,
     create_schema_for_tests,
 )
+from fuel_predictor.infrastructure.packaged_vehicle_catalog import PackagedVehicleCatalog
 from fuel_predictor.infrastructure.sqlalchemy_daily_operations import (
     SqlAlchemyDailyOperationRepository,
 )
@@ -232,3 +234,41 @@ def test_the_migration_codes_existing_planned_operations_and_leaves_imports_alon
     with engine.connect() as connection:
         columns = {column["name"] for column in inspect(connection).get_columns("daily_operations")}
     assert "operation_code" not in columns
+
+
+# --- the vehicle code comes from the fleet catalog ---------------------------------
+
+
+def _create_with_fleet(repository: SqlAlchemyDailyOperationRepository) -> CreateDailyOperation:
+    return CreateDailyOperation(
+        repository,
+        now=lambda: _MORNING,
+        site_timezone=_JAKARTA,
+        vehicle_catalog=PackagedVehicleCatalog(),
+    )
+
+
+@pytest.mark.parametrize(
+    ("written", "code"),
+    [
+        ("VT 01", "260923-0914-VT-P410-VT01"),
+        # Written the way the trip sheets write it: still the catalog's unit.
+        ("oft tronton", "260923-0914-TR-HINO-OFT"),
+        ("VT 14", "260923-0914-VT-VT14"),
+        # Not in the catalog: the unit mark alone.
+        ("Crane Sewa 01", "260923-0914-CS01"),
+    ],
+)
+def test_the_code_carries_the_group_type_and_unit(tmp_path: Path, written: str, code: str) -> None:
+    operation = _create_with_fleet(_repository(tmp_path)).execute(_command(written))
+
+    assert operation.operation_code == code
+
+
+def test_a_full_code_typed_back_loosely_finds_the_operation(tmp_path: Path) -> None:
+    repository = _repository(tmp_path)
+    operation = _create_with_fleet(repository).execute(_command("VT 01"))
+
+    found = find_daily_operation(repository, " 260923-0914-vt-p410-vt01 ")
+
+    assert found.operation_id == operation.operation_id

@@ -94,14 +94,25 @@ Hasilnya menampilkan:
 
 Perhatikan kotak hijau di atas: nilai ini **estimasi bahan bakar disiapkan**, bukan konsumsi aktual yang telah diverifikasi. Kalimat itu selalu ikut ditampilkan.
 
-**Catat kode operasinya.** Setiap operasi mendapat kode pendek, misalnya `260923-0914-VT01`:
-tanggal dan jam operasi itu dibuat (waktu setempat), lalu kendaraannya. Tulis kode ini di nota
-atau catatan BBM. Saat BBM aktualnya dilaporkan nanti, kode inilah yang diketik — huruf besar
-atau kecil tidak berpengaruh.
+**Catat kode operasinya.** Setiap operasi mendapat kode, misalnya `260924-0914-VT-P410-VT01`:
+
+| Bagian | Artinya |
+|---|---|
+| `260924-0914` | Tanggal dan jam operasi dibuat (24 September 2026, 09:14, waktu setempat) |
+| `VT` | Grup kendaraan: Vacuum Truck |
+| `P410` | Tipe kendaraan: Scania P410 6X6 |
+| `VT01` | Unitnya: VT 01 |
+
+Di bawah kode, halaman estimasi menuliskan arti tiap bagian untuk kendaraan itu. Tulis kode ini
+di nota atau catatan BBM. Saat BBM aktualnya dilaporkan nanti, kode inilah yang diketik — huruf
+besar atau kecil tidak berpengaruh.
 
 Kalau kendaraan yang sama dibuatkan operasi dua kali dalam menit yang sama — misalnya tombol
-tertekan dua kali — operasi kedua mendapat akhiran `-2` (`260923-0914-VT01-2`). Catat BBM aktual
-untuk salah satunya saja.
+tertekan dua kali — operasi kedua mendapat akhiran `-2` (`260924-0914-VT-P410-VT01-2`). Catat BBM
+aktual untuk salah satunya saja.
+
+Daftar lengkap kode kendaraan — grup, tipe, dan ejaan lain tiap unit — ada di menu **Armada**.
+Buka menu itu kalau ragu kode mana milik kendaraan mana.
 
 Estimasi yang sudah dibuat bisa dibuka lagi kapan saja dari menu **Riwayat Prediksi**:
 daftarnya terbaru di atas, ada kotak pencarian, dan tiap baris menunjukkan apakah BBM aktualnya

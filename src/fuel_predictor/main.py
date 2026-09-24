@@ -111,6 +111,7 @@ from fuel_predictor.delivery.authentication import (
 from fuel_predictor.delivery.bulk_prediction_pages import build_bulk_prediction_pages_router
 from fuel_predictor.delivery.dashboard import build_dashboard_router
 from fuel_predictor.delivery.events import ImportantEvents
+from fuel_predictor.delivery.fleet_pages import build_fleet_pages_router
 from fuel_predictor.delivery.health import build_health_router
 from fuel_predictor.delivery.historical_dataset_pages import (
     build_historical_dataset_pages_router,
@@ -284,7 +285,10 @@ def create_app(
     resolved_route_preview = route_preview or maps_provider
     configure_site_timezone(settings.site_zone)
     create_daily_operation = CreateDailyOperation(
-        repository, resolved_routing_provider, site_timezone=settings.site_zone
+        repository,
+        resolved_routing_provider,
+        site_timezone=settings.site_zone,
+        vehicle_catalog=resolved_vehicle_catalog,
     )
     get_daily_operation = GetDailyOperation(repository)
     prediction_history = SqlAlchemyPredictionHistoryRepository(session_factory)
@@ -599,6 +603,7 @@ def create_app(
             events=events,
         )
     )
+    app.include_router(build_fleet_pages_router(resolved_vehicle_catalog, guard))
     app.include_router(
         build_actual_fuel_pages_router(
             record_actual_fuel,

@@ -1,9 +1,9 @@
 """The operation code: the identifier an operator writes down and types back (ADR 0016).
 
-`260923-0914-VT01` says when the operation was created, in site-local time, and
-which vehicle it was for. It is formed once, when the operation is created, and
-stored; nothing here is ever used to recompute the code of an existing
-operation.
+`260924-0914-VT-P410-VT01` says when the operation was created, in site-local
+time, and which vehicle it was for: its group, its type and the unit itself.
+It is formed once, when the operation is created, and stored; nothing here is
+ever used to recompute the code of an existing operation.
 """
 
 import re
@@ -33,11 +33,21 @@ def _kept_whole(word: str) -> bool:
     return word.isupper() or len(word) <= 2 or any(character.isdigit() for character in word)
 
 
-def operation_code_base(created_at_site_time: datetime, vehicle: str | None) -> str:
+def vehicle_code(group_code: str, type_code: str, vehicle: str | None) -> str | None:
+    """Group, type and unit, each as the fleet catalog codes it: `VT-P410-VT01`.
+
+    A part the catalog does not code is left out rather than guessed - a unit
+    whose type is only its group reads `VT-VT14`, and a vehicle the catalog
+    does not know is its unit mark alone.
+    """
+    parts = [part for part in (group_code, type_code, vehicle_mark(vehicle)) if part]
+    return "-".join(parts) or None
+
+
+def operation_code_base(created_at_site_time: datetime, vehicle_code: str | None) -> str:
     """The code before any suffix, from a time already in the site's time zone."""
     stamp = created_at_site_time.strftime("%y%m%d-%H%M")
-    mark = vehicle_mark(vehicle)
-    return f"{stamp}-{mark}" if mark else stamp
+    return f"{stamp}-{vehicle_code}" if vehicle_code else stamp
 
 
 def next_free_operation_code(base: str, taken: Collection[str]) -> str:

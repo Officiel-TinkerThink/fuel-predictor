@@ -45,7 +45,7 @@ _operations = sa.table(
 
 def upgrade() -> None:
     op.add_column(
-        "daily_operations", sa.Column("operation_code", sa.String(length=40), nullable=True)
+        "daily_operations", sa.Column("operation_code", sa.String(length=64), nullable=True)
     )
     _backfill()
     op.create_index(_INDEX, "daily_operations", ["operation_code"], unique=True)

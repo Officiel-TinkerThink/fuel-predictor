@@ -36,7 +36,7 @@ def xlsx_template() -> bytes:
         (
             "Kode Operasi",
             "Wajib",
-            "Kode yang dicatat saat estimasi dibuat, misalnya 260923-0914-VT01. "
+            "Kode yang dicatat saat estimasi dibuat, misalnya 260924-0914-VT-P410-VT01. "
             "Huruf besar/kecil dan spasi tidak berpengaruh. ID OPR-... juga diterima.",
         )
     )

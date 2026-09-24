@@ -53,12 +53,15 @@ from fuel_predictor.main import create_app
 # --- the catalog --------------------------------------------------------------
 
 
-def test_the_bundled_fleet_names_every_type_after_its_group() -> None:
-    """Every group has one type today, so the column carries the group's name."""
-    options = PackagedVehicleCatalog().options()
+def test_units_the_owner_has_not_typed_keep_their_group_as_their_type() -> None:
+    """The Data Ratio sheet types most of the fleet (test_fleet_taxonomy); the
+    units it does not list keep the placeholder: their type is their group."""
+    catalog = PackagedVehicleCatalog()
 
-    assert options
-    assert all(option.type == option.group for option in options)
+    for name in ("VT 14", "VT 15", "Forklift SCM", "Wheel Loader Forklift"):
+        option = catalog.find(name)
+        assert option is not None
+        assert option.type == option.group, name
 
 
 def test_a_sheet_without_the_type_column_still_imports(tmp_path: Path) -> None:
@@ -241,7 +244,7 @@ def test_a_planner_names_only_the_unit_and_the_stored_prediction_carries_its_lin
     assert prediction.status_code == 201, prediction.text
     body = prediction.json()
     assert body["input_snapshot"]["vehicle"] == "t crane 01"
-    assert body["input_snapshot"]["vehicle_type"] == "Crane"
+    assert body["input_snapshot"]["vehicle_type"] == "Scania P410B 8x4"
     assert body["input_snapshot"]["vehicle_group"] == "Crane"
     assert "vehicle_type" not in body["feature_values"]
     assert "vehicle_group" not in body["feature_values"]

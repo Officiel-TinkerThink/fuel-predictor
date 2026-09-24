@@ -1033,6 +1033,29 @@ tbody tr.is-selected td {
   margin: var(--space-2) 0;
 }
 
+.fleet-code-example .operation-code {
+  font-size: clamp(1.1rem, 4vw, 1.5rem);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.fleet-taxonomy__types {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+
+.operation-code-callout__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0 0 var(--space-2);
+  font-size: 0.85rem;
+}
+
+.operation-code-callout__legend strong {
+  font-family: var(--font-mono);
+}
+
 .operation-code-callout__code .operation-code {
   font-size: clamp(1.4rem, 5vw, 2rem);
   letter-spacing: 0.04em;

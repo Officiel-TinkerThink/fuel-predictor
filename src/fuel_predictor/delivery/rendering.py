@@ -54,6 +54,7 @@ NAVIGATION: tuple[NavigationGroup, ...] = (
                 "Prediksi Massal", "/prediksi-operasi-massal", Capability.IMPORT_OPERATIONS
             ),
             NavigationItem("Riwayat Prediksi", "/riwayat-prediksi", Capability.CREATE_PREDICTION),
+            NavigationItem("Armada", "/armada", Capability.CREATE_PREDICTION),
         ),
     ),
     NavigationGroup(
