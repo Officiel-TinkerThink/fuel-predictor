@@ -81,6 +81,7 @@ from fuel_predictor.application.model_promotion_policy import (
     PromotionPolicy,
 )
 from fuel_predictor.application.monitoring import GetMonitoringDashboard
+from fuel_predictor.application.prediction_features import feature_values
 from fuel_predictor.application.prediction_history import (
     GetLatestPrediction,
     ListRecentPredictions,
@@ -100,7 +101,7 @@ from fuel_predictor.application.user_directory import (
     GetUserDirectory,
     UpdateUserProfile,
 )
-from fuel_predictor.application.vehicles import VehicleCatalog
+from fuel_predictor.application.vehicles import VehicleCatalog, VehicleLineage
 from fuel_predictor.configuration import ApplicationSettings
 from fuel_predictor.delivery.actual_fuel_pages import build_actual_fuel_pages_router
 from fuel_predictor.delivery.agent_pages import build_agent_pages_router
@@ -136,6 +137,12 @@ from fuel_predictor.delivery.security import (
     register_security_error_handlers,
 )
 from fuel_predictor.delivery.user_pages import build_user_pages_router
+from fuel_predictor.domain.daily_operation import (
+    ActivityMode,
+    DailyOperation,
+    DistanceSource,
+    VehicleCategory,
+)
 from fuel_predictor.domain.identity import AuditOutcome
 from fuel_predictor.infrastructure.alert_notifiers import (
     build_notifier,
@@ -204,14 +211,20 @@ from fuel_predictor.infrastructure.zip_model_package_archive import ZipModelPack
 # One representative operation the post-activation health check asks the
 # newly-swapped model to answer. Mid-range values on purpose: a case at the
 # edge of the training distribution would fail for reasons that say nothing
-# about whether the swap worked.
-_HEALTH_CHECK_FEATURES: dict[str, str | float] = {
-    "vehicle_category": "ANGBER",
-    "activity_mode": "transport",
-    "distance_source": "manual",
-    "total_distance_km": 30.0,
-    "lifting_hours": 0.0,
-}
+# about whether the swap worked. Built through the feature contract rather
+# than written out: a hand-written dict stayed on baseline-v1 when `vehicle`
+# became a feature, and every baseline-v2 package then failed this check.
+HEALTH_CHECK_FEATURES: dict[str, str | float] = feature_values(
+    DailyOperation(
+        operation_id="HEALTH-CHECK",
+        vehicle_category=VehicleCategory.ANGBER,
+        activity_mode=ActivityMode.TRANSPORT,
+        lifting_hours=None,
+        total_distance_km=30.0,
+        distance_source=DistanceSource.MANUAL,
+    ),
+    VehicleLineage.unknown(),
+)
 
 
 def _rollback_recorder(record_audit: RecordAuditEvent) -> Any:
@@ -453,7 +466,7 @@ def create_app(
         holder=active_model_holder,
         repository=prediction_repository,
         memory_probe=SystemMemoryProbe(),
-        health_check=answers_a_representative_case(_HEALTH_CHECK_FEATURES),
+        health_check=answers_a_representative_case(HEALTH_CHECK_FEATURES),
         record_rollback=_rollback_recorder(record_audit),
     )
     agent_client_repository = SqlAlchemyAgentClientRepository(session_factory)
