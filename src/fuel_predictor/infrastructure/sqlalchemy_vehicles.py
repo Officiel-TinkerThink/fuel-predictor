@@ -21,6 +21,7 @@ class SqlAlchemyVehicleRepository:
                 type=row.vehicle_type,
                 group_code=row.group_code,
                 type_code=row.type_code,
+                can_lift=row.can_lift,
             )
             for row in rows
         )
@@ -52,6 +53,7 @@ class SqlAlchemyVehicleRepository:
                     aliases=list(vehicle.aliases),
                     group_code=vehicle.group_code,
                     type_code=vehicle.type_code,
+                    can_lift=vehicle.can_lift,
                 )
                 for vehicle in vehicles
             )

@@ -52,7 +52,13 @@ def xlsx_template() -> bytes:
         )
     )
     instructions.append(
-        ("Mode Aktivitas", "Wajib", "Gunakan transport, lifting, atau transport_and_lifting.")
+        (
+            "Mode Aktivitas",
+            "Wajib",
+            "Gunakan transport (mobilisasi) atau transport_and_lifting (mobilisasi + lifting, "
+            "hanya untuk kendaraan yang bisa lifting: Truck Crane 01, Truck Crane 02, "
+            "Wheel Crane — lihat menu Armada).",
+        )
     )
     instructions.append(("Jam Lifting", "Opsional", "Wajib dan lebih dari 0 untuk mode lifting."))
     instructions.append(("Jarak Total (km)", "Wajib", "Masukkan angka lebih besar dari 0."))

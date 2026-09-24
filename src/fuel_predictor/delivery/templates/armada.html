@@ -44,7 +44,7 @@
     <table data-list data-list-label="Kendaraan">
       <caption>{{ units | length }} kendaraan</caption>
       <thead>
-        <tr><th>Kode kendaraan</th><th>Kendaraan</th><th>Grup</th><th>Tipe</th><th>Ejaan lain</th></tr>
+        <tr><th>Kode kendaraan</th><th>Kendaraan</th><th>Grup</th><th>Tipe</th><th>Lifting</th><th>Ejaan lain</th></tr>
       </thead>
       <tbody>
         {% for unit in units %}
@@ -53,6 +53,7 @@
           <td>{{ unit.name }}</td>
           <td>{{ unit.group }}</td>
           <td>{% if unit.type != unit.group %}{{ unit.type }}{% else %}<span class="muted">Belum dicatat</span>{% endif %}</td>
+          <td>{% if unit.can_lift %}{{ ui.badge('Bisa lifting', 'success') }}{% else %}<span class="muted">Mobilisasi saja</span>{% endif %}</td>
           <td>{{ unit.aliases | join(', ') or '—' }}</td>
         </tr>
         {% endfor %}

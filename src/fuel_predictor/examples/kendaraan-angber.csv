@@ -1,24 +1,24 @@
-nama_kendaraan,grup,kode_grup,tipe,kode_tipe,alias
-Forklift SCM,Forklift,FL,Forklift,,FORKLIFT;SCM
-Oil Field Truck,Truck,TR,HINO FM 260,HINO,OFT;OFT Tronton;Tronton OFT
-Prime Mover,Truck,TR,Scania P460A 6x6 Tractor Head,P460,PM 01
-Truck Crane 01,Crane,CR,Scania P410B 8x4,P410B,T CRANE 01
-Truck Crane 02,Crane,CR,Scania P410B 8x4,P410B,T CRANE 02
-VT 01,Vacuum Truck,VT,Scania P410 6X6,P410,
-VT 02,Vacuum Truck,VT,Scania P410 6X6,P410,
-VT 03,Vacuum Truck,VT,Scania P410 6X6,P410,
-VT 04,Vacuum Truck,VT,UD Truck Quester CWE 280 64R,UDQ,
-VT 05,Vacuum Truck,VT,UD Truck Quester CWE 280 64R,UDQ,
-VT 06,Vacuum Truck,VT,UD Truck Quester CWE 280 64R,UDQ,
-VT 07,Vacuum Truck,VT,UD Truck Quester CWE 280 64R,UDQ,
-VT 08,Vacuum Truck,VT,UD Truck Quester CWE 280 64R,UDQ,
-VT 09,Vacuum Truck,VT,Mitsubishi FE HDX Hi-Gear,FE,
-VT 10,Vacuum Truck,VT,Scania P380 6x4,P380,
-VT 11,Vacuum Truck,VT,Scania P380 6x4,P380,
-VT 12,Vacuum Truck,VT,Scania P380 6x4,P380,
-VT 13,Vacuum Truck,VT,Scania P380 6x4,P380,
-VT 14,Vacuum Truck,VT,Vacuum Truck,,
-VT 15,Vacuum Truck,VT,Vacuum Truck,,
-Wheel Crane,Crane,CR,Kato NK600RX-60 Ton,KATO,WHELL CRANE
-Wheel Loader Forklift,Forklift,FL,Forklift,,WHELL LOADER FORKLIFT
-Winch Truck,Truck,TR,Scania P410CB 6x6,P410CB,OFT Winch Truck;Whinch Truck OFT
+nama_kendaraan,grup,kode_grup,tipe,kode_tipe,bisa_lifting,alias
+Forklift SCM,Forklift,FL,Forklift,,tidak,FORKLIFT;SCM
+Oil Field Truck,Truck,TR,HINO FM 260,HINO,tidak,OFT;OFT Tronton;Tronton OFT
+Prime Mover,Truck,TR,Scania P460A 6x6 Tractor Head,P460,tidak,PM 01
+Truck Crane 01,Crane,CR,Scania P410B 8x4,P410B,ya,T CRANE 01
+Truck Crane 02,Crane,CR,Scania P410B 8x4,P410B,ya,T CRANE 02
+VT 01,Vacuum Truck,VT,Scania P410 6X6,P410,tidak,
+VT 02,Vacuum Truck,VT,Scania P410 6X6,P410,tidak,
+VT 03,Vacuum Truck,VT,Scania P410 6X6,P410,tidak,
+VT 04,Vacuum Truck,VT,UD Truck Quester CWE 280 64R,UDQ,tidak,
+VT 05,Vacuum Truck,VT,UD Truck Quester CWE 280 64R,UDQ,tidak,
+VT 06,Vacuum Truck,VT,UD Truck Quester CWE 280 64R,UDQ,tidak,
+VT 07,Vacuum Truck,VT,UD Truck Quester CWE 280 64R,UDQ,tidak,
+VT 08,Vacuum Truck,VT,UD Truck Quester CWE 280 64R,UDQ,tidak,
+VT 09,Vacuum Truck,VT,Mitsubishi FE HDX Hi-Gear,FE,tidak,
+VT 10,Vacuum Truck,VT,Scania P380 6x4,P380,tidak,
+VT 11,Vacuum Truck,VT,Scania P380 6x4,P380,tidak,
+VT 12,Vacuum Truck,VT,Scania P380 6x4,P380,tidak,
+VT 13,Vacuum Truck,VT,Scania P380 6x4,P380,tidak,
+VT 14,Vacuum Truck,VT,Vacuum Truck,,tidak,
+VT 15,Vacuum Truck,VT,Vacuum Truck,,tidak,
+Wheel Crane,Crane,CR,Kato NK600RX-60 Ton,KATO,ya,WHELL CRANE
+Wheel Loader Forklift,Forklift,FL,Forklift,,tidak,WHELL LOADER FORKLIFT
+Winch Truck,Truck,TR,Scania P410CB 6x6,P410CB,tidak,OFT Winch Truck;Whinch Truck OFT

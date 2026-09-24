@@ -485,6 +485,8 @@ class VehicleRow(Base):
     # Empty when the sheet gives none: a type that is only its group has no code.
     group_code: Mapped[str] = mapped_column(String(8), nullable=False, default="")
     type_code: Mapped[str] = mapped_column(String(8), nullable=False, default="")
+    # Lifting capacity: only such a unit may be planned with lifting.
+    can_lift: Mapped[bool] = mapped_column(nullable=False, default=False)
 
 
 type SessionFactory = sessionmaker[Session]

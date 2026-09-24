@@ -71,8 +71,10 @@ dulu, lalu masuk lagi dengan yang baru.
      katalog armada dan ditampilkan di hasil sebagai keterangan.
    - **Rute & pemberhentian** — ketik nama lokasi; daftar menyaring sambil Anda mengetik.
      Nama yang tidak ada di katalog ditolak beserta usulan nama yang mirip.
-   - **Mode aktivitas** — `transport`, `lifting`, atau `transport_and_lifting`.
-   - **Jam lifting** — wajib diisi kalau mode mencakup lifting.
+   - **Aktivitas** — *Mobilisasi*, atau *Mobilisasi + lifting*. Pilihan kedua hanya bisa dipilih
+     untuk kendaraan yang bisa lifting (Truck Crane 01, Truck Crane 02, Wheel Crane — kolom
+     *Lifting* di menu **Armada**); untuk kendaraan lain pilihan itu tidak aktif.
+   - **Jam lifting** — wajib diisi kalau aktivitas mencakup lifting.
    - **Jarak tempuh** — dihitung otomatis dari rute, jadi biasanya tidak ada yang perlu diisi.
      Bila penyedia rute gagal menghitung, penyimpanan ditolak dan kolom **Jarak tempuh manual**
      muncul untuk diisi sendiri (seluruh perjalanan, termasuk kembali); estimasinya lalu

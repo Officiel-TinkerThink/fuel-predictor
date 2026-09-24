@@ -189,6 +189,29 @@
     };
     activityMode.addEventListener("change", syncLifting);
     syncLifting();
+
+    // Only a unit that can lift may be planned with lifting. The list comes
+    // from the fleet catalog; the server refuses lifting for anything else,
+    // so this only spares the planner a rejected form.
+    var gate = document.querySelector("[data-lifting-vehicles]");
+    var vehicle = document.querySelector("#field-vehicle");
+    if (gate && vehicle) {
+      var liftingVehicles = JSON.parse(gate.getAttribute("data-lifting-vehicles") || "[]");
+      var syncCapacity = function () {
+        var canLift = liftingVehicles.indexOf(vehicle.value) !== -1;
+        Array.prototype.forEach.call(activityMode.options, function (option) {
+          if (LIFTING_MODES.indexOf(option.value) !== -1) {
+            option.disabled = !canLift;
+          }
+        });
+        if (!canLift && LIFTING_MODES.indexOf(activityMode.value) !== -1) {
+          activityMode.value = "transport";
+          syncLifting();
+        }
+      };
+      vehicle.addEventListener("change", syncCapacity);
+      syncCapacity();
+    }
   }
 
   // The same unit leaves the same pool most days. Remember the last vehicle

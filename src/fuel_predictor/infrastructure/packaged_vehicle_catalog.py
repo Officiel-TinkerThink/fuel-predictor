@@ -26,6 +26,12 @@ def _keys(option: VehicleOption) -> tuple[str, ...]:
     return tuple(name.casefold().replace(" ", "") for name in written if name)
 
 
+def _yes(value: str | None) -> bool:
+    """A sheet's "ya"/"tidak" (or yes/true/1). Blank means no: a unit is
+    mobilisation only until the sheet says it can lift."""
+    return (value or "").strip().casefold() in {"ya", "yes", "true", "1", "y"}
+
+
 class PackagedVehicleCatalog:
     """Reads the bundled fleet once and serves it from memory."""
 
@@ -47,6 +53,7 @@ class PackagedVehicleCatalog:
                         type=(row.get("tipe") or "").strip(),
                         group_code=(row.get("kode_grup") or "").strip(),
                         type_code=(row.get("kode_tipe") or "").strip(),
+                        can_lift=_yes(row.get("bisa_lifting")),
                     )
                 )
         check_catalog(options)

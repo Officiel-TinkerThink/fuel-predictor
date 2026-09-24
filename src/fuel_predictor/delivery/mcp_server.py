@@ -443,7 +443,14 @@ def build_registry(
 
     def list_vehicles(_arguments: Mapping[str, Any]) -> list[dict[str, Any]]:
         return [
-            {"name": option.name, "group": option.group or None, "aliases": list(option.aliases)}
+            {
+                "name": option.name,
+                "group": option.group or None,
+                "type": option.type or None,
+                "vehicle_code": option.vehicle_code,
+                "can_lift": option.can_lift,
+                "aliases": list(option.aliases),
+            }
             for option in _vehicles().options()
         ]
 
@@ -672,6 +679,10 @@ def build_registry(
 _EMPTY_SCHEMA: dict[str, Any] = {"type": "object", "properties": {}, "additionalProperties": False}
 
 _ACTIVITY_MODES = ["transport", "lifting", "transport_and_lifting"]
+# What a new plan may say: mobilisation, or mobilisation with lifting for a
+# unit that can lift (the server refuses it for the others). "lifting" alone
+# remains only for searching operations planned before.
+_PLANNED_ACTIVITY_MODES = ["transport", "transport_and_lifting"]
 
 _PREDICT_INPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -685,7 +696,14 @@ _PREDICT_INPUT_SCHEMA: dict[str, Any] = {
                 "atau alias 'T CRANE 01'. Lihat list_vehicles."
             ),
         },
-        "activity_mode": {"type": "string", "enum": _ACTIVITY_MODES},
+        "activity_mode": {
+            "type": "string",
+            "enum": _PLANNED_ACTIVITY_MODES,
+            "description": (
+                "transport = mobilisasi; transport_and_lifting = mobilisasi + lifting, only for "
+                "a vehicle that can lift (list_vehicles says which)."
+            ),
+        },
         "lifting_hours": {
             "type": ["number", "null"],
             "minimum": 0,

@@ -93,6 +93,7 @@ class CreateDailyOperation:
 
     def execute(self, command: CreateDailyOperationCommand) -> DailyOperation:
         validate_stop_sequence(command.stop_sequence)
+        self._refuse_lifting_without_capacity(command)
         total_distance_km = command.total_distance_km
         distance_source = command.distance_source
         route_distance_manual_fallback = False
@@ -146,6 +147,18 @@ class CreateDailyOperation:
                 continue
             return coded
         raise OperationCodeTakenError(base)
+
+    def _refuse_lifting_without_capacity(self, command: CreateDailyOperationCommand) -> None:
+        """A unit the catalog says cannot lift is mobilisation only. A unit the
+        catalog does not know is not second-guessed: there is nothing to check."""
+        if command.activity_mode is ActivityMode.TRANSPORT or not command.vehicle:
+            return
+        option = self._vehicle_catalog.find(command.vehicle) if self._vehicle_catalog else None
+        if option is not None and not option.can_lift:
+            raise DailyOperationValidationError(
+                "activity_mode",
+                f"{option.name} tidak memiliki kemampuan lifting. Pilih Mobilisasi.",
+            )
 
     def _vehicle_code(self, vehicle: str | None) -> str | None:
         """The catalog's group - type - unit code for the unit, under whatever

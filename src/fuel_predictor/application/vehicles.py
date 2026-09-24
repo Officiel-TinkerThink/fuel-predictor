@@ -38,6 +38,9 @@ class VehicleOption:
     # has none, and the vehicle code skips it.
     group_code: str = ""
     type_code: str = ""
+    # Whether the unit has lifting capacity. Only such a unit may be planned
+    # with lifting; every other one is mobilisation only.
+    can_lift: bool = False
 
     def __post_init__(self) -> None:
         if not self.type:

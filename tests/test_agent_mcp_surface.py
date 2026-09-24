@@ -490,7 +490,16 @@ def test_catalog_tools_let_an_agent_disambiguate_before_committing(tmp_path: Pat
 
     fleet = json.loads(vehicles.json()["result"]["content"][0]["text"])
     crane = next(item for item in fleet if item["name"] == "Truck Crane 01")
-    assert crane == {"name": "Truck Crane 01", "group": "Crane", "aliases": ["T CRANE 01"]}
+    # What an agent needs before planning: the unit's taxonomy, its vehicle code, and
+    # whether it may be planned with lifting.
+    assert crane == {
+        "name": "Truck Crane 01",
+        "group": "Crane",
+        "type": "Scania P410B 8x4",
+        "vehicle_code": "CR-P410B-TC01",
+        "can_lift": True,
+        "aliases": ["T CRANE 01"],
+    }
     names = [item["name"] for item in json.loads(stops.json()["result"]["content"][0]["text"])]
     assert names[:2] == ["SP-II", "SP-III"]
     # No routing provider in tests: the agent is told to ask for a distance

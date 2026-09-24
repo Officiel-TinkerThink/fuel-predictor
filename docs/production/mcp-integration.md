@@ -158,8 +158,10 @@ the agent answers with the recommendation, its details, and similar past operati
 
 `vehicle` and `activity_mode` are required. Give `stop_sequence` (planner's order, include the
 return leg) so the distance comes from the route, or `total_distance_km` when the distance is
-already known / the routing provider is unavailable. `lifting_hours` is required for
-`lifting` and `transport_and_lifting`. Full schema: `get_prediction_input_schema`.
+already known / the routing provider is unavailable. `activity_mode` is `transport`
+(mobilisation) or `transport_and_lifting`; the latter only for a vehicle that can lift (the three
+cranes), otherwise the call is refused. `lifting_hours` is required with it. Full schema:
+`get_prediction_input_schema`.
 
 Result:
 

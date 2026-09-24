@@ -90,7 +90,7 @@ def test_indonesian_form_creates_daily_operation_with_same_behavior(tmp_path: Pa
     assert response.status_code == 201
     assert "Operasi harian tersimpan" in response.text
     assert "ANGBER" in response.text
-    assert "Angkut dan lifting" in response.text
+    assert "Mobilisasi + lifting" in response.text
     assert "43,2 km" in response.text
     assert re.search(r"OPR-[0-9A-F]{32}", response.text)
 
@@ -101,7 +101,7 @@ def test_form_rejects_invalid_operation_and_preserves_useful_input(tmp_path: Pat
             "/operasi-harian",
             data={
                 "vehicle_category": "ANGBER",
-                "activity_mode": "lifting",
+                "activity_mode": "transport_and_lifting",
                 "lifting_hours": "",
                 "total_distance_km": "18.5",
                 "distance_source": "manual",
@@ -112,7 +112,7 @@ def test_form_rejects_invalid_operation_and_preserves_useful_input(tmp_path: Pat
     assert "Periksa kembali data operasi" in response.text
     assert "Jam lifting harus lebih besar dari 0 untuk mode yang mencakup lifting." in response.text
     assert 'value="18.5"' in response.text
-    assert '<option value="lifting" selected>' in response.text
+    assert '<option value="transport_and_lifting" selected>' in response.text
     # The rejected submission is exactly the case where the planner still has
     # to enter lifting hours, so the field comes back visible rather than
     # hidden behind a mode change it has already made.
@@ -155,7 +155,7 @@ def test_form_asks_for_one_activity_and_lifting_total_for_the_whole_operation(
     # row left blank is simply not a stop.
     assert form.text.count('name="stop_sequence"') == 2
     assert response.status_code == 201
-    assert "Angkut dan lifting" in response.text
+    assert "Mobilisasi + lifting" in response.text
     assert "Depo" in response.text
     assert "Site A" in response.text
 

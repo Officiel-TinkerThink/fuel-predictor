@@ -16,7 +16,11 @@
            the form; bring the select back once a second category exists. #}
         <input type="hidden" name="vehicle_category" value="{{ values.get('vehicle_category', 'ANGBER') }}">
         {{ ui.select_field('vehicle', 'Kendaraan', [('', 'Pilih kendaraan…')], values.get('vehicle', ''), hint='Pilih unit yang akan digunakan.', errors=errors, required=true, groups=vehicle_groups) }}
-        {{ ui.select_field('activity_mode', 'Aktivitas', [('transport', 'Angkut'), ('lifting', 'Lifting'), ('transport_and_lifting', 'Angkut dan lifting')], values.get('activity_mode', 'transport'), hint=none, errors=errors, required=true) }}
+        {# Two activities. Lifting is only offered for a unit that can lift;
+           app.js disables it for the others, and the server refuses it anyway. #}
+        <div data-lifting-vehicles='{{ lifting_vehicles | tojson }}'>
+        {{ ui.select_field('activity_mode', 'Aktivitas', [('transport', 'Mobilisasi'), ('transport_and_lifting', 'Mobilisasi + lifting')], values.get('activity_mode', 'transport'), hint='Mobilisasi + lifting hanya untuk kendaraan yang bisa lifting (lihat Armada).', errors=errors, required=true) }}
+        </div>
         {# Hidden only when the chosen mode has no lifting in it, so a rejected
            submission comes back with the field the planner still has to fill. #}
         <div class="field" id="lifting-field"{% if values.get('activity_mode', 'transport') == 'transport' %} hidden{% endif %}>

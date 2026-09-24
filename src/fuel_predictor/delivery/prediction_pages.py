@@ -57,9 +57,10 @@ _HISTORY_SORTS = (
     SortOption("model", "Model", lambda e: e.model_code, default_direction="asc"),
 )
 _MODE_LABELS = {
-    "transport": "Angkut",
-    "lifting": "Lifting",
-    "transport_and_lifting": "Angkut dan lifting",
+    "transport": "Mobilisasi",
+    # Kept for operations planned before the two-choice form; not offered now.
+    "lifting": "Lifting (tanpa mobilisasi)",
+    "transport_and_lifting": "Mobilisasi + lifting",
 }
 _SOURCE_LABELS = {"manual": "Input manual", "routing_provider": "Penyedia rute"}
 # Why a past operation is shown, in the planner's words: the fallback order
@@ -94,6 +95,11 @@ def build_prediction_pages_router(
         if operation is None or not operation.vehicle:
             return None
         return vehicle_catalog.find(operation.vehicle)
+
+    def _lifting_vehicles() -> tuple[str, ...]:
+        """The units the form may offer lifting for; the server refuses it for
+        the rest regardless (CreateDailyOperation)."""
+        return tuple(option.name for option in vehicle_catalog.options() if option.can_lift)
 
     def _vehicle_options() -> list[tuple[str, list[tuple[str, str]]]]:
         """Units under their kind of machine (Crane, Truck, …) in the order the
@@ -154,6 +160,7 @@ def build_prediction_pages_router(
                 location_catalog.options(),
                 _vehicle_options(),
                 route_preview is not None,
+                lifting_vehicles=_lifting_vehicles(),
             )
         )
 
@@ -199,6 +206,7 @@ def build_prediction_pages_router(
                     location_catalog.options(),
                     _vehicle_options(),
                     route_preview is not None,
+                    lifting_vehicles=_lifting_vehicles(),
                 ),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
@@ -223,6 +231,7 @@ def build_prediction_pages_router(
                     location_catalog.options(),
                     _vehicle_options(),
                     route_preview is not None,
+                    lifting_vehicles=_lifting_vehicles(),
                 ),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
@@ -235,6 +244,7 @@ def build_prediction_pages_router(
                     location_catalog.options(),
                     _vehicle_options(),
                     route_preview is not None,
+                    lifting_vehicles=_lifting_vehicles(),
                 ),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
@@ -437,6 +447,8 @@ def _render_form(
     location_options: tuple[LocationOption, ...],
     vehicle_groups: list[tuple[str, list[tuple[str, str]]]],
     route_preview_available: bool = False,
+    *,
+    lifting_vehicles: tuple[str, ...] = (),
 ) -> str:
     return render(
         "prediksi.html",
@@ -448,6 +460,7 @@ def _render_form(
         values=values,
         errors=errors,
         vehicle_groups=vehicle_groups,
+        lifting_vehicles=lifting_vehicles,
         location_options=location_options,
         route_preview_available=route_preview_available,
     )
