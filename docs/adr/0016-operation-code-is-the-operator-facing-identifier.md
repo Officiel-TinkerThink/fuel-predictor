@@ -20,17 +20,23 @@ operators are not technical.
 Every operation someone plans gets an **operation code** when it is created:
 
 ```
-260923-0914-VT01        yymmdd-hhmm-<vehicle mark>
-260923-0914-VT01-2      the same vehicle again within the same minute
-260923-0914             no vehicle named
+260924-0914-VT-P410-VT01     yymmdd-hhmm-<vehicle code>
+260924-0914-VT-P410-VT01-2   the same vehicle again within the same minute
+260924-0914-VT-VT14          a unit whose type is only its group
+260924-0914                  no vehicle named
 ```
 
 - **Time is the creation time, in site-local time.** `created_at` stays stored in UTC; the code
   is formed in the zone named by `FUEL_PREDICTOR_SITE_TIMEZONE` (default `Asia/Jakarta`), and
   every screen shows times in that zone, so the time in a code matches the time printed beside it.
-- **The vehicle mark names the unit, shortly.** A word in capitals, with a digit, or of at most two
-  letters is kept whole; any other word shrinks to its initial: `VT 01` → `VT01`,
-  `Truck Crane 01` → `TC01`, `Oil Field Truck` → `OFT`.
+- **The vehicle code names group, type and unit** (revised 2026-09-24 at the owner's request):
+  `VT-P410-VT01` is group Vacuum Truck, type Scania P410 6X6, unit VT 01. Group and type codes are
+  held in the vehicle catalog next to their names (`kode_grup`, `kode_tipe`), one code per group
+  and per type, so the owner decides them. The unit's mark is derived from its name: a word in
+  capitals, with a digit, or of at most two letters is kept whole, any other word shrinks to its
+  initial (`Truck Crane 01` → `TC01`, `Oil Field Truck` → `OFT`). A part the catalog does not code
+  is left out; a vehicle the catalog does not know is its mark alone. The Armada page lists every
+  unit's code.
 - **Unique, with the lowest free suffix from 2.** The same unit twice in one minute is nearly
   always a double submission; the operator records actual fuel against one of them. A concurrent
   insert that takes the chosen code is retried with the next suffix.
@@ -46,9 +52,13 @@ Every operation someone plans gets an **operation code** when it is created:
 
 - An operator notes one short, meaningful code at prediction time and can reconstruct most of it
   from their own log if the note is lost.
-- The code carries the unit only, not its type or group: the lineage can change after the code is
-  written (ADR 0015), and each extra segment makes the code harder to copy. Screens show the type
-  and group next to the code instead.
+- The code carries the type and group as they were when it was issued. If the owner later
+  re-types a unit (ADR 0015), older codes keep the old type code and new ones get the new; both
+  still find their operation, because a code is looked up, never parsed.
+- The code is longer (up to about 30 characters). The owner chose completeness over brevity; the
+  estimate spells out what each part means, and the copy button and the result CSV spare most
+  hand copying.
+- Operations that existed before vehicle codes keep the unit-only code the backfill gave them.
 - Operations planned in bulk carry the upload time, not the day each job runs; the result download
   pairs every code with its source row.
 - A leftover duplicate stays on the "waiting for actual fuel" list until a way to mark it as a

@@ -45,6 +45,10 @@ Actual fuel is measured **per vehicle per job**, so a per-operation handle is th
    `Asia/Jakarta`). Imported historical rows (`IMPR-…`) have no creation time and are never waiting
    for actual fuel, so they get none.
 
+> **Revised 2026-09-24:** the vehicle part of the code now names group, type and unit —
+> `260924-0914-VT-P410-VT01` — from codes held in the vehicle catalog. See
+> `.scratch/fleet-taxonomy/spec.md` and ADR 0016.
+
 ## Out of scope
 
 - Marking or cancelling a duplicate operation so it leaves the "waiting for actual fuel" list.
