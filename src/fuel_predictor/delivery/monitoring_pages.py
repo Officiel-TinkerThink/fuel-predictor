@@ -112,7 +112,10 @@ def build_monitoring_pages_router(
                 page_title="Kinerja Model",
                 active_path="/pemantauan/kinerja-model",
                 eyebrow="EVALUASI MODEL",
-                page_lead="Kinerja model aktif diukur dari bahan bakar aktual yang tercocokkan.",
+                page_lead=(
+                    "Setiap model diukur dari prediksinya sendiri yang sudah punya bahan bakar "
+                    "aktual."
+                ),
                 performance=performance,
                 rolling_error_trend=dashboard.rolling_error_trend,
                 trend_chart=trend_chart(

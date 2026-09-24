@@ -9,8 +9,46 @@
 {{ ui.banner('info', performance.overall.matched_record_count ~ ' catatan aktual tercocokkan', 'Metrik memakai estimasi kebutuhan BBM, bukan alokasi rekomendasi.') }}
 {% endif %}
 
+{% if performance.by_model %}
 <section class="card">
-  <h2>Seberapa tepat model aktif</h2>
+  <h2>Per model</h2>
+  <p class="hint">Setiap aktual dihitung untuk model yang membuat prediksinya. MAE uji adalah
+    yang dinyatakan model saat dilatih; bandingkan dengan MAE lapangan. Bias negatif berarti
+    estimasi cenderung kurang dari aktual.</p>
+  <div class="table-wrap">
+    <table data-list data-list-label="Kinerja per model">
+      <thead><tr><th>Model</th><th>Status</th><th class="numeric">Cocok</th><th class="numeric">MAE lapangan</th><th class="numeric">MAE uji</th><th class="numeric">RMSE</th><th class="numeric">Bias</th><th class="numeric">sMAPE</th><th class="numeric">Cakupan interval</th></tr></thead>
+      <tbody>
+        {% for item in performance.by_model %}
+        {% set metrics = item.metrics %}
+        <tr>
+          <td>{{ ui.model_name(item.model) }}<br><span class="hint">{{ item.model.algorithm }}</span></td>
+          <td>{% if item.model.lifecycle_status.value == 'active' %}{{ ui.badge('Aktif', 'success') }}{% elif item.model.lifecycle_status.value == 'candidate' %}{{ ui.badge('Kandidat', 'warning') }}{% else %}{{ ui.badge('Pensiun', 'neutral') }}{% endif %}</td>
+          <td class="numeric">{{ metrics.matched_record_count }}</td>
+          {% if metrics.mae_liters is not none %}
+          <td class="numeric">{{ metrics.mae_liters | angka }} L</td>
+          <td class="numeric">{{ item.model.uncertainty_liters | angka }} L</td>
+          <td class="numeric">{{ metrics.rmse_liters | angka }} L</td>
+          <td class="numeric">{{ '%+.1f' | format(metrics.bias_liters) | replace('.', ',') }} L</td>
+          <td class="numeric">{{ metrics.smape_percent | angka }}%</td>
+          <td class="numeric">{{ metrics.interval_coverage_percent | angka }}%</td>
+          {% else %}
+          <td class="numeric">Belum ada aktual</td>
+          <td class="numeric">{{ item.model.uncertainty_liters | angka }} L</td>
+          <td class="numeric">-</td><td class="numeric">-</td><td class="numeric">-</td><td class="numeric">-</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Semua prediksi, semua model</h2>
+  <p class="hint">Gabungan seluruh model yang pernah melayani. Untuk menilai satu model, pakai tabel
+    per model di atas.</p>
   <div class="grid grid--metrics">
     {% if performance.overall.mae_liters is not none %}
     {{ ui.metric('Selisih rata-rata (MAE)', performance.overall.mae_liters | angka, unit='L', context='Rata-rata jarak antara estimasi dan aktual. Makin kecil makin baik.') }}

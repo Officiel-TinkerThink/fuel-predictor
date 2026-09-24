@@ -179,7 +179,7 @@ def _seed_demo(force: bool) -> int:
     settings = ApplicationSettings()
     try:
         factory = build_session_factory(build_engine(settings.database_url))
-        predictions = SqlAlchemyPredictionRepository(factory)
+        predictions = SqlAlchemyPredictionRepository(factory, site_timezone=settings.site_zone)
 
         # Seeding twice would leave a second dataset version and a second model
         # behind, so the safe default is to stop once the work is already done.

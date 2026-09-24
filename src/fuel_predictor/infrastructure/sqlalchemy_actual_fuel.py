@@ -114,6 +114,7 @@ class SqlAlchemyActualFuelRepository:
                     PredictionRow.uncertainty_lower_liters,
                     PredictionRow.uncertainty_upper_liters,
                     ActualFuelRecordRow.actual_fuel_liters,
+                    PredictionRow.model_version_id,
                 )
                 .select_from(ActualFuelRecordRow)
                 .join(
@@ -129,6 +130,7 @@ class SqlAlchemyActualFuelRepository:
                 uncertainty_lower_liters=row.uncertainty_lower_liters,
                 uncertainty_upper_liters=row.uncertainty_upper_liters,
                 actual_fuel_liters=row.actual_fuel_liters,
+                model_version_id=row.model_version_id,
             )
             for row in rows
         )

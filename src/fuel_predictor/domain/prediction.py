@@ -28,6 +28,9 @@ class ModelVersion:
     # The vehicle taxonomy this model was trained under (ADR 0015). None for a
     # model or package that predates the field: unknown, never "mismatch".
     catalog_fingerprint: str | None = None
+    # How people name this model: M-260924-01, given when it is registered.
+    # None only on an object not yet stored.
+    model_code: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

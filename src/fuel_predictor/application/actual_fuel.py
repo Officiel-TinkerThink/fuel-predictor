@@ -14,6 +14,7 @@ from fuel_predictor.domain.actual_fuel import (
     ActualFuelStatus,
 )
 from fuel_predictor.domain.daily_operation import DailyOperation, VehicleCategory
+from fuel_predictor.domain.prediction import ModelLifecycleStatus, ModelVersion
 
 
 class ActualFuelWriter(Protocol):
@@ -22,6 +23,15 @@ class ActualFuelWriter(Protocol):
 
 class PredictionOutcomeReader(Protocol):
     def get_prediction_outcomes(self) -> Sequence["PredictionOutcome"]: ...
+
+
+class PerformanceModelReader(Protocol):
+    """The models a performance report names: each one's code, status and the
+    error it declared at training."""
+
+    def get(self, model_version_id: str) -> ModelVersion | None: ...
+
+    def get_active(self) -> ModelVersion | None: ...
 
 
 class AwaitingActualFuelReader(Protocol):
@@ -109,6 +119,9 @@ class PredictionOutcome:
     uncertainty_lower_liters: float
     uncertainty_upper_liters: float
     actual_fuel_liters: float
+    # The model whose prediction this actual is compared with. None where an
+    # outcome is scored outside the served history (a candidate evaluation).
+    model_version_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,22 +137,37 @@ class PerformanceMetrics:
     rmse_liters: float | None
     smape_percent: float | None
     interval_coverage_percent: float | None
+    # Mean of estimate - actual: negative means the estimates run short. A
+    # model can have a fine MAE and still under-allocate every day.
+    bias_liters: float | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ModelPerformance:
+    """One model's field record: its own predictions against recorded actuals."""
+
+    model: ModelVersion
+    metrics: PerformanceMetrics
 
 
 @dataclass(frozen=True, slots=True)
 class PerformanceReport:
     overall: PerformanceMetrics
     by_vehicle_category: tuple[tuple[VehicleCategory, PerformanceMetrics], ...]
+    # The active model first, then the others newest first.
+    by_model: tuple[ModelPerformance, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
 class GetPredictionPerformance:
     outcome_reader: PredictionOutcomeReader
+    model_reader: PerformanceModelReader | None = None
 
     def execute(self) -> PerformanceReport:
         outcomes = tuple(self.outcome_reader.get_prediction_outcomes())
         categories = tuple(sorted({outcome.vehicle_category for outcome in outcomes}, key=str))
         return PerformanceReport(
+            by_model=self._by_model(outcomes),
             overall=calculate_performance_metrics(outcomes),
             by_vehicle_category=tuple(
                 (
@@ -152,6 +180,38 @@ class GetPredictionPerformance:
                 )
                 for category in categories
             ),
+        )
+
+    def _by_model(self, outcomes: tuple[PredictionOutcome, ...]) -> tuple[ModelPerformance, ...]:
+        """Each actual counts for the model that made the prediction it is
+        compared with. The active model is listed even before its first
+        matched actual, so a fresh promotion is visibly "not yet measured"."""
+        if self.model_reader is None:
+            return ()
+        models: dict[str, ModelVersion] = {}
+        active = self.model_reader.get_active()
+        if active is not None:
+            models[active.model_version_id] = active
+        for model_version_id in {o.model_version_id for o in outcomes if o.model_version_id}:
+            if model_version_id not in models:
+                model = self.model_reader.get(model_version_id)
+                if model is not None:
+                    models[model_version_id] = model
+        ordered = sorted(
+            models.values(),
+            key=lambda model: (
+                model.lifecycle_status is not ModelLifecycleStatus.ACTIVE,
+                -model.version,
+            ),
+        )
+        return tuple(
+            ModelPerformance(
+                model=model,
+                metrics=calculate_performance_metrics(
+                    tuple(o for o in outcomes if o.model_version_id == model.model_version_id)
+                ),
+            )
+            for model in ordered
         )
 
 
@@ -182,4 +242,5 @@ def calculate_performance_metrics(outcomes: Sequence[PredictionOutcome]) -> Perf
         rmse_liters=sqrt(sum(error**2 for error in errors) / count),
         smape_percent=sum(smape_values) / count,
         interval_coverage_percent=(covered / count) * 100,
+        bias_liters=sum(errors) / count,
     )

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime, tzinfo
 from typing import Any, cast
 
 from sqlalchemy import CursorResult, Select, select, update
@@ -15,12 +15,16 @@ from fuel_predictor.domain.model_activation import (
     ModelNotActivatableError,
     ModelVersionNotFoundError,
 )
+from fuel_predictor.domain.model_code import model_code_prefix, next_model_code
 from fuel_predictor.domain.prediction import (
     FuelPrediction,
     ModelLifecycleStatus,
     ModelVersion,
 )
 from fuel_predictor.infrastructure.database import ModelVersionRow, PredictionRow, SessionFactory
+
+# More than a few lost races in a row is not a race.
+_CODE_ATTEMPTS = 5
 
 # Both a fresh candidate and a previously-retired version may become active:
 # the first is a promotion, the second is a rollback. The difference in
@@ -35,8 +39,10 @@ _ACTIVATABLE_STATUSES = frozenset(
 class SqlAlchemyPredictionRepository(
     ModelVersionWriter, ActiveModelVersionReader, PredictionWriter
 ):
-    def __init__(self, session_factory: SessionFactory) -> None:
+    def __init__(self, session_factory: SessionFactory, site_timezone: tzinfo = UTC) -> None:
         self._session_factory = session_factory
+        # Model codes are dated in the site's time zone, like operation codes.
+        self._site_timezone = site_timezone
 
     def create(self, model: ModelVersion) -> ModelVersion:
         return self._add_model(model)
@@ -180,9 +186,33 @@ class SqlAlchemyPredictionRepository(
             )
 
     def _add_model(self, model: ModelVersion) -> ModelVersion:
+        """Store a new model version with the next free model code for its day.
+
+        Two registrations in the same instant can pick the same code; the loser
+        of that race gets the unique-index error and tries the next one.
+        """
+        for _ in range(_CODE_ATTEMPTS):
+            try:
+                return self._insert_model(model)
+            except IntegrityError:
+                if self.get(model.model_version_id) is not None:
+                    raise
+        raise RuntimeError("Tidak dapat memberi kode model setelah beberapa percobaan.")
+
+    def _insert_model(self, model: ModelVersion) -> ModelVersion:
+        trained_at = (
+            model.trained_at if model.trained_at.tzinfo else model.trained_at.replace(tzinfo=UTC)
+        )
+        finished_on = trained_at.astimezone(self._site_timezone).date()
         with self._session_factory.begin() as session:
+            taken = session.scalars(
+                select(ModelVersionRow.model_code).where(
+                    ModelVersionRow.model_code.startswith(model_code_prefix(finished_on))
+                )
+            )
             row = ModelVersionRow(
                 model_version_id=model.model_version_id,
+                model_code=next_model_code(finished_on, (code for code in taken if code)),
                 dataset_version_id=model.dataset_version_id,
                 feature_version=model.feature_version,
                 algorithm=model.algorithm,
@@ -257,4 +287,5 @@ def _to_model(row: ModelVersionRow) -> ModelVersion:
         promoted_at=row.promoted_at,
         retired_at=row.retired_at,
         catalog_fingerprint=row.catalog_fingerprint,
+        model_code=row.model_code,
     )

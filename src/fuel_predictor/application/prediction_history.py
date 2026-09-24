@@ -26,6 +26,10 @@ class PredictionHistoryEntry:
     recommended_allocation_liters: float
     actual_fuel_liters: float | None
     operation_code: str | None = None
+    # Which model made the estimate, so a planner can tell one model's
+    # numbers from the next's.
+    model_version_id: str | None = None
+    model_code: str | None = None
 
 
 class PredictionHistoryReader(Protocol):

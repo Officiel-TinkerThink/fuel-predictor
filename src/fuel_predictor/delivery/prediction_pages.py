@@ -54,6 +54,7 @@ _HISTORY_SORTS = (
     SortOption("alokasi", "Alokasi (L)", lambda e: e.recommended_allocation_liters),
     SortOption("jarak", "Jarak (km)", lambda e: e.total_distance_km),
     SortOption("kendaraan", "Kendaraan", lambda e: e.vehicle, default_direction="asc"),
+    SortOption("model", "Model", lambda e: e.model_code, default_direction="asc"),
 )
 _MODE_LABELS = {
     "transport": "Angkut",
@@ -272,6 +273,7 @@ def build_prediction_pages_router(
             search=lambda e: [
                 e.operation_code,
                 e.operation_id,
+                e.model_code,
                 e.vehicle,
                 e.departure,
                 e.destination,

@@ -140,7 +140,11 @@ class ModelVersionRow(Base):
     )
 
     version: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    model_version_id: Mapped[str] = mapped_column(String(40), unique=True, nullable=False)
+    # 64, as the package manifest allows; 40 once rejected longer package names.
+    model_version_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    # M-260924-01: the name people use. Always set by the repository; nullable
+    # only because SQLite cannot add a NOT NULL column to a populated table.
+    model_code: Mapped[str | None] = mapped_column(String(16), nullable=True, unique=True)
     # Provenance, not a local reference. A model trained here names a dataset
     # this application imported; an ingested package names one from the
     # builder's environment that need not exist here. A foreign key asserted
@@ -166,7 +170,7 @@ class PredictionRow(Base):
         ForeignKey("daily_operations.operation_id"), nullable=False, index=True
     )
     model_version_id: Mapped[str] = mapped_column(
-        ForeignKey("model_versions.model_version_id"), nullable=False, index=True
+        String(64), ForeignKey("model_versions.model_version_id"), nullable=False, index=True
     )
     dataset_version_id: Mapped[str] = mapped_column(String(32), nullable=False)
     feature_version: Mapped[str] = mapped_column(String(64), nullable=False)

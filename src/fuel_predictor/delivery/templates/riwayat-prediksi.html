@@ -4,7 +4,7 @@
 {% block content %}
 
 <section class="card">
-  {{ ui.listing_toolbar(listing, placeholder='Kendaraan, lokasi, atau kode operasi') }}
+  {{ ui.listing_toolbar(listing, placeholder='Kendaraan, lokasi, kode operasi, atau kode model') }}
   {% if listing.items %}
   <div class="table-wrap">
     <table class="table--sortable">
@@ -15,6 +15,7 @@
           <th>Rute</th>
           {{ ui.sort_th(listing, 'jarak', 'Jarak', numeric=true) }}
           {{ ui.sort_th(listing, 'alokasi', 'Alokasi', numeric=true) }}
+          {{ ui.sort_th(listing, 'model', 'Model') }}
           <th>Aktual</th>
         </tr>
       </thead>
@@ -26,6 +27,7 @@
           <td data-label="Rute">{% if item.departure %}{{ item.departure }} → {{ item.destination }}{% if item.stop_count > 2 %} <span class="hint">(+{{ item.stop_count - 2 }})</span>{% endif %}{% else %}—{% endif %}</td>
           <td class="numeric" data-label="Jarak">{{ item.total_distance_km | angka }} km</td>
           <td class="numeric" data-label="Alokasi">{{ item.recommended_allocation_liters | angka }} L</td>
+          <td data-label="Model">{% if item.model_version_id %}{{ ui.model_name(item) }}{% else %}—{% endif %}</td>
           <td data-label="Aktual">
             {% if item.actual_fuel_liters is not none %}{{ ui.badge((item.actual_fuel_liters | angka) ~ ' L', 'success') }}
             {% else %}<a class="button button--secondary button--small" href="/bahan-bakar-aktual?operation_id={{ ui.operation_ref(item) }}">Catat</a>{% endif %}

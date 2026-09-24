@@ -109,6 +109,7 @@ _RESULT_HEADERS = (
     "Alokasi rekomendasi (L)",
     "Rentang bawah (L)",
     "Rentang atas (L)",
+    "Kode model",
     "Model",
 )
 
@@ -136,6 +137,7 @@ def _results_csv(result: BulkOperationPredictionResult) -> str:
                 prediction.recommended_allocation_liters,
                 prediction.uncertainty_lower_liters,
                 prediction.uncertainty_upper_liters,
+                prediction.model.model_code or "",
                 prediction.model.model_version_id,
             )
         )

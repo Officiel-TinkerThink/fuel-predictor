@@ -271,15 +271,17 @@ def create_app(
     if uses_test_schema:
         create_schema_for_tests(engine)
     session_factory = build_session_factory(engine)
+    settings = ApplicationSettings()
     repository = SqlAlchemyDailyOperationRepository(session_factory)
     historical_dataset_repository = SqlAlchemyHistoricalDatasetRepository(session_factory)
-    prediction_repository = SqlAlchemyPredictionRepository(session_factory)
+    prediction_repository = SqlAlchemyPredictionRepository(
+        session_factory, site_timezone=settings.site_zone
+    )
     actual_fuel_repository = SqlAlchemyActualFuelRepository(session_factory)
     monitoring_repository = SqlAlchemyMonitoringRepository(session_factory)
     user_repository = SqlAlchemyUserRepository(session_factory)
     session_repository = SqlAlchemySessionRepository(session_factory)
     audit_repository = SqlAlchemyAuditRepository(session_factory)
-    settings = ApplicationSettings()
     resolved_public_url = settings.public_url if public_url is None else public_url
     resolved_location_catalog = location_catalog or SqlAlchemyLocationRepository(session_factory)
     resolved_vehicle_catalog = vehicle_catalog or SqlAlchemyVehicleRepository(session_factory)
@@ -347,7 +349,9 @@ def create_app(
     bulk_actual_fuel = BulkActualFuel(
         SpreadsheetHistoricalDatasetSourceReader(), record_actual_fuel
     )
-    get_prediction_performance = GetPredictionPerformance(actual_fuel_repository)
+    get_prediction_performance = GetPredictionPerformance(
+        actual_fuel_repository, model_reader=prediction_repository
+    )
     list_awaiting_actual = ListOperationsAwaitingActualFuel(actual_fuel_repository)
     promote_candidate_model = PromoteCandidateModel(prediction_repository, prediction_repository)
     get_candidate_model_comparison = GetCandidateModelComparison(

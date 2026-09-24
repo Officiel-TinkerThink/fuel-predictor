@@ -41,9 +41,15 @@ class SqlAlchemyPredictionHistoryRepository:
                     PredictionRow.estimated_fuel_requirement_liters,
                     PredictionRow.recommended_allocation_liters,
                     ActualFuelRecordRow.actual_fuel_liters,
+                    PredictionRow.model_version_id,
+                    ModelVersionRow.model_code,
                 )
                 .select_from(DailyOperationRow)
                 .join(PredictionRow, PredictionRow.prediction_id == latest_prediction_id)
+                .join(
+                    ModelVersionRow,
+                    ModelVersionRow.model_version_id == PredictionRow.model_version_id,
+                )
                 .outerjoin(
                     ActualFuelRecordRow,
                     ActualFuelRecordRow.operation_id == DailyOperationRow.operation_id,
@@ -66,6 +72,8 @@ class SqlAlchemyPredictionHistoryRepository:
                 estimated_fuel_requirement_liters=row.estimated_fuel_requirement_liters,
                 recommended_allocation_liters=row.recommended_allocation_liters,
                 actual_fuel_liters=row.actual_fuel_liters,
+                model_version_id=row.model_version_id,
+                model_code=row.model_code,
             )
             for row in rows
         )

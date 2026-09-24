@@ -381,6 +381,7 @@ def build_registry(
                 "upper": prediction.uncertainty_upper_liters,
             },
             "model_version_id": prediction.model.model_version_id,
+            "model_code": prediction.model.model_code,
             # Carried deliberately: an agent must be able to tell an estimate
             # of prepared fuel from verified consumption.
             "safety_policy": prediction.safety_policy,

@@ -19,6 +19,7 @@ dist/
 !.scratch/vehicle-group-mapping/
 !.scratch/operation-code/
 !.scratch/fleet-taxonomy/
+!.scratch/model-code/
 .scratch/fuel-prediction-mvp/**/*.sqlite3
 
 # Claude Code harness runtime state, not project configuration.

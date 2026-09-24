@@ -169,6 +169,8 @@ class DatasetOperationsResponse(BaseModel):
 
 class ModelVersionResponse(BaseModel):
     model_version_id: str
+    # How people name the model: M-260924-01.
+    model_code: str | None = None
     version: int
     dataset_version_id: str
     feature_version: str
@@ -268,15 +270,28 @@ class PerformanceMetricsResponse(BaseModel):
     rmse_liters: float | None
     smape_percent: float | None
     interval_coverage_percent: float | None
+    # Mean estimate - actual; negative means the estimates run short.
+    bias_liters: float | None = None
 
 
 class CategoryPerformanceResponse(PerformanceMetricsResponse):
     vehicle_category: VehicleCategory
 
 
+class ModelPerformanceResponse(PerformanceMetricsResponse):
+    """One model's own predictions against recorded actuals."""
+
+    model_version_id: str
+    model_code: str | None
+    lifecycle_status: ModelLifecycleStatus
+    # The MAE the model declared when it was trained, next to its field MAE.
+    declared_mae_liters: float
+
+
 class PredictionPerformanceResponse(BaseModel):
     overall: PerformanceMetricsResponse
     by_vehicle_category: list[CategoryPerformanceResponse]
+    by_model: list[ModelPerformanceResponse] = []
 
 
 class CategoryModelComparisonResponse(BaseModel):
@@ -604,6 +619,16 @@ def build_router(
                 )
                 for category, metrics in report.by_vehicle_category
             ],
+            by_model=[
+                ModelPerformanceResponse(
+                    model_version_id=item.model.model_version_id,
+                    model_code=item.model.model_code,
+                    lifecycle_status=item.model.lifecycle_status,
+                    declared_mae_liters=item.model.uncertainty_liters,
+                    **_performance_metrics_response(item.metrics).model_dump(),
+                )
+                for item in report.by_model
+            ],
         )
 
     return router
@@ -612,6 +637,7 @@ def build_router(
 def _model_response(model: ModelVersion) -> ModelVersionResponse:
     return ModelVersionResponse(
         model_version_id=model.model_version_id,
+        model_code=model.model_code,
         version=model.version,
         dataset_version_id=model.dataset_version_id,
         feature_version=model.feature_version,
@@ -782,6 +808,7 @@ def _performance_metrics_response(metrics: PerformanceMetrics) -> PerformanceMet
         rmse_liters=metrics.rmse_liters,
         smape_percent=metrics.smape_percent,
         interval_coverage_percent=metrics.interval_coverage_percent,
+        bias_liters=metrics.bias_liters,
     )
 
 

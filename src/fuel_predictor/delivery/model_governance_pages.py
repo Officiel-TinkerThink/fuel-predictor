@@ -61,7 +61,12 @@ def build_model_governance_pages_router(
                 versions=paginate(
                     dashboard.all_versions,
                     ListingQuery.from_params(request.query_params),
-                    search=lambda m: [m.model_version_id, m.algorithm, m.lifecycle_status.value],
+                    search=lambda m: [
+                        m.model_code,
+                        m.model_version_id,
+                        m.algorithm,
+                        m.lifecycle_status.value,
+                    ],
                     sorts=_VERSION_SORTS,
                     default_sort="waktu",
                 ),

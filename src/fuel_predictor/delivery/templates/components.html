@@ -11,6 +11,12 @@
 <code class="operation-code">{{ item.operation_code or item.operation_id }}</code>
 {%- endmacro %}
 
+{# A model as people name it: its model code, or its id for a version stored
+   before codes existed. #}
+{% macro model_name(model) -%}
+<code class="operation-code">{{ model.model_code or model.model_version_id }}</code>
+{%- endmacro %}
+
 {# The same, spelled plainly for links and form values. #}
 {% macro operation_ref(item) -%}{{ item.operation_code or item.operation_id }}{%- endmacro %}
 
