@@ -100,3 +100,50 @@ def test_the_sheet_is_for_whoever_records_actual_fuel() -> None:
         "/bahan-bakar-aktual/menunggu.xlsx",
         Capability.RECORD_ACTUAL_FUEL,
     ) in ROUTE_CAPABILITIES
+
+
+def test_the_sheet_speaks_the_form_s_words_and_checks_entries_as_they_are_typed(
+    tmp_path: Path,
+) -> None:
+    """It told people to type manual_entry, fuel_meter or receipt; the form
+    and the slip say Meter BBM, Nota and Catatan manual. Excel now offers
+    those as a list and refuses a word where litres go."""
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        _train_baseline(client)
+        _operation_with_prediction(client, 24)
+        sheet = load_workbook(BytesIO(client.get("/bahan-bakar-aktual/menunggu.xlsx").content))
+
+    data = sheet["Bahan Bakar Aktual"]
+    assert data["C1"].value == "Diukur dengan (opsional)"
+    rules = {str(rule.sqref): rule for rule in data.data_validations.dataValidation}
+    assert rules["C2:C2000"].formula1 == '"Meter BBM,Nota,Catatan manual"'
+    assert rules["B2:B2000"].type == "decimal" and rules["B2:B2000"].formula1 == "0"
+    guide = " ".join(
+        str(value) for row in sheet["Petunjuk"].iter_rows(values_only=True) for value in row
+    )
+    assert "fuel_meter" not in guide and "manual_entry" not in guide
+
+
+def test_the_form_s_words_are_read_back_and_anything_else_is_named(tmp_path: Path) -> None:
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        _train_baseline(client)
+        codes = [
+            _operation_with_prediction(client, distance)["operation"]["operation_code"]
+            for distance in (20, 30, 40, 50)
+        ]
+        rows = zip(codes, ("Meter BBM", "nota", "Catatan manual", "timbangan"), strict=True)
+        sheet = "Kode Operasi (wajib),Bahan Bakar Aktual (L) (wajib),Diukur dengan (opsional)\n"
+        sheet += "".join(f"{code},20,{how}\n" for code, how in rows)
+        body = client.post(
+            "/api/v1/bulk-actual-fuel",
+            files={"file": ("aktual.csv", sheet.encode(), "text/csv")},
+        ).json()
+
+    assert [row["actual_fuel"]["measurement_source"] for row in body["accepted_rows"]] == [
+        "fuel_meter",
+        "receipt",
+        "manual_entry",
+    ]
+    assert body["correction_report"][0]["reasons"][0]["message"].startswith(
+        "Diukur dengan tidak dikenali"
+    )

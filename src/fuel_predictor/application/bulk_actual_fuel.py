@@ -173,6 +173,8 @@ _HEADER_ALIASES = {
         "actual fuel l",
     },
     "measurement_source": {
+        "diukur dengan",
+        "diukur dengan opsional",
         "sumber pengukuran",
         "sumber pengukuran opsional",
         "measurement source",
@@ -259,17 +261,28 @@ def _parse_measurement_source(
     if is_blank(raw_value):
         return ActualFuelMeasurementSource.SPREADSHEET_IMPORT
     aliases = {
+        # The words the form, the slip and the sheet's dropdown use; then the
+        # codes older sheets were told to write.
+        "meter bbm": ActualFuelMeasurementSource.FUEL_METER,
+        "nota": ActualFuelMeasurementSource.RECEIPT,
+        "bukti nota": ActualFuelMeasurementSource.RECEIPT,
+        "catatan manual": ActualFuelMeasurementSource.MANUAL_ENTRY,
         "manual entry": ActualFuelMeasurementSource.MANUAL_ENTRY,
         "manual": ActualFuelMeasurementSource.MANUAL_ENTRY,
         "fuel meter": ActualFuelMeasurementSource.FUEL_METER,
-        "meter bbm": ActualFuelMeasurementSource.FUEL_METER,
         "receipt": ActualFuelMeasurementSource.RECEIPT,
         "bukti": ActualFuelMeasurementSource.RECEIPT,
         "spreadsheet import": ActualFuelMeasurementSource.SPREADSHEET_IMPORT,
     }
     source = aliases.get(normalize_header(str(raw_value)))
     if source is None:
-        issues.append(CorrectionReason("measurement_source", "Sumber pengukuran tidak valid."))
+        issues.append(
+            CorrectionReason(
+                "measurement_source",
+                'Diukur dengan tidak dikenali; gunakan "Meter BBM", "Nota", atau '
+                '"Catatan manual", atau kosongkan.',
+            )
+        )
     return source
 
 
