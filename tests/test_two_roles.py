@@ -289,3 +289,20 @@ def test_an_operator_is_not_offered_a_link_that_would_be_refused(
     assert operator_client.get("/pemantauan/kinerja-model").status_code == 403
     assert 'href="/pemantauan/kinerja-model"' not in for_operator
     assert 'href="/pemantauan/kinerja-model"' in for_admin
+
+
+def test_the_operator_s_overview_does_not_compute_the_administrator_s_figures(
+    operator_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Re-scoring every actual for figures an operator is never shown made
+    their overview take seconds after each restart."""
+    from fuel_predictor.application.model_lifecycle import GetModelGovernanceDashboard
+    from fuel_predictor.application.monitoring import GetMonitoringDashboard
+
+    def not_for_operators(*_args: object) -> None:
+        raise AssertionError("computed for an operator")
+
+    monkeypatch.setattr(GetModelGovernanceDashboard, "execute", not_for_operators)
+    monkeypatch.setattr(GetMonitoringDashboard, "execute", not_for_operators)
+
+    assert operator_client.get("/").status_code == 200

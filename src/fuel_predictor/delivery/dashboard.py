@@ -58,12 +58,20 @@ def build_dashboard_router(
     @router.get("/", response_class=HTMLResponse)
     def show_overview(request: Request) -> HTMLResponse:
         caller = guard.require_caller(request)
-        monitoring = get_monitoring_dashboard.execute()
-        governance = get_model_governance_dashboard.execute()
-        critical_alerts = [
-            alert for alert in monitoring.active_alerts if alert.severity.value == "critical"
-        ]
         can_monitor = caller.allows(Capability.VIEW_MONITORING)
+        manages_models = caller.allows(Capability.MANAGE_MODELS)
+        # The model and service figures are the administrator's to read, and
+        # computing them re-scores every recorded actual: an operator's
+        # overview computed them anyway and took seconds after a restart.
+        monitoring = get_monitoring_dashboard.execute() if can_monitor else None
+        governance = (
+            get_model_governance_dashboard.execute() if can_monitor or manages_models else None
+        )
+        critical_alerts = (
+            [alert for alert in monitoring.active_alerts if alert.severity.value == "critical"]
+            if monitoring is not None
+            else []
+        )
         shows_awaiting = not can_monitor and caller.allows(Capability.RECORD_ACTUAL_FUEL)
         return HTMLResponse(
             render(
@@ -94,9 +102,9 @@ def build_dashboard_router(
                 # is imported and a candidate trained and promoted. Only the
                 # people who can do those steps are walked through them.
                 setup_needed=(
-                    governance.active_model is None and caller.allows(Capability.MANAGE_MODELS)
+                    governance is not None and governance.active_model is None and manages_models
                 ),
-                candidate_count=len(governance.candidate_models),
+                candidate_count=len(governance.candidate_models) if governance else 0,
                 freshness=_freshness(),
             )
         )
