@@ -212,10 +212,7 @@ def _render_form(
         page_title="Catat Bahan Bakar Aktual",
         active_path="/bahan-bakar-aktual",
         eyebrow="UMPAN BALIK OPERASI",
-        page_lead=(
-            "Pilih operasi yang sudah selesai, lalu masukkan BBM yang benar-benar terpakai. "
-            "Nilai ini disimpan terpisah dari bahan bakar disiapkan."
-        ),
+        page_lead="Masukkan BBM yang benar-benar terpakai untuk operasi yang sudah selesai.",
         values=values,
         errors=errors,
         awaiting=awaiting,
@@ -230,8 +227,8 @@ def _render_bulk_form(caller: "ActiveCaller", error: str | None) -> str:
         active_path="/bahan-bakar-aktual-massal",
         eyebrow="UMPAN BALIK OPERASI",
         page_lead=(
-            "Unggah CSV atau Excel .xlsx. Baris valid tetap disimpan; ID tidak cocok dan "
-            "nilai tidak valid dikarantina."
+            "Isi BBM aktual banyak operasi sekaligus dari satu berkas. Baris yang bermasalah "
+            "disisihkan beserta alasannya; baris lainnya tetap disimpan."
         ),
         error=error,
     )

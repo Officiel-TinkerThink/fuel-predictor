@@ -25,8 +25,8 @@ if TYPE_CHECKING:
 _UPLOAD_FILE = File(...)
 
 _PAGE_LEAD = (
-    "Unggah rencana operasi CSV atau Excel .xlsx. Baris yang valid tetap diprediksi, "
-    "sementara baris lain dikarantina bersama alasan koreksinya."
+    "Buat estimasi untuk banyak operasi sekaligus dari satu berkas. Baris yang bermasalah "
+    "disisihkan beserta alasannya; baris lainnya tetap diproses."
 )
 
 

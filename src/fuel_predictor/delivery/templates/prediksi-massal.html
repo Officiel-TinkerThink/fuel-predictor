@@ -8,19 +8,26 @@
 {% endif %}
 
 <section class="card">
-  {{ ui.steps(['Unduh template', 'Isi satu baris per operasi', 'Unggah'], 0) }}
-  <div class="button-row" style="margin-top: 0">
-    <a class="button button--secondary" href="/api/v1/bulk-operation-predictions/template?format=xlsx">Unduh template Excel</a>
-    <a class="button button--secondary" href="/api/v1/bulk-operation-predictions/template?format=csv">Unduh template CSV</a>
-  </div>
-  <p class="hint">Selalu pakai template ini; nama dan urutan kolomnya harus persis. Kolom wajib:
-    kategori ANGBER, mode aktivitas, jarak total, sumber jarak. Kendaraan, jam lifting, dan
-    urutan pemberhentian opsional.</p>
-  <form method="post" action="/prediksi-operasi-massal" enctype="multipart/form-data">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    {{ ui.file_field('file', 'Berkas rencana operasi', '.csv,.xlsx', hint='CSV atau Excel .xlsx yang diisi dari template di atas.') }}
-    <button type="submit" class="button">Buat prediksi massal</button>
-  </form>
+  <ol class="numbered-steps">
+    <li>
+      <h2>Unduh templatnya</h2>
+      <p><a class="button" href="/api/v1/bulk-operation-predictions/template?format=xlsx">Unduh templat (Excel)</a></p>
+      <p class="hint">Atau dalam <a href="/api/v1/bulk-operation-predictions/template?format=csv">CSV</a>.</p>
+    </li>
+    <li>
+      <h2>Isi satu baris per operasi</h2>
+      <p class="hint">Arti setiap kolom dan contohnya ada di lembar <strong>Petunjuk</strong> dalam
+        templat. Jangan mengubah nama kolomnya.</p>
+    </li>
+    <li>
+      <h2>Unggah berkasnya</h2>
+      <form method="post" action="/prediksi-operasi-massal" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        {{ ui.file_field('file', 'Berkas rencana operasi', '.csv,.xlsx', hint='Excel (.xlsx) atau CSV.') }}
+        <button type="submit" class="button">Buat prediksi massal</button>
+      </form>
+    </li>
+  </ol>
 </section>
 
 {% endblock %}

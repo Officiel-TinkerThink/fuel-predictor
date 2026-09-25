@@ -1560,6 +1560,49 @@ dialog[open]:not(:modal) {
   margin: var(--space-3) 0;
 }
 
+/* Instructions as numbered steps, each carrying the action it needs. */
+.numbered-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-5);
+  counter-reset: step;
+}
+
+.numbered-steps > li {
+  position: relative;
+  padding-left: calc(28px + var(--space-3));
+  counter-increment: step;
+}
+
+.numbered-steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-brand-soft);
+  color: var(--color-brand-strong);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.numbered-steps h2 {
+  margin: 0 0 var(--space-2);
+  font-size: 1rem;
+  line-height: 28px;
+}
+
+.numbered-steps p {
+  margin: 0 0 var(--space-2);
+  max-width: var(--measure);
+}
+
 /* Download, fill, import: numbered, with the two buttons as steps 1 and 3. */
 .fill-by-sheet {
   margin: var(--space-3) 0;

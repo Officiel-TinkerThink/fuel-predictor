@@ -12,9 +12,6 @@
     <dt>Nama pengguna</dt><dd>{{ caller_user.username }}</dd>
     <dt>Peran</dt><dd>{{ role_label }}</dd>
     <dt>Email</dt><dd>{% if caller_user.email %}{{ caller_user.email }}{% else %}Belum diisi{% endif %}</dd>
-    <dt>Status</dt><dd>{{ ui.badge('Aktif', 'success') if caller_user.is_active else ui.badge('Nonaktif', 'neutral') }}</dd>
-    <dt>Dibuat</dt><dd>{{ caller_user.created_at | waktu }}</dd>
-    <dt>Terakhir masuk</dt><dd>{% if caller_user.last_sign_in_at %}{{ caller_user.last_sign_in_at | waktu }}{% else %}Belum pernah{% endif %}</dd>
   </dl>
   {% if caller_user.role.value == 'administrator' %}
   <div class="button-row">

@@ -14,10 +14,8 @@
 <section class="card">
   <form method="post" action="/bahan-bakar-aktual" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <fieldset>
-      <legend>Hasil operasi</legend>
-      {{ ui.text_field('operation_id', 'Kode operasi', values.get('operation_id', ''), hint='Kode yang dicatat saat estimasi dibuat, misalnya 260924-0914-VT-P410-VT01. Atau pilih Catat di daftar di bawah.', errors=errors, required=true) }}
-      <div class="chosen-operation" data-chosen-operation{% if not chosen.item %} hidden{% endif %}>
+    {{ ui.text_field('operation_id', 'Kode operasi', values.get('operation_id', ''), hint='Kode yang dicatat saat estimasi dibuat, misalnya 260924-0914-VT-P410-VT01. Atau pilih Catat di daftar di bawah.', errors=errors, required=true) }}
+    <div class="chosen-operation" data-chosen-operation{% if not chosen.item %} hidden{% endif %}>
         <p class="chosen-operation__label">Operasi yang akan dicatat</p>
         <p class="chosen-operation__summary">
           <strong data-chosen-vehicle>{% if chosen.item %}{{ chosen.item.vehicle or chosen.item.vehicle_category.value }}{% endif %}</strong>
@@ -28,8 +26,8 @@
       <p class="field-note" data-code-not-waiting hidden>Kode ini tidak ada di daftar yang menunggu BBM aktual. Periksa lagi kodenya, atau mungkin aktualnya sudah dicatat.</p>
       {{ ui.number_field('actual_fuel_liters', 'Bahan bakar aktual', 'L', values.get('actual_fuel_liters', ''), hint='BBM yang benar-benar terpakai sepanjang operasi.', errors=errors, required=true, min=0.01) }}
       <p class="field-note field-note--warning" data-litres-warning hidden></p>
-      {{ ui.select_field('measurement_source', 'Sumber pengukuran', [('manual_entry', 'Catatan manual'), ('fuel_meter', 'Meter BBM'), ('receipt', 'Bukti/nota')], values.get('measurement_source', 'manual_entry'), errors=errors) }}
-    </fieldset>
+      {# The same choices, in the same order, as the slip's "Diukur dengan". #}
+      {{ ui.select_field('measurement_source', 'Diukur dengan', [('fuel_meter', 'Meter BBM'), ('receipt', 'Nota'), ('manual_entry', 'Catatan manual')], values.get('measurement_source', 'manual_entry'), errors=errors) }}
     <button type="submit" class="button">Simpan bahan bakar aktual</button>
   </form>
 </section>
@@ -65,10 +63,5 @@
   {{ ui.empty_state('Semua prediksi sudah punya BBM aktual. Tidak ada yang menunggu.') }}
   {% endif %}
 </section>
-
-<div class="button-row">
-  {% if not awaiting %}<a class="button button--secondary" href="/bahan-bakar-aktual-massal">Impor aktual dari berkas</a>{% endif %}
-  {% if may_open('/pemantauan/kinerja-model') %}<a class="button button--secondary" href="/pemantauan/kinerja-model">Lihat kinerja prediksi</a>{% endif %}
-</div>
 
 {% endblock %}
