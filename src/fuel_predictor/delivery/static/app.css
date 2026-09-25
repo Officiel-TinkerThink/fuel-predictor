@@ -2607,3 +2607,151 @@ th[aria-sort="descending"] .collection-sort::after { content: " ↓"; }
     animation-duration: 0.01ms !important;
   }
 }
+
+/* ---------- Fuel slip (printed) ----------
+   A standalone page sized for A5 or half an A4 sheet. The screen shows the
+   paper; print drops the buttons and the page background. */
+.slip-page {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  padding: var(--space-5) var(--space-4);
+}
+
+.slip {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: var(--space-6);
+  background: #fff;
+  color: #10202b;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.slip__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.slip__brand {
+  margin: 0 0 var(--space-4);
+  font-size: 0.8rem;
+  color: #5b6b76;
+}
+
+.slip__label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #5b6b76;
+}
+
+.slip__code {
+  margin: var(--space-1) 0 var(--space-2);
+  font-family: var(--font-mono);
+  font-size: clamp(1.1rem, 5vw, 2rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+
+.slip__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0 0 var(--space-4);
+  font-size: 0.85rem;
+}
+
+.slip__legend strong {
+  font-family: var(--font-mono);
+}
+
+.slip__header {
+  padding-bottom: var(--space-4);
+  border-bottom: 2px solid #10202b;
+}
+
+.slip__facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-4) 0;
+}
+
+.slip__facts dt {
+  color: #5b6b76;
+}
+
+.slip__facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.slip__numbers {
+  display: flex;
+  gap: var(--space-6);
+  padding: var(--space-4) 0;
+  border-top: 1px solid #c9d3d8;
+  border-bottom: 1px solid #c9d3d8;
+}
+
+.slip__figure {
+  margin: var(--space-1) 0 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.slip__figure--quiet {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #37474f;
+}
+
+.slip__fill {
+  margin-top: var(--space-5);
+}
+
+.slip__line {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+}
+
+.slip__line > span:first-child {
+  flex: 0 0 11rem;
+  color: #37474f;
+}
+
+.slip__blank {
+  flex: 1;
+  border-bottom: 1px solid #10202b;
+  min-height: 1.4rem;
+}
+
+.slip__footer {
+  margin: var(--space-6) 0 0;
+  font-size: 0.8rem;
+  color: #5b6b76;
+}
+
+@media print {
+  .slip-page {
+    background: #fff;
+    padding: 0;
+  }
+
+  .slip {
+    border: 0;
+    padding: 0;
+    max-width: none;
+  }
+
+  [data-print-actions] {
+    display: none;
+  }
+}

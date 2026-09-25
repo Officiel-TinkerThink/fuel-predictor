@@ -26,6 +26,7 @@
 <div class="button-row result-actions">
   <a class="button" href="/prediksi">Buat operasi lain</a>
   <a class="button button--secondary" href="/bahan-bakar-aktual?operation_id={{ (operation and operation.operation_code) or prediction.operation_id }}">Catat BBM aktual untuk operasi ini</a>
+  <a class="button button--secondary" href="/operasi-harian/{{ prediction.operation_id }}/slip" target="_blank" rel="noopener">Cetak slip</a>
 </div>
 
 <section class="card">

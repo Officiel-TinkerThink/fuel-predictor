@@ -68,6 +68,7 @@ ROUTE_CAPABILITIES: tuple[tuple[str, str, Capability], ...] = (
     ("GET", "/prediksi/rute", Capability.CREATE_PREDICTION),
     ("POST", "/operasi-harian", Capability.CREATE_PREDICTION),
     ("GET", "/operasi-harian/*", Capability.CREATE_PREDICTION),
+    ("GET", "/operasi-harian/*/slip", Capability.CREATE_PREDICTION),
     ("POST", "/operasi-harian/*/prediksi", Capability.CREATE_PREDICTION),
     ("GET", "/riwayat-prediksi", Capability.CREATE_PREDICTION),
     # The fleet and its vehicle codes: whoever writes an operation code down.

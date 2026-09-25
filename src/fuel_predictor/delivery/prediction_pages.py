@@ -41,7 +41,7 @@ from fuel_predictor.delivery.http import (
     translate_validation_errors,
 )
 from fuel_predictor.delivery.listing import ListingQuery, SortOption, paginate
-from fuel_predictor.delivery.rendering import render
+from fuel_predictor.delivery.rendering import render, render_error_page, render_standalone
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.daily_operation import DailyOperation, DailyOperationValidationError
 from fuel_predictor.domain.prediction import FuelPrediction
@@ -302,6 +302,38 @@ def build_prediction_pages_router(
                     "atau mencatat BBM aktualnya."
                 ),
                 listing=listing,
+            )
+        )
+
+    @router.get("/operasi-harian/{operation_id}/slip", response_class=HTMLResponse)
+    def show_slip(operation_id: str, request: Request) -> HTMLResponse:
+        """The estimate as a paper slip: the code to carry to the fuel point,
+        the allocation, and room for the litres actually used."""
+        guard.require_caller(request)
+        try:
+            operation = get_daily_operation.execute(operation_id)
+        except DailyOperationNotFoundError:
+            return HTMLResponse(
+                render_error_page("Operasi tidak ditemukan", "Tidak ada operasi dengan ID ini."),
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        prediction = get_latest_prediction.execute(operation_id)
+        if prediction is None:
+            return HTMLResponse(
+                render_error_page(
+                    "Belum ada estimasi",
+                    "Slip dicetak dari estimasi. Buat estimasi untuk operasi ini terlebih dahulu.",
+                ),
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        return HTMLResponse(
+            render_standalone(
+                "slip.html",
+                page_title=f"Slip BBM {operation.operation_code or operation.operation_id}",
+                operation=operation,
+                prediction=prediction,
+                vehicle=_vehicle(operation),
+                mode_label=_MODE_LABELS[operation.activity_mode.value],
             )
         )
 

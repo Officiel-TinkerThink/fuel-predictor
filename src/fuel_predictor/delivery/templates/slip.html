@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page_title }} · Fuel Matrix Calculation</title>
+  <link rel="stylesheet" href="/statis/app.css">
+  <link rel="icon" href="data:,">
+</head>
+{# A paper slip, always light: it is printed, and on screen it previews the
+   paper. The code is what the operator carries to the fuel point and types
+   back in Catat Aktual. #}
+<body class="slip-page">
+<main class="slip">
+  <div class="slip__actions" data-print-actions>
+    <button type="button" class="button" data-print onclick="window.print()">Cetak slip</button>
+    <a class="button button--secondary" href="/operasi-harian/{{ operation.operation_id }}">Kembali ke estimasi</a>
+  </div>
+
+  <header class="slip__header">
+    <p class="slip__brand">Fuel Matrix Calculation · Slip BBM operasi</p>
+    <p class="slip__label">Kode operasi</p>
+    <p class="slip__code">{{ operation.operation_code or operation.operation_id }}</p>
+    {% if vehicle and operation.operation_code and ('-' ~ vehicle.vehicle_code) in operation.operation_code %}
+    <p class="slip__legend">
+      {% if vehicle.group_code %}<span><strong>{{ vehicle.group_code }}</strong> {{ vehicle.group }}</span>{% endif %}
+      {% if vehicle.type_code %}<span><strong>{{ vehicle.type_code }}</strong> {{ vehicle.type }}</span>{% endif %}
+      <span><strong>{{ vehicle.unit_mark }}</strong> {{ vehicle.name }}</span>
+    </p>
+    {% endif %}
+  </header>
+
+  <dl class="slip__facts">
+    <dt>Kendaraan</dt><dd>{{ operation.vehicle or operation.vehicle_category.value }}{% if vehicle %} · {{ vehicle.type }}{% endif %}</dd>
+    <dt>Aktivitas</dt><dd>{{ mode_label }}{% if operation.lifting_hours %} · {{ operation.lifting_hours | angka }} jam lifting{% endif %}</dd>
+    {% if operation.stop_sequence %}<dt>Rute</dt><dd>{{ operation.stop_sequence | join(' → ') }}</dd>{% endif %}
+    <dt>Jarak total</dt><dd>{{ operation.total_distance_km | angka }} km</dd>
+    <dt>Diprediksi</dt><dd>{{ prediction.created_at | waktu }} · model {{ prediction.model.model_code or prediction.model.model_version_id }}</dd>
+  </dl>
+
+  <div class="slip__numbers">
+    <div><p class="slip__label">Alokasi rekomendasi</p><p class="slip__figure">{{ prediction.recommended_allocation_liters | angka }} L</p></div>
+    <div><p class="slip__label">Estimasi kebutuhan</p><p class="slip__figure slip__figure--quiet">{{ prediction.estimated_fuel_requirement_liters | angka }} L</p></div>
+  </div>
+
+  <section class="slip__fill">
+    <p class="slip__label">Diisi setelah operasi selesai</p>
+    <p class="slip__line"><span>BBM aktual terpakai</span><span class="slip__blank"></span><span>L</span></p>
+    <p class="slip__line"><span>Diukur dengan</span><span class="slip__choices">☐ Meter BBM &nbsp; ☐ Nota &nbsp; ☐ Catatan manual</span></p>
+    <p class="slip__line"><span>Dicatat oleh</span><span class="slip__blank"></span></p>
+    <p class="slip__line"><span>Tanggal</span><span class="slip__blank"></span></p>
+  </section>
+
+  <p class="slip__footer">Ketik kode di atas pada menu <strong>Catat Aktual</strong> untuk mencatat BBM aktualnya.
+    Estimasi dipelajari dari catatan BBM disiapkan; bukan konsumsi aktual yang telah diverifikasi.</p>
+</main>
+</body>
+</html>
