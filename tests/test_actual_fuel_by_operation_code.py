@@ -127,3 +127,22 @@ def test_an_operation_opens_by_its_code_as_well_as_its_id(tmp_path: Path) -> Non
     assert page.status_code == 200
     assert "Kode operasi — catat kode ini" in page.text
     assert slip.status_code == 200
+
+
+def test_a_csv_saved_by_excel_in_indonesian_reads_back(tmp_path: Path) -> None:
+    """Excel set to Indonesian saves CSV with semicolons and decimal commas."""
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        _train_baseline(client)
+        code = _operation_with_prediction(client, 24)["operation"]["operation_code"]
+        sheet = (
+            "Kode Operasi (wajib);Bahan Bakar Aktual (L) (wajib);Diukur dengan (opsional)\n"
+            f"{code};25,5;Meter BBM\n"
+        )
+        body = client.post(
+            "/api/v1/bulk-actual-fuel",
+            files={"file": ("aktual.csv", sheet.encode(), "text/csv")},
+        ).json()
+
+    assert body["accepted_row_count"] == 1
+    assert body["accepted_rows"][0]["actual_fuel"]["actual_fuel_liters"] == 25.5
+    assert body["accepted_rows"][0]["actual_fuel"]["measurement_source"] == "fuel_meter"
