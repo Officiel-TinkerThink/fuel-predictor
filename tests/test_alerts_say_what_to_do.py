@@ -42,6 +42,7 @@ def test_health_page_groups_alerts_and_shows_the_remediation(
     # Two alerts of one kind: one group, one remediation, both operations listed.
     assert page.count("Tindakan:") == 1
     assert remediation_for(MonitoringAlertKind.MISSING_ACTUAL)[:40] in page
-    assert all(operation_id in page for operation_id in overdue)
+    # Each named by its code and linked to the operation, where actual fuel is recorded.
+    assert all(f'href="/operasi-harian/{operation_id}"' in page for operation_id in overdue)
     assert ">missing_actual<" not in page
     assert ">missing_actual<" not in overview

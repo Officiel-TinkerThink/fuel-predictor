@@ -45,7 +45,7 @@
     {{ ui.badge('Kritis' if group.critical else 'Peringatan', 'danger' if group.critical else 'warning') }}
   </div>
   <ul class="alert-group__items">
-    {% for message in group.messages %}<li>{{ message }}</li>{% endfor %}
+    {% for item in group.entries %}<li>{% if item.href %}<a href="{{ item.href }}">{{ item.text }}</a>{% else %}{{ item.text }}{% endif %}</li>{% endfor %}
   </ul>
   <p class="alert-group__action"><strong>Tindakan:</strong> {{ group.remediation }}</p>
   <p class="hint">{{ group.urgency }}</p>

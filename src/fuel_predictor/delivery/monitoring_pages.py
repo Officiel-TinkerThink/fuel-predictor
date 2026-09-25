@@ -166,10 +166,19 @@ def group_alerts(alerts: Sequence[MonitoringAlert]) -> list[dict[str, object]]:
                 "critical": critical,
                 "urgency": urgency_for(worst),
                 "remediation": remediation_for(kind),
-                "messages": [a.message for a in members],
+                "entries": [{"text": a.message, "href": _alert_href(a)} for a in members],
             }
         )
     return result
+
+
+def _alert_href(alert: MonitoringAlert) -> str | None:
+    """Where the thing an alert names can be opened: a missing actual links
+    to its operation, where actual fuel is one click away."""
+    operation_id = alert.details.get("operation_id")
+    if alert.kind is MonitoringAlertKind.MISSING_ACTUAL and isinstance(operation_id, str):
+        return f"/operasi-harian/{operation_id}"
+    return None
 
 
 # Plot geometry for the rolling-error line: a fixed viewBox the CSS scales,
