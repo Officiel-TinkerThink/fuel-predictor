@@ -169,20 +169,22 @@ class GetModelGovernanceDashboard:
                     self.vehicle_catalog,
                 )
             )
-        retraining_recommended = bool(
-            active_performance
-            and active_performance.mae_liters is not None
-            and active_performance.mae_liters > self.max_active_model_mae_liters
+        active_mae = active_performance.mae_liters if active_performance else None
+        retraining_recommended = (
+            active_mae is not None and active_mae > self.max_active_model_mae_liters
         )
         if active is None:
             recommendation = (
                 "Belum ada model aktif. Latih kandidat dari dataset tervalidasi lalu promosikan "
                 "secara manual setelah ditinjau."
             )
-        elif retraining_recommended:
+        elif active_mae is not None and retraining_recommended:
+            mae = f"{active_mae:.1f}".replace(".", ",")
+            limit = f"{self.max_active_model_mae_liters:.1f}".replace(".", ",")
             recommendation = (
-                "Kinerja model aktif perlu ditinjau. Latih kandidat baru secara manual dan "
-                "bandingkan metriknya sebelum promosi."
+                f"Model aktif meleset rata-rata {mae} L dari BBM aktual yang tercatat, di atas "
+                f"batas {limit} L. Latih kandidat baru secara manual dan bandingkan metriknya "
+                "sebelum promosi."
             )
         elif candidates:
             recommendation = (

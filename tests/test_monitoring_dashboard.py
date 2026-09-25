@@ -78,6 +78,7 @@ def test_monitoring_dashboard_reports_traceable_local_alerts(
             )
         dashboard = client.get("/api/v1/monitoring-dashboard")
         health_page = client.get("/pemantauan/kesehatan-sistem")
+        code = client.get(f"/api/v1/daily-operations/{operation_id}").json()["operation_code"]
         recorded = client.post(
             f"/api/v1/daily-operations/{operation_id}/actual-fuel",
             json={"actual_fuel_liters": estimate, "measurement_source": "fuel_meter"},
@@ -93,6 +94,9 @@ def test_monitoring_dashboard_reports_traceable_local_alerts(
         "missing_actual",
     }
     assert all(alert["resolved_at"] is None for alert in body["active_alerts"])
+    missing = next(alert for alert in body["active_alerts"] if alert["kind"] == "missing_actual")
+    # Named by the code on the slip, the one people can look up.
+    assert missing["message"] == f"Operasi {code} belum dicatat bahan bakar aktualnya."
     assert health_page.status_code == 200
     assert "Kesehatan Sistem" in health_page.text
     # The page keeps promising promotion is never automatic.
@@ -126,13 +130,23 @@ def test_monitoring_dashboard_shows_rolling_error_and_category_degradation(
             json={"actual_fuel_liters": estimate + 5, "measurement_source": "fuel_meter"},
         )
         dashboard = client.get("/api/v1/monitoring-dashboard")
+        management = client.get("/pengelolaan-model")
 
     assert actual.status_code == 201
     assert dashboard.status_code == 200
     body = dashboard.json()
     assert body["rolling_error_trend"][0]["mae_liters"] == 5.0
     assert body["category_degradation"][0]["degraded"] is True
-    assert "model_degradation" in {alert["kind"] for alert in body["active_alerts"]}
+    degradation = next(
+        alert for alert in body["active_alerts"] if alert["kind"] == "model_degradation"
+    )
+    # The alert says by how much, not only that a threshold was crossed.
+    assert degradation["message"] == (
+        "Estimasi ANGBER meleset rata-rata 5,0 L dari BBM aktual, di atas ambang 1,0 L."
+    )
+    assert "meleset rata-rata 5,0 L dari BBM aktual yang tercatat, di atas batas 1,0 L" in (
+        management.text
+    )
 
 
 def test_evidently_feature_drift_uses_its_dataset_and_column_metrics() -> None:

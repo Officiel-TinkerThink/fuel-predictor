@@ -252,7 +252,8 @@ def _alerts_for(
                 f"missing_actual:{prediction.operation_id}",
                 MonitoringAlertKind.MISSING_ACTUAL,
                 MonitoringAlertSeverity.WARNING,
-                f"Prediksi untuk {prediction.operation_id} belum memiliki bahan bakar aktual.",
+                f"Operasi {prediction.operation_code or prediction.operation_id} "
+                "belum dicatat bahan bakar aktualnya.",
                 {
                     "operation_id": prediction.operation_id,
                     "prediction_id": prediction.prediction_id,
@@ -270,7 +271,8 @@ def _alerts_for(
                 "feature_drift:active_model",
                 MonitoringAlertKind.FEATURE_DRIFT,
                 MonitoringAlertSeverity.WARNING,
-                "Distribusi fitur prediksi bergeser melewati ambang pemantauan.",
+                f"{_percent(drift.drift_share)} fitur prediksi bergeser dari data latih "
+                f"(ambang {_percent(drift.threshold)}).",
                 {"drift_share": drift.drift_share, "threshold": drift.threshold},
                 observed_at,
             )
@@ -282,7 +284,9 @@ def _alerts_for(
                     f"model_degradation:{category.vehicle_category.value}",
                     MonitoringAlertKind.MODEL_DEGRADATION,
                     MonitoringAlertSeverity.CRITICAL,
-                    f"MAE kategori {category.vehicle_category.value} melewati ambang pemantauan.",
+                    f"Estimasi {category.vehicle_category.value} meleset rata-rata "
+                    f"{_liters(category.rolling_mae_liters or 0.0)} dari BBM aktual, "
+                    f"di atas ambang {_liters(category.threshold_liters)}.",
                     {
                         "vehicle_category": category.vehicle_category.value,
                         "mae_liters": category.rolling_mae_liters or 0.0,
@@ -292,6 +296,15 @@ def _alerts_for(
                 )
             )
     return tuple(alerts)
+
+
+def _liters(value: float) -> str:
+    """1 decimal, Indonesian comma: alerts are read on screen and in a chat."""
+    return f"{value:.1f}".replace(".", ",") + " L"
+
+
+def _percent(share: float) -> str:
+    return f"{share * 100:.0f}%"
 
 
 def _alert(
