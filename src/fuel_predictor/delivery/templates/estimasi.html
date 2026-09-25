@@ -93,7 +93,7 @@
         {% for item in similar %}
         {% set record = item.record %}
         <tr>
-          <td data-sort-value="{{ record.operation_date or record.recorded_at or '' }}">{% if record.operation_date %}{{ record.operation_date }}{% elif record.recorded_at %}{{ record.recorded_at | waktu }}{% else %}—{% endif %}
+          <td data-sort-value="{{ record.operation_date or record.recorded_at or '' }}">{% if record.operation_date %}{{ record.operation_date | tanggal }}{% elif record.recorded_at %}{{ record.recorded_at | waktu }}{% else %}—{% endif %}
             <span class="muted">· {% if record.source.value == 'dataset' %}riwayat{% else %}dicatat{% endif %}</span></td>
           <td>{{ record.vehicle or '—' }}{% if item.vehicle_group %} <span class="muted">· {{ item.vehicle_type }} · {{ item.vehicle_group }}</span>{% endif %}</td>
           <td>{{ mode_labels[record.activity_mode.value] }}{% if record.lifting_hours %} · {{ record.lifting_hours | angka }} jam{% endif %}</td>

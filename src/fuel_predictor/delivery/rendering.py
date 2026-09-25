@@ -7,7 +7,7 @@ use case, or a domain object's behaviour.
 import hashlib
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime, tzinfo
+from datetime import UTC, date, datetime, tzinfo
 from functools import cache, partial
 from pathlib import Path
 from types import SimpleNamespace
@@ -117,6 +117,7 @@ def build_environment() -> Environment:
     environment.filters["angka"] = format_decimal
     environment.filters["aktivitas"] = activity_label
     environment.filters["waktu"] = format_datetime
+    environment.filters["tanggal"] = format_day
     environment.globals["static_version"] = static_version
     return environment
 
@@ -237,6 +238,18 @@ def format_datetime(value: datetime | None, zone: tzinfo = UTC) -> str:
         return "-"
     aware = value if value.tzinfo is not None else value.replace(tzinfo=UTC)
     return aware.astimezone(zone).strftime("%d/%m/%Y %H:%M")
+
+
+def format_day(value: str | None) -> str:
+    """A day written as the pages write days (25/09/2026). History carries its
+    dates as the sheet had them, usually 2026-09-25; anything else is shown
+    as it came."""
+    if not value:
+        return "-"
+    try:
+        return date.fromisoformat(value.strip()[:10]).strftime("%d/%m/%Y")
+    except ValueError:
+        return value
 
 
 def configure_site_timezone(zone: tzinfo) -> None:
