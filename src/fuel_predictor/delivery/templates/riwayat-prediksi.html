@@ -29,7 +29,12 @@
           <td class="numeric" data-label="Alokasi">{{ item.recommended_allocation_liters | angka }} L</td>
           <td data-label="Model">{% if item.model_version_id %}{{ ui.model_name(item) }}{% else %}—{% endif %}</td>
           <td data-label="Aktual">
-            {% if item.actual_fuel_liters is not none %}{{ ui.badge((item.actual_fuel_liters | angka) ~ ' L', 'success') }}
+            {% if item.actual_fuel_liters is not none %}
+            {# How far the day landed from its estimate, and whether it ran past
+               what was issued - the two things a planner reads this column for. #}
+            {% set diff = item.actual_fuel_liters - item.estimated_fuel_requirement_liters %}
+            {{ ui.badge((item.actual_fuel_liters | angka) ~ ' L', 'warning' if item.actual_fuel_liters > item.recommended_allocation_liters else 'success') }}
+            <br><span class="hint">{{ '+' if diff > 0 else ('−' if diff < 0 else '±') }}{{ diff | abs | angka(1) }} L dari estimasi{% if item.actual_fuel_liters > item.recommended_allocation_liters %} · melebihi alokasi{% endif %}</span>
             {% else %}<a class="button button--secondary button--small" href="/bahan-bakar-aktual?operation_id={{ ui.operation_ref(item) }}">Catat</a>{% endif %}
           </td>
         </tr>

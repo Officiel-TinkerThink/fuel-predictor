@@ -11,6 +11,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from fuel_predictor.delivery.rendering import format_decimal
 from fuel_predictor.main import create_app
 from tests.test_actual_fuel_outcomes import _operation_with_prediction, _train_baseline
 
@@ -109,3 +110,21 @@ def test_history_pages_sorts_and_searches_like_every_list(tmp_path: Path) -> Non
     assert ids[1] in searched and ids[0] not in searched and ids[2] not in searched
     # Sorting by distance ascending puts the shortest (20 km) first.
     assert by_distance.index(ids[0]) < by_distance.index(ids[1]) < by_distance.index(ids[2])
+
+
+def test_a_recorded_actual_says_how_far_it_landed_from_the_estimate(tmp_path: Path) -> None:
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        _train_baseline(client)
+        item = _operation_with_prediction(client, 24)
+        estimate = item["prediction"]["estimated_fuel_requirement_liters"]
+        allocation = item["prediction"]["recommended_allocation_liters"]
+        client.post(
+            f"/api/v1/daily-operations/{item['operation']['operation_id']}/actual-fuel",
+            json={"actual_fuel_liters": allocation + 10, "measurement_source": "fuel_meter"},
+        )
+
+        page = client.get("/riwayat-prediksi").text
+
+    expected = "+" + format_decimal(allocation + 10 - estimate, 1)
+    assert f"{expected} L dari estimasi" in page
+    assert "melebihi alokasi" in page
