@@ -188,6 +188,8 @@
       position.textContent = "Halaman " + page + " dari " + pages;
       previous.disabled = page <= 1;
       next.disabled = page >= pages;
+      // One page needs no page buttons, only the count.
+      controls.hidden = pages <= 1;
       empty.hidden = matched.length !== 0;
     }
 

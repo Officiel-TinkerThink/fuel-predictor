@@ -111,6 +111,7 @@ from fuel_predictor.delivery.authentication import (
 )
 from fuel_predictor.delivery.bulk_prediction_pages import build_bulk_prediction_pages_router
 from fuel_predictor.delivery.dashboard import build_dashboard_router
+from fuel_predictor.delivery.error_pages import register_error_pages
 from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.delivery.fleet_pages import build_fleet_pages_router
 from fuel_predictor.delivery.health import build_health_router
@@ -560,6 +561,7 @@ def create_app(
         lifespan=application_lifespan,
     )
     register_error_handlers(app)
+    register_error_pages(app)
     register_identity_error_handlers(app)
     register_security_error_handlers(app)
     install_session_middleware(app, resolve_session)

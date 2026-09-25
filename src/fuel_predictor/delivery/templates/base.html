@@ -102,6 +102,16 @@
       } catch (error) {
         // Storage refused: the sidebar simply starts at the top.
       }
+      // Arriving from a link elsewhere (the overview, a button), the current
+      // page's item may sit below the fold of the sidebar; bring it into view.
+      var current = nav.querySelector('a[aria-current="page"]');
+      if (current) {
+        var item = current.getBoundingClientRect();
+        var box = nav.getBoundingClientRect();
+        if (item.bottom > box.bottom - 24 || item.top < box.top) {
+          nav.scrollTop += item.top - box.top - box.height / 3;
+        }
+      }
     })();
   </script>
 

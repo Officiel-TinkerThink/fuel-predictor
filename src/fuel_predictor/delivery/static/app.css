@@ -844,6 +844,116 @@ textarea {
   }
 }
 
+/* ---------- Actual fuel: the operation being recorded ---------- */
+.chosen-operation {
+  max-width: 34rem;
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--color-brand);
+  border-radius: var(--radius-md);
+  background: var(--color-brand-soft);
+}
+
+.chosen-operation__label {
+  margin: 0 0 var(--space-1);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.chosen-operation__summary {
+  margin: 0;
+}
+
+.chosen-operation__meta {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.field-note {
+  max-width: 34rem;
+  margin: 0 0 var(--space-4);
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.field-note--warning {
+  color: var(--color-warning);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-soft);
+}
+
+/* ---------- File drop zone ----------
+   Only with the script (html.js): it is what names the chosen file. Without
+   it, the browser's own picker stays as it is. */
+.file-drop__prompt,
+.file-drop__name {
+  display: none;
+}
+
+html.js .file-drop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-5) var(--space-4);
+  text-align: center;
+  border: 1.5px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+html.js .file-drop:hover,
+html.js .file-drop--over {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+html.js .file-drop:focus-within {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+html.js .file-drop--chosen {
+  border-style: solid;
+  border-color: var(--color-brand);
+}
+
+/* The real input covers the zone, invisible: a click or a drop anywhere on
+   it lands on the input itself. */
+html.js .file-drop input[type="file"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+html.js .file-drop__prompt,
+html.js .file-drop__name {
+  display: block;
+}
+
+.file-drop__prompt strong {
+  color: var(--color-brand-strong);
+}
+
+.file-drop__name {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+html.js .file-drop--chosen .file-drop__name {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
 /* The reveal button sits inside the field, so the input reserves room for it
    rather than running underneath. Sized off the input's own type-agnostic
    rules, because revealing swaps the type to text. */
@@ -1172,6 +1282,12 @@ tbody tr.is-selected td {
 .fleet-taxonomy__types {
   margin: 0;
   padding-left: var(--space-4);
+}
+
+/* A definition list's values are bold; here only the type name is. */
+.fleet-taxonomy dd,
+.fleet-taxonomy dt {
+  font-weight: 400;
 }
 
 .operation-code-callout__legend {
@@ -2331,9 +2447,10 @@ dialog::backdrop {
   display: block;
 }
 
+/* Its own 38px circle: `max-content` here once shrank it to the icon's
+   width, an oval on the sign-in and error pages. */
 .signin__card .theme-toggle {
   display: flex;
-  width: max-content;
   margin-left: auto;
   margin-bottom: var(--space-5);
 }

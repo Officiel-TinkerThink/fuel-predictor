@@ -166,9 +166,15 @@
 {% set message = _error_for(errors, name) | trim %}
 <div class="field">
   <label for="field-{{ name }}">{{ label }}</label>
-  <input id="field-{{ name }}" name="{{ name }}" type="file" accept="{{ accept }}"
-    {% if required %} required{% endif %}
-    {% if message %} aria-invalid="true" aria-describedby="error-{{ name }}"{% elif hint %} aria-describedby="hint-{{ name }}"{% endif %}>
+  {# A drop zone around the real input (app.js names the chosen file); with
+     no script, the browser's own picker shows as it is. #}
+  <div class="file-drop" data-file-drop>
+    <input id="field-{{ name }}" name="{{ name }}" type="file" accept="{{ accept }}"
+      {% if required %} required{% endif %}
+      {% if message %} aria-invalid="true" aria-describedby="error-{{ name }}"{% elif hint %} aria-describedby="hint-{{ name }}"{% endif %}>
+    <span class="file-drop__prompt" aria-hidden="true"><strong>Pilih berkas</strong> atau seret ke sini</span>
+    <span class="file-drop__name" data-file-name aria-hidden="true">Belum ada berkas dipilih</span>
+  </div>
   {% if hint %}<span class="hint" id="hint-{{ name }}">{{ hint }}</span>{% endif %}
   {% if message %}<span class="field-error" id="error-{{ name }}">{{ message }}</span>{% endif %}
 </div>
@@ -238,7 +244,8 @@
 {% macro steps(labels, current) -%}
 <ol class="steps" aria-label="Tahapan">
   {% for label in labels %}
-  <li {% if loop.index == current %}aria-current="step"{% elif loop.index < current %}data-state="done"{% endif %}>{{ label }}</li>
+  {# current=0: the steps are instructions, nothing is done or current yet. #}
+  <li {% if current and loop.index == current %}aria-current="step"{% elif current and loop.index < current %}data-state="done"{% endif %}>{{ label }}</li>
   {% endfor %}
 </ol>
 {%- endmacro %}

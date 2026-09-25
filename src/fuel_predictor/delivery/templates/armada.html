@@ -30,7 +30,7 @@
     <dd>
       <ul class="fleet-taxonomy__types">
         {% for type in group.types %}
-        <li>{% if type.code %}<code class="operation-code">{{ type.code }}</code> {{ type.name }}{% else %}<span class="muted">Tipe belum dicatat</span>{% endif %}
+        <li>{% if type.code %}<code class="operation-code">{{ type.code }}</code> <strong>{{ type.name }}</strong>{% else %}<span class="muted">Tipe belum dicatat</span>{% endif %}
           <span class="hint">· {{ type.units | map(attribute='name') | join(', ') }}</span></li>
         {% endfor %}
       </ul>

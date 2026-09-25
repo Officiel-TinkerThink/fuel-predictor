@@ -94,6 +94,56 @@
     });
   });
 
+  // Recording actual fuel: say which waiting operation the typed code is, and
+  // warn - without blocking - when the litres are far from its allocation,
+  // which is nearly always a typo or the wrong operation. The waiting list's
+  // rows carry what is needed; the server stays the authority on the code.
+  var codeInput = document.querySelector("#field-operation_id");
+  var chosenBox = document.querySelector("[data-chosen-operation]");
+  if (codeInput && chosenBox) {
+    var waiting = Array.prototype.slice.call(document.querySelectorAll("li[data-ref-id]"));
+    var notWaiting = document.querySelector("[data-code-not-waiting]");
+    var litresInput = document.querySelector("#field-actual_fuel_liters");
+    var litresWarning = document.querySelector("[data-litres-warning]");
+    var chosenAllocation = null;
+    var normalise = function (value) { return value.replace(/\s+/g, "").toUpperCase(); };
+    var formatLitres = function (value) { return value.toLocaleString("id-ID", { maximumFractionDigits: 2 }); };
+    var checkLitres = function () {
+      if (!litresInput || !litresWarning) { return; }
+      var litres = parseFloat((litresInput.value || "").replace(",", "."));
+      var far = chosenAllocation && litres > 0 && (litres > chosenAllocation * 2 || litres < chosenAllocation * 0.4);
+      litresWarning.hidden = !far;
+      if (far) {
+        litresWarning.textContent = formatLitres(litres) + " L jauh dari alokasi " + formatLitres(chosenAllocation)
+          + " L untuk operasi ini. Periksa lagi angka dan kodenya sebelum menyimpan.";
+      }
+    };
+    var showChosen = function () {
+      var typed = normalise(codeInput.value || "");
+      var match = null;
+      waiting.forEach(function (row) {
+        if (typed && (row.getAttribute("data-ref") === typed || row.getAttribute("data-ref-id") === typed)) {
+          match = row;
+        }
+      });
+      chosenBox.hidden = !match;
+      chosenAllocation = match ? parseFloat(match.getAttribute("data-allocation")) : null;
+      if (match) {
+        chosenBox.querySelector("[data-chosen-vehicle]").textContent = match.getAttribute("data-vehicle");
+        chosenBox.querySelector("[data-chosen-route]").textContent = match.getAttribute("data-route");
+        chosenBox.querySelector("[data-chosen-when]").textContent = match.getAttribute("data-when");
+        chosenBox.querySelector("[data-chosen-allocation]").textContent = formatLitres(chosenAllocation);
+      }
+      // Only once the code looks complete (date and time typed), so the note
+      // does not nag on every keystroke.
+      if (notWaiting) { notWaiting.hidden = Boolean(match) || typed.length < 11; }
+      checkLitres();
+    };
+    codeInput.addEventListener("input", showChosen);
+    if (litresInput) { litresInput.addEventListener("input", checkLitres); }
+    showChosen();
+  }
+
   // Arriving with the operation already chosen (a "Catat" link), the only
   // thing left to type is the litres, so start there.
   var chosenOperation = document.querySelector("#field-operation_id");
@@ -118,6 +168,32 @@
         }, 1500);
       });
     });
+  });
+
+  // File pickers become a drop zone that names the chosen file. The real
+  // input stays underneath and covers the zone, so clicking, the keyboard
+  // and screen readers all work on it; without this script the browser's
+  // own picker shows instead (see .file-drop in app.css).
+  document.querySelectorAll("[data-file-drop]").forEach(function (zone) {
+    var input = zone.querySelector('input[type="file"]');
+    var name = zone.querySelector("[data-file-name]");
+    if (!input || !name) {
+      return;
+    }
+    var empty = name.textContent;
+    var show = function () {
+      var file = input.files && input.files[0];
+      name.textContent = file ? file.name + " · " + Math.max(1, Math.round(file.size / 1024)) + " KB" : empty;
+      zone.classList.toggle("file-drop--chosen", Boolean(file));
+    };
+    input.addEventListener("change", show);
+    ["dragenter", "dragover"].forEach(function (type) {
+      zone.addEventListener(type, function () { zone.classList.add("file-drop--over"); });
+    });
+    ["dragleave", "drop"].forEach(function (type) {
+      zone.addEventListener(type, function () { zone.classList.remove("file-drop--over"); });
+    });
+    show();
   });
 
   // A dialog the server rendered open (a rejected submission) becomes a real
@@ -157,8 +233,9 @@
     }
   });
 
-  // Show the chosen filename for file inputs, which otherwise read as "No file chosen".
-  document.querySelectorAll('input[type="file"]').forEach(function (input) {
+  // Show the chosen filename for a file input outside a drop zone (which
+  // names the file itself, and must not have its format hint overwritten).
+  document.querySelectorAll('input[type="file"]:not([data-file-drop] input)').forEach(function (input) {
     input.addEventListener("change", function () {
       var hint = document.getElementById("hint-" + input.getAttribute("name"));
       if (hint && input.files && input.files.length > 0) {
