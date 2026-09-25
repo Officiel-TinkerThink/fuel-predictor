@@ -86,7 +86,8 @@ def test_indonesian_form_creates_daily_operation_with_same_behavior(tmp_path: Pa
         )
 
     assert form.status_code == 200
-    assert "Buat Operasi Harian" in form.text
+    # The page carries the name of the menu entry that opens it.
+    assert "<h1>Buat Prediksi</h1>" in form.text
     assert response.status_code == 201
     assert "Operasi harian tersimpan" in response.text
     assert "ANGBER" in response.text

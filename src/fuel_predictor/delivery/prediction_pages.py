@@ -557,7 +557,7 @@ def _render_form(
     return render(
         "prediksi.html",
         caller=caller,
-        page_title="Buat Operasi Harian",
+        page_title="Buat Prediksi",
         active_path="/prediksi",
         eyebrow="PERENCANAAN BAHAN BAKAR",
         page_lead=(
