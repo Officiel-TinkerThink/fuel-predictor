@@ -60,7 +60,7 @@
 
 <div class="grid grid--metrics">
   {% if governance.active_model %}
-  {{ ui.metric('Model aktif', 'v' ~ governance.active_model.version, context=governance.active_model.algorithm, href='/pengelolaan-model') }}
+  {{ ui.metric('Model aktif', governance.active_model.model_code or ('v' ~ governance.active_model.version), context=governance.active_model.algorithm, href='/pengelolaan-model') }}
   {% else %}
   {{ ui.metric('Model aktif', 'Belum ada', unavailable=true, context='Latih dan promosikan kandidat baseline.', href='/pengelolaan-model') }}
   {% endif %}

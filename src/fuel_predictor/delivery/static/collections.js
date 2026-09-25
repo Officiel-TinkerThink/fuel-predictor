@@ -73,6 +73,15 @@
     [5, 10, 20, 50].forEach(function (count) {
       size.add(new Option(String(count), String(count)));
     });
+    // A page may ask for a longer first page (a reference list read top to
+    // bottom); the viewer can still change it.
+    var preferred = collection.dataset.listPerPage;
+    if (preferred && Array.from(size.options).some(function (o) { return o.value === preferred; })) {
+      size.value = preferred;
+    }
+    // A handful of rows needs no search box and no pager: they only push the
+    // rows themselves down. Column sorting stays, it costs no space.
+    var small = rows.length <= 5;
 
     var pager = element("nav", "pagination collection-pagination");
     pager.setAttribute("aria-label", "Halaman " + name);
@@ -101,7 +110,7 @@
       return { row: row, original: original, search: readableText(row).toLocaleLowerCase("id"), values: {} };
     });
 
-    if (isTable) {
+    if (isTable && collection.tHead) {
       headers = Array.from(collection.tHead.rows[0].cells);
       collection.classList.add("table--sortable");
       headers.forEach(function (header, column) {
@@ -127,7 +136,7 @@
         });
         header.replaceChildren(button);
       });
-    } else {
+    } else if (!small) {
       var sort = element("select");
       sort.add(new Option("Urutan awal", ""));
       (collection.dataset.listSort || "").split(",").filter(Boolean).forEach(function (definition) {
@@ -160,7 +169,7 @@
           return compare(a.values[sortKey], b.values[sortKey], direction) || a.original - b.original;
         });
       }
-      var perPage = Number(size.value);
+      var perPage = small ? Math.max(rows.length, 1) : Number(size.value);
       var pages = Math.max(1, Math.ceil(matched.length / perPage));
       page = Math.min(page, pages);
       var start = (page - 1) * perPage;
@@ -186,8 +195,10 @@
     size.addEventListener("change", function () { page = 1; render(); });
     previous.addEventListener("click", function () { page -= 1; render(); });
     next.addEventListener("click", function () { page += 1; render(); });
-    anchor.before(toolbar);
-    anchor.after(empty, pager);
+    if (!small) {
+      anchor.before(toolbar);
+      anchor.after(empty, pager);
+    }
     render();
   }
 

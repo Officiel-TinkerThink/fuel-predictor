@@ -250,8 +250,12 @@ a:hover {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  /* Room for the last item to clear the account row's top border. */
-  padding-bottom: var(--space-2);
+  /* The list fades out at its bottom edge, so a half-visible heading reads
+     as "more below" rather than as a rendering fault; the padding lets the
+     last item scroll clear of the fade. */
+  padding-bottom: var(--space-6);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--space-6)), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--space-6)), transparent);
 }
 
 .nav-group {
@@ -824,6 +828,22 @@ textarea {
   border-radius: var(--radius-md);
 }
 
+/* iOS zooms the whole page into any field under 16px the moment it is tapped,
+   and never zooms back. On a touch screen every control is 16px, so filling
+   the form does not throw the layout around. */
+@media (pointer: coarse) {
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="number"],
+  input[type="password"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 /* The reveal button sits inside the field, so the input reserves room for it
    rather than running underneath. Sized off the input's own type-agnostic
    rules, because revealing swaps the type to text. */
@@ -1166,8 +1186,10 @@ tbody tr.is-selected td {
   font-family: var(--font-mono);
 }
 
+/* Sized so a full code (about 25 characters) fits one line on a phone; a
+   code broken across lines is easy to copy wrongly. */
 .operation-code-callout__code .operation-code {
-  font-size: clamp(1.4rem, 5vw, 2rem);
+  font-size: clamp(1rem, 5.2vw, 2rem);
   letter-spacing: 0.04em;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -1719,6 +1741,16 @@ dialog::backdrop {
   margin-bottom: 6px;
 }
 
+/* The stop's input sits inside its label; without this it inherited the
+   label's small bold type, so a typed location read as a caption. */
+.stop-fields .field label input {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  color: var(--color-text);
+}
+
 .stop-row .stop-controls {
   flex: 0 0 76px;
   width: 76px;
@@ -1745,6 +1777,7 @@ dialog::backdrop {
 }
 
 .route-preview__title {
+  text-transform: uppercase;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -1791,8 +1824,7 @@ dialog::backdrop {
 
 .route-preview__api {
   margin: 6px 0 0;
-  font-size: 12px;
-  font-family: var(--font-mono);
+  font-size: 0.8125rem;
   color: var(--color-text-muted);
 }
 
@@ -1904,7 +1936,8 @@ dialog::backdrop {
   }
 
   /* Nothing scrolls sideways in a stacked row, so an id wraps again. */
-  .table--sortable .mono-id {
+  .table--sortable .mono-id,
+  .table--sortable .operation-code {
     white-space: normal;
     overflow-wrap: anywhere;
   }

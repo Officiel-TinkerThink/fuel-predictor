@@ -4,7 +4,7 @@
 {% block content %}
 
 {% if performance.overall.matched_record_count == 0 %}
-{{ ui.banner('info', 'Belum cukup data', 'Belum ada bahan bakar aktual yang dapat dicocokkan dengan prediksi.') }}
+{{ ui.banner('info', 'Belum ada BBM aktual yang tercocokkan', 'Angka kinerja, tren, dan degradasi muncul di sini setelah BBM aktual pertama dicatat untuk sebuah prediksi.', 'Catat BBM aktual', '/bahan-bakar-aktual') }}
 {% else %}
 {{ ui.banner('info', performance.overall.matched_record_count ~ ' catatan aktual tercocokkan', 'Metrik memakai estimasi kebutuhan BBM, bukan alokasi rekomendasi.') }}
 {% endif %}
@@ -45,6 +45,9 @@
 </section>
 {% endif %}
 
+{# With nothing matched, every section below would only repeat "no data"; the
+   banner above already says what to do. #}
+{% if performance.overall.matched_record_count %}
 <section class="card">
   <h2>Semua prediksi, semua model</h2>
   <p class="hint">Gabungan seluruh model yang pernah melayani. Untuk menilai satu model, pakai tabel
@@ -138,6 +141,7 @@
   {{ ui.empty_state('Belum ada aktual yang cocok.') }}
   {% endif %}
 </section>
+{% endif %}
 
 <div class="button-row"><a class="button button--secondary" href="/bahan-bakar-aktual">Catat bahan bakar aktual</a><a class="button button--secondary" href="/pengelolaan-model">Kelola model</a></div>
 
