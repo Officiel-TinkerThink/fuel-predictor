@@ -31,7 +31,8 @@
             </ul>
             {% endif %}
           </td>
-          <td data-label="Subjek">{{ record.subject or '-' }}</td>
+          {# An operation's subject opens that operation; any other stays text. #}
+          <td data-label="Subjek">{% if record.subject and record.subject.startswith('OPR-') %}<a href="/operasi-harian/{{ record.subject }}"><code class="mono-id">{{ record.subject }}</code></a>{% else %}{{ record.subject or '-' }}{% endif %}</td>
           <td data-label="Hasil">
             {% if record.outcome == 'succeeded' %}{{ ui.badge('Berhasil', 'success') }}
             {% elif record.outcome == 'denied' %}{{ ui.badge('Ditolak', 'warning') }}

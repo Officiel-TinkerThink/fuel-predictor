@@ -30,7 +30,13 @@
     {% endfor %}
   </ul>
   {% else %}
+  {# "Nothing drifted" is a result; with too little data there is no result
+     yet, and saying the first would be claiming a check that never ran. #}
+  {% if drift.drift_share is not none %}
   {{ ui.empty_state('Tidak ada ciri yang bergeser melewati batas.') }}
+  {% else %}
+  {{ ui.empty_state('Belum dihitung: perlu data latih model aktif dan cukup banyak operasi terkini untuk dibandingkan.') }}
+  {% endif %}
   {% endif %}
   <p class="hint">Perbandingan dengan sedikit operasi terkini kurang bisa diandalkan; lihat dulu
     kedua jumlah di atas sebelum menafsirkan hasilnya.</p>

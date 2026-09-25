@@ -40,6 +40,7 @@ _DETAIL_LABELS = {
     "scopes": "cakupan",
     "username": "pengguna",
     "operation_id": "operasi",
+    "kode": "kode operasi",
     "vehicle": "kendaraan",
     "liters": "liter",
     "jarak_km": "jarak (km)",

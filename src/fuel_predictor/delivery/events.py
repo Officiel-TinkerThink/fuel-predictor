@@ -27,6 +27,7 @@ class ImportantEvents:
     ) -> None:
         # Enough to recognise the row; the operation's own page has the rest.
         details: Details = {
+            "kode": operation.operation_code,
             "vehicle": operation.vehicle,
             "jarak_km": round(operation.total_distance_km, 1),
         }
