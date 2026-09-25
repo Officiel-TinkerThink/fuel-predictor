@@ -8,6 +8,7 @@ follows is worth more than a query per page.
 
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlencode
 
@@ -146,7 +147,12 @@ def paginate(
     by_key = {option.key: option for option in sorts}
     sort_key = query.sort if query.sort in by_key else default_sort
     direction = query.direction if query.direction in ("asc", "desc") else default_direction
-    matched.sort(key=_sortable(by_key[sort_key].value_of), reverse=direction == "desc")
+    # Rows with nothing to sort by go last in either direction; reversing one
+    # sort put "Belum pernah" at the top of every newest-first list.
+    value_of = by_key[sort_key].value_of
+    present = [row for row in matched if value_of(row) is not None]
+    present.sort(key=_sortable(value_of), reverse=direction == "desc")
+    matched = present + [row for row in matched if value_of(row) is None]
     size = per_page or query.per_page
     pages = max(1, -(-len(matched) // size))
     page = min(max(query.page, 1), pages)
@@ -165,16 +171,19 @@ def paginate(
     )
 
 
-def _sortable(value_of: Callable[[Any], Any]) -> Callable[[Any], tuple[int, Any]]:
-    """None sorts last whichever way; strings compare case-insensitively."""
+def _sortable(value_of: Callable[[Any], Any]) -> Callable[[Any], Any]:
+    """Strings compare case-insensitively; a time without a zone is taken as
+    UTC. SQLite hands back stored times without one, and a single row that
+    kept its zone (written by hand, or by an older version) made the whole
+    list fail to sort. Rows without a value are set aside by the caller."""
 
-    def key(row: Any) -> tuple[int, Any]:
+    def key(row: Any) -> Any:
         value = value_of(row)
-        if value is None:
-            return (1, 0)
         if isinstance(value, str):
-            return (0, value.lower())
-        return (0, value)
+            return value.lower()
+        if isinstance(value, datetime) and value.tzinfo is None:
+            return value.replace(tzinfo=UTC)
+        return value
 
     return key
 

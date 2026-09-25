@@ -29,7 +29,8 @@
       return raw === "" ? null : (numeric ? Number(raw) : raw);
     }
     var text = readableText(cell);
-    if (!numeric) return text;
+    // An empty cell has nothing to sort by: last, like a missing number.
+    if (!numeric) return text === "" ? null : text;
     // Indonesian formatting: 1.234,5 L. Missing measurements remain last.
     var match = text.match(/^-?\d[\d.]*(?:,\d+)?(?=\s|%|$)/);
     return match ? Number(match[0].replace(/\./g, "").replace(",", ".")) : null;
