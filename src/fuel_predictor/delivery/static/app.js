@@ -196,6 +196,19 @@
     show();
   });
 
+  // "Print all slips" on a bulk result: print the slips section alone.
+  var printSlips = document.querySelector("[data-print-slips]");
+  if (printSlips && document.querySelector("[data-slip-batch]")) {
+    printSlips.hidden = false;
+    printSlips.addEventListener("click", function () {
+      document.documentElement.classList.add("printing-slips");
+      window.print();
+    });
+    window.addEventListener("afterprint", function () {
+      document.documentElement.classList.remove("printing-slips");
+    });
+  }
+
   // A dialog the server rendered open (a rejected submission) becomes a real
   // modal, so it gets its backdrop and its focus trap like one opened here.
   document.querySelectorAll("dialog[open]").forEach(function (dialog) {

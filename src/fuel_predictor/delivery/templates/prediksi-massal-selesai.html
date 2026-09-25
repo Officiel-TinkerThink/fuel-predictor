@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% import "components.html" as ui %}
+{% import "_slip.html" as slips %}
 
 {% block content %}
 
@@ -13,8 +14,12 @@
   <div class="card__title">
     <h2>Baris berhasil diprediksi</h2>
     {# A data: link needs no script and no server-side copy of the result. #}
-    <a class="button" download="{{ results_filename }}"
-       href="data:text/csv;charset=utf-8,{{ results_csv | urlencode }}">Unduh hasil (CSV)</a>
+    <div class="button-row">
+      <a class="button" download="{{ results_filename }}"
+         href="data:text/csv;charset=utf-8,{{ results_csv | urlencode }}">Unduh hasil (CSV)</a>
+      {# Printing needs the script that shows only the slips; hidden without it. #}
+      <button type="button" class="button button--secondary" data-print-slips hidden>Cetak semua slip ({{ accepted_count }})</button>
+    </div>
   </div>
   <div class="table-wrap">
     <table data-list data-list-label="Baris berhasil diprediksi">
@@ -62,5 +67,14 @@
   <a class="button button--secondary" href="/prediksi-operasi-massal">Prediksi berkas lain</a>
   <a class="button button--secondary" href="/riwayat-prediksi">Lihat di riwayat prediksi</a>
 </div>
+
+{% if result.accepted_rows %}
+{# Printed only: one slip per accepted operation, one per page. #}
+<div class="slip-batch" data-slip-batch>
+  {% for row in result.accepted_rows %}
+  <div class="slip">{{ slips.slip_sheet(row.operation, row.prediction, vehicles.get(row.operation.operation_id)) }}</div>
+  {% endfor %}
+</div>
+{% endif %}
 
 {% endblock %}

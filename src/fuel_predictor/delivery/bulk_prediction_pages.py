@@ -14,6 +14,7 @@ from fuel_predictor.application.bulk_operation_predictions import (
     BulkOperationPredictionResult,
 )
 from fuel_predictor.application.historical_datasets import HistoricalDatasetImportError
+from fuel_predictor.application.vehicles import VehicleCatalog
 from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
@@ -34,6 +35,7 @@ def build_bulk_prediction_pages_router(
     guard: SecurityGuard,
     *,
     events: ImportantEvents,
+    vehicle_catalog: VehicleCatalog | None = None,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -77,6 +79,13 @@ def build_bulk_prediction_pages_router(
                 accepted_count=len(result.accepted_rows),
                 quarantined_count=len(result.correction_report),
                 ignored_count=result.ignored_blank_row_count,
+                # Each accepted operation's catalog unit, so the printed slips
+                # can say what each part of their codes stands for.
+                vehicles={
+                    row.operation.operation_id: vehicle_catalog.find(row.operation.vehicle)
+                    for row in result.accepted_rows
+                    if vehicle_catalog is not None and row.operation.vehicle
+                },
             ),
             status_code=status.HTTP_201_CREATED,
         )

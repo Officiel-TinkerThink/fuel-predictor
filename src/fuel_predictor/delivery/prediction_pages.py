@@ -41,7 +41,12 @@ from fuel_predictor.delivery.http import (
     translate_validation_errors,
 )
 from fuel_predictor.delivery.listing import ListingQuery, SortOption, paginate
-from fuel_predictor.delivery.rendering import render, render_error_page, render_standalone
+from fuel_predictor.delivery.rendering import (
+    ACTIVITY_LABELS,
+    render,
+    render_error_page,
+    render_standalone,
+)
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.daily_operation import DailyOperation, DailyOperationValidationError
 from fuel_predictor.domain.prediction import FuelPrediction
@@ -56,12 +61,7 @@ _HISTORY_SORTS = (
     SortOption("kendaraan", "Kendaraan", lambda e: e.vehicle, default_direction="asc"),
     SortOption("model", "Model", lambda e: e.model_code, default_direction="asc"),
 )
-_MODE_LABELS = {
-    "transport": "Mobilisasi",
-    # Kept for operations planned before the two-choice form; not offered now.
-    "lifting": "Lifting (tanpa mobilisasi)",
-    "transport_and_lifting": "Mobilisasi + lifting",
-}
+_MODE_LABELS = ACTIVITY_LABELS
 _SOURCE_LABELS = {"manual": "Input manual", "routing_provider": "Penyedia rute"}
 # Why a past operation is shown, in the planner's words: the fallback order
 # ADR 0015 fixes, same unit before same type before same group.
@@ -107,7 +107,10 @@ def build_prediction_pages_router(
         twenty-odd suffixed names. Units with no group come last, unlabelled."""
         groups: dict[str, list[tuple[str, str]]] = {}
         for option in vehicle_catalog.options():
-            groups.setdefault(option.group or "Lainnya", []).append((option.name, option.name))
+            # The type beside the name tells two vacuum trucks apart at a
+            # glance; a unit whose type is only its group needs no suffix.
+            label = option.name if option.type == option.group else f"{option.name} · {option.type}"
+            groups.setdefault(option.group or "Lainnya", []).append((option.name, label))
         ordered = [(name, units) for name, units in groups.items() if name != "Lainnya"]
         if "Lainnya" in groups:
             ordered.append(("Lainnya", groups["Lainnya"]))
@@ -333,7 +336,6 @@ def build_prediction_pages_router(
                 operation=operation,
                 prediction=prediction,
                 vehicle=_vehicle(operation),
-                mode_label=_MODE_LABELS[operation.activity_mode.value],
             )
         )
 

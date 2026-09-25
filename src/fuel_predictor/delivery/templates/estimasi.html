@@ -16,7 +16,7 @@
 <div class="grid grid--metrics result-metrics">
   {{ ui.metric('Alokasi rekomendasi', prediction.recommended_allocation_liters | angka, unit='L', context='Jumlah yang disarankan untuk disiapkan.') }}
   {{ ui.metric('Estimasi kebutuhan BBM', prediction.estimated_fuel_requirement_liters | angka, unit='L', context='Perkiraan BBM yang perlu disiapkan.') }}
-  {{ ui.metric('Rentang ketidakpastian', (prediction.uncertainty_lower_liters | angka) ~ '–' ~ (prediction.uncertainty_upper_liters | angka), unit='L') }}
+  {{ ui.metric('Rentang ketidakpastian', (prediction.uncertainty_lower_liters | angka) ~ '–' ~ (prediction.uncertainty_upper_liters | angka), unit='L', context='Estimasi ± ' ~ (prediction.model.uncertainty_liters | angka) ~ ' L, selisih rata-rata model ini saat diuji.') }}
 </div>
 
 {% if operation and operation.operation_code %}

@@ -2739,7 +2739,33 @@ th[aria-sort="descending"] .collection-sort::after { content: " ↓"; }
   color: #5b6b76;
 }
 
+/* The bulk result's slips exist for printing only. */
+.slip-batch {
+  display: none;
+}
+
 @media print {
+  html.printing-slips body {
+    background: #fff;
+  }
+
+  /* Everything but the slips steps aside; each slip gets its own page. */
+  html.printing-slips .app__nav,
+  html.printing-slips .app__main > *:not(.slip-batch) {
+    display: none !important;
+  }
+
+  html.printing-slips .slip-batch {
+    display: block;
+  }
+
+  html.printing-slips .slip-batch .slip {
+    border: 0;
+    padding: 0;
+    max-width: none;
+    break-after: page;
+  }
+
   .slip-page {
     background: #fff;
     padding: 0;

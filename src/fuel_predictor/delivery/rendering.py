@@ -113,6 +113,7 @@ def build_environment() -> Environment:
         lstrip_blocks=True,
     )
     environment.filters["angka"] = format_decimal
+    environment.filters["aktivitas"] = activity_label
     environment.filters["waktu"] = format_datetime
     return environment
 
@@ -185,6 +186,19 @@ def render_standalone(template_name: str, **context: object) -> str:
 
 def render_error_page(title: str, message: str) -> str:
     return render_standalone("kesalahan.html", page_title=title, message=message)
+
+
+# What a planned operation does, as the planner reads it.
+ACTIVITY_LABELS = {
+    "transport": "Mobilisasi",
+    # Kept for operations planned before the two-choice form; not offered now.
+    "lifting": "Lifting (tanpa mobilisasi)",
+    "transport_and_lifting": "Mobilisasi + lifting",
+}
+
+
+def activity_label(value: str) -> str:
+    return ACTIVITY_LABELS.get(value, value)
 
 
 def format_decimal(value: float | None, digits: int = 2) -> str:

@@ -125,7 +125,17 @@ _HEADER_ALIASES = {
         "jarak total km wajib",
         "jarak total",
     },
-    "vehicle": {"kendaraan", "unit", "unit kendaraan", "nama kendaraan", "armada", "vehicle"},
+    # "kendaraan opsional" is the template's own header, "Kendaraan (opsional)";
+    # without it every sheet filled from the template lost its vehicles.
+    "vehicle": {
+        "kendaraan",
+        "kendaraan opsional",
+        "unit",
+        "unit kendaraan",
+        "nama kendaraan",
+        "armada",
+        "vehicle",
+    },
     "distance_source": {"sumber jarak", "sumber jarak wajib"},
     "stop_sequence": {"urutan pemberhentian", "urutan pemberhentian opsional"},
 }

@@ -69,3 +69,26 @@ def test_a_slip_for_an_operation_without_an_estimate_says_so(tmp_path: Path) -> 
 
 def test_the_slip_is_for_whoever_plans() -> None:
     assert ("GET", "/operasi-harian/*/slip", Capability.CREATE_PREDICTION) in ROUTE_CAPABILITIES
+
+
+def test_a_bulk_result_can_print_every_operations_slip(tmp_path: Path) -> None:
+    sheet = (
+        "Kategori ANGBER (wajib),Kendaraan (opsional),Mode Aktivitas (wajib),"
+        "Jam Lifting (opsional),Jarak Total (km) (wajib),Sumber Jarak (wajib)\n"
+        "ANGBER,VT 01,transport,,20,manual\n"
+        "ANGBER,VT 05,transport,,25,manual\n"
+    )
+    app = create_app(
+        database_path=tmp_path / "operations.sqlite3", vehicle_catalog=PackagedVehicleCatalog()
+    )
+    with TestClient(app) as client:
+        _train_baseline(client)
+        page = client.post(
+            "/prediksi-operasi-massal",
+            files={"file": ("rencana.csv", sheet.encode(), "text/csv")},
+        ).text
+
+    batch = page[page.index("data-slip-batch") :]
+    assert batch.count('class="slip__sheet"') == 2
+    assert "VT-P410-VT01" in batch and "VT-UDQ-VT05" in batch
+    assert "data-print-slips" in page

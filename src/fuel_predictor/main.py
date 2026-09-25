@@ -627,6 +627,7 @@ def create_app(
             bulk_operation_prediction,
             guard,
             events=events,
+            vehicle_catalog=resolved_vehicle_catalog,
         )
     )
     app.include_router(build_fleet_pages_router(resolved_vehicle_catalog, guard))
