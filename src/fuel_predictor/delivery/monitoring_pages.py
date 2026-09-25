@@ -8,13 +8,14 @@ question (is the model performing well) at different time horizons.
 """
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
 from fuel_predictor.application.actual_fuel import GetPredictionPerformance
-from fuel_predictor.application.monitoring import GetMonitoringDashboard
+from fuel_predictor.application.monitoring import GetMonitoringDashboard, MonitoringDashboard
 from fuel_predictor.application.monitoring_runs import (
     BackupRunRepository,
     MonitoringFreshness,
@@ -64,15 +65,12 @@ def build_monitoring_pages_router(
                 page_title="Kesehatan Sistem",
                 active_path="/pemantauan/kesehatan-sistem",
                 eyebrow="PEMANTAUAN LOKAL",
-                page_lead="Status layanan, kualitas data, dan hal yang perlu perhatian.",
-                active_alerts=dashboard.active_alerts,
-                alert_groups=group_alerts(dashboard.active_alerts),
-                unresolved_data_quality_issue_count=dashboard.unresolved_data_quality_issue_count,
+                page_lead="Apa yang perlu ditangani, dengan tombol untuk menanganinya.",
+                tasks=health_tasks(dashboard),
+                checks=health_checks(dashboard),
                 unresolved_data_quality_issues=dashboard.unresolved_data_quality_issues,
                 dataset_validation_summaries=dashboard.dataset_validation_summaries,
                 missing_actual_predictions=dashboard.missing_actual_predictions,
-                missing_actual_prediction_count=dashboard.missing_actual_prediction_count,
-                missing_actual_after_days=dashboard.missing_actual_after_days,
                 freshness=_freshness(),
                 last_backup=backup_runs.latest(),
                 # Whether anyone is actually told about these alerts. "No
@@ -136,6 +134,7 @@ ALERT_KIND_LABELS: dict[MonitoringAlertKind, str] = {
     MonitoringAlertKind.MISSING_ACTUAL: "Aktual belum dicatat",
     MonitoringAlertKind.FEATURE_DRIFT: "Operasi berbeda dari data latih",
     MonitoringAlertKind.MODEL_DEGRADATION: "Kinerja model menurun",
+    MonitoringAlertKind.VEHICLE_TAXONOMY: "Penggolongan kendaraan berubah",
 }
 
 
@@ -143,42 +142,131 @@ def alert_kind_label(kind: MonitoringAlertKind) -> str:
     return ALERT_KIND_LABELS.get(kind, kind.value)
 
 
-def group_alerts(alerts: Sequence[MonitoringAlert]) -> list[dict[str, object]]:
-    """One group per kind, worst severity first, carrying the remediation
-    once - three overdue operations are one thing to do, not three."""
+@dataclass(frozen=True, slots=True)
+class HealthAction:
+    label: str
+    href: str
+    primary: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class HealthTask:
+    """One thing to do, however many alerts it gathers: three overdue
+    operations are one job, done with one sheet."""
+
+    kind: str
+    title: str
+    critical: bool
+    urgency: str
+    # What the alerts found, when they say more than the title does.
+    findings: tuple[str, ...]
+    # The full steps, kept from the alert texts; folded on the page.
+    remediation: str
+    actions: tuple[HealthAction, ...]
+
+
+# Missing actuals are filled by sheet; the page shows those steps itself.
+_ACTIONS: dict[MonitoringAlertKind, tuple[HealthAction, ...]] = {
+    MonitoringAlertKind.MODEL_DEGRADATION: (
+        HealthAction("Bandingkan dan ganti model", "/pengelolaan-model", primary=True),
+        HealthAction("Lihat kinerja model", "/pemantauan/kinerja-model"),
+    ),
+    MonitoringAlertKind.FEATURE_DRIFT: (
+        HealthAction("Lihat pergeseran data", "/pemantauan/pergeseran-data", primary=True),
+    ),
+    MonitoringAlertKind.DATA_QUALITY: (
+        HealthAction("Impor ulang data historis", "/impor-data-historis", primary=True),
+    ),
+    MonitoringAlertKind.VEHICLE_TAXONOMY: (
+        HealthAction("Latih dan bandingkan kandidat", "/pengelolaan-model", primary=True),
+        HealthAction("Lihat Armada", "/armada"),
+    ),
+}
+
+
+def health_tasks(dashboard: MonitoringDashboard) -> list[HealthTask]:
+    """The active alerts as things to do, most urgent first."""
     groups: dict[MonitoringAlertKind, list[MonitoringAlert]] = {}
-    for alert in alerts:
+    for alert in dashboard.active_alerts:
         groups.setdefault(alert.kind, []).append(alert)
-    ordered = sorted(
-        groups.items(),
-        key=lambda item: (
-            0 if any(a.severity.value == "critical" for a in item[1]) else 1,
-            ALERT_KIND_LABELS.get(item[0], item[0].value),
-        ),
-    )
-    result: list[dict[str, object]] = []
-    for kind, members in ordered:
-        critical = any(a.severity.value == "critical" for a in members)
+    tasks = []
+    for kind, members in groups.items():
+        critical = any(a.severity is MonitoringAlertSeverity.CRITICAL for a in members)
         worst = MonitoringAlertSeverity.CRITICAL if critical else MonitoringAlertSeverity.WARNING
-        result.append(
-            {
-                "label": alert_kind_label(kind),
-                "critical": critical,
-                "urgency": urgency_for(worst),
-                "remediation": remediation_for(kind),
-                "entries": [{"text": a.message, "href": _alert_href(a)} for a in members],
-            }
+        tasks.append(
+            HealthTask(
+                kind=kind.value,
+                title=_task_title(kind, len(members)),
+                critical=critical,
+                urgency=urgency_for(worst),
+                findings=_findings(kind, members, dashboard),
+                remediation=remediation_for(kind),
+                actions=_ACTIONS.get(kind, ()),
+            )
         )
-    return result
+    return sorted(tasks, key=lambda task: (not task.critical, task.title))
 
 
-def _alert_href(alert: MonitoringAlert) -> str | None:
-    """Where the thing an alert names can be opened: a missing actual links
-    to its operation, where actual fuel is one click away."""
-    operation_id = alert.details.get("operation_id")
-    if alert.kind is MonitoringAlertKind.MISSING_ACTUAL and isinstance(operation_id, str):
-        return f"/operasi-harian/{operation_id}"
-    return None
+def _task_title(kind: MonitoringAlertKind, count: int) -> str:
+    if kind is MonitoringAlertKind.MISSING_ACTUAL:
+        return f"{count} operasi belum dicatat BBM aktualnya"
+    if kind is MonitoringAlertKind.DATA_QUALITY:
+        return f"{count} baris impor perlu diperbaiki"
+    return alert_kind_label(kind)
+
+
+def _findings(
+    kind: MonitoringAlertKind, members: Sequence[MonitoringAlert], dashboard: MonitoringDashboard
+) -> tuple[str, ...]:
+    # One line per overdue operation or bad row would bury the action; those
+    # are listed in full under the task instead.
+    if kind is MonitoringAlertKind.MISSING_ACTUAL:
+        return (
+            f"Sudah lebih dari {dashboard.missing_actual_after_days} hari sejak diprediksi. "
+            "Tanpa BBM aktual, ketepatan estimasinya tidak bisa diukur.",
+        )
+    if kind is MonitoringAlertKind.DATA_QUALITY:
+        return ("Baris ini tidak ikut melatih model sampai diperbaiki dan diimpor ulang.",)
+    return tuple(alert.message for alert in members)
+
+
+@dataclass(frozen=True, slots=True)
+class HealthCheck:
+    """A line of the all-clear list. Unmeasured checks say so rather than
+    passing: "no drift" is a finding, "not enough data" is not."""
+
+    text: str
+    measured: bool = True
+
+
+def health_checks(dashboard: MonitoringDashboard) -> list[HealthCheck]:
+    """What is fine, for every kind with no active alert."""
+    alerting = {alert.kind for alert in dashboard.active_alerts}
+    checks: list[HealthCheck] = []
+    if MonitoringAlertKind.MISSING_ACTUAL not in alerting:
+        checks.append(
+            HealthCheck(
+                f"Tidak ada operasi yang lewat {dashboard.missing_actual_after_days} hari "
+                "tanpa BBM aktual."
+            )
+        )
+    if MonitoringAlertKind.MODEL_DEGRADATION not in alerting:
+        if any(item.rolling_mae_liters is not None for item in dashboard.category_degradation):
+            checks.append(HealthCheck("Estimasi masih dalam ambang ketepatan."))
+        else:
+            checks.append(
+                HealthCheck("Ketepatan estimasi belum diukur: BBM aktual belum cukup.", False)
+            )
+    if MonitoringAlertKind.FEATURE_DRIFT not in alerting:
+        if dashboard.feature_drift.status == "ready":
+            checks.append(HealthCheck("Pola operasi masih sesuai data latih model."))
+        else:
+            checks.append(
+                HealthCheck("Pergeseran data belum dihitung: prediksi baru belum cukup.", False)
+            )
+    if MonitoringAlertKind.DATA_QUALITY not in alerting:
+        checks.append(HealthCheck("Tidak ada baris impor yang perlu diperbaiki."))
+    return checks
 
 
 # Plot geometry for the rolling-error line: a fixed viewBox the CSS scales,

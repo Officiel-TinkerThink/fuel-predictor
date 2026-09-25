@@ -40,9 +40,9 @@
     {{ ui.badge(awaiting | length, 'warning' if awaiting else 'success') }}
   </div>
   {% if awaiting %}
-  <p><a class="button button--secondary button--small" href="/bahan-bakar-aktual/menunggu.xlsx">Unduh daftar ini (Excel) untuk diisi</a></p>
-  <p class="hint">Operasi yang sudah diprediksi tetapi belum dilaporkan hasilnya, terbaru di atas.
-    Pilih <strong>Catat</strong> untuk mengisi kodenya ke formulir.</p>
+  {{ ui.fill_by_sheet() }}
+  <p class="hint">Atau satu per satu: pilih <strong>Catat</strong> pada operasinya untuk mengisi kodenya
+    ke formulir di atas. Terbaru di atas.</p>
   <ul class="row-list" data-list data-list-label="Menunggu BBM aktual" data-list-sort="name:Kendaraan,time:Waktu:date,amount:Alokasi:number">
     {% for item in awaiting %}
     <li data-sort-name="{{ item.vehicle or '' }}" data-sort-time="{{ item.predicted_at }}" data-sort-amount="{{ item.recommended_allocation_liters }}"
@@ -67,7 +67,7 @@
 </section>
 
 <div class="button-row">
-  <a class="button button--secondary" href="/bahan-bakar-aktual-massal">Impor aktual dari berkas</a>
+  {% if not awaiting %}<a class="button button--secondary" href="/bahan-bakar-aktual-massal">Impor aktual dari berkas</a>{% endif %}
   {% if may_open('/pemantauan/kinerja-model') %}<a class="button button--secondary" href="/pemantauan/kinerja-model">Lihat kinerja prediksi</a>{% endif %}
 </div>
 

@@ -38,11 +38,26 @@ def test_health_page_groups_alerts_and_shows_the_remediation(
         page = client.get("/pemantauan/kesehatan-sistem").text
         overview = client.get("/").text
 
-    assert "Aktual belum dicatat" in page
-    # Two alerts of one kind: one group, one remediation, both operations listed.
-    assert page.count("Tindakan:") == 1
-    assert remediation_for(MonitoringAlertKind.MISSING_ACTUAL)[:40] in page
+    # Two alerts of one kind: one thing to do, its steps said once, both
+    # operations listed.
+    assert "2 operasi belum dicatat BBM aktualnya" in page
+    assert page.count(remediation_for(MonitoringAlertKind.MISSING_ACTUAL)[:40]) == 1
+    # Not only a warning: the sheet to fill and the page that reads it back.
+    assert 'href="/bahan-bakar-aktual/menunggu.xlsx"' in page
+    assert 'href="/bahan-bakar-aktual-massal"' in page
     # Each named by its code and linked to the operation, where actual fuel is recorded.
     assert all(f'href="/operasi-harian/{operation_id}"' in page for operation_id in overdue)
     assert ">missing_actual<" not in page
     assert ">missing_actual<" not in overview
+
+
+def test_an_all_clear_page_says_so_and_ticks_only_what_it_measured(tmp_path: Path) -> None:
+    """With nothing to do the page says so in one line; a check that had no
+    data to run on is listed as not yet measured, never ticked."""
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        page = client.get("/pemantauan/kesehatan-sistem").text
+
+    assert "Semua berjalan baik" in page
+    assert "Ketepatan estimasi belum diukur" in page
+    assert "Estimasi masih dalam ambang ketepatan" not in page
+    assert 'class="check-list__pending"' in page

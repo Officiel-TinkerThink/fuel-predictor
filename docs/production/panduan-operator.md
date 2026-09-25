@@ -176,8 +176,9 @@ memburuk berbulan-bulan tanpa ada yang tahu.
   lalu isi jumlah liter sebenarnya. Begitu kodenya cocok, formulir menampilkan operasinya
   (kendaraan, waktu prediksi, alokasi) supaya Anda yakin mencatat operasi yang benar. Kalau liter
   yang diketik jauh dari alokasinya, muncul peringatan: periksa lagi angka dan kodenya.
-- **Sekaligus, cara termudah:** tekan **Unduh daftar ini (Excel)** di halaman Catat Aktual (atau
-  **Unduh operasi yang menunggu** di Impor Massal). Berkasnya sudah berisi kode, kendaraan, waktu,
+- **Sekaligus, cara termudah:** di kotak **Isi sekaligus lewat Excel** — ada di halaman Catat
+  Aktual, Ringkasan, dan Kesehatan Sistem — tekan **Unduh daftarnya** (atau **Unduh operasi yang
+  menunggu** di Impor Massal). Berkasnya sudah berisi kode, kendaraan, waktu,
   rute, dan alokasi setiap operasi yang menunggu; isi saja kolom **Bahan Bakar Aktual (L)**, lalu
   unggah di menu **Impor Massal**. Baris yang belum diisi dilewati, jadi berkas yang sama boleh
   diisi bertahap sepanjang minggu dan diunggah berkali-kali.
@@ -192,8 +193,12 @@ Lakukan ini rutin — mingguan sudah cukup.
 
 Hanya untuk akun administrator. Menu **Pemantauan**. Bagian yang perlu Anda perhatikan:
 
-**Peringatan aktif.** Setiap peringatan menyebutkan tindakan yang perlu diambil. Ikuti
-kalimat "Tindakan:" — kalimat itu memang ditulis untuk dibaca tanpa latar belakang teknis.
+**Kesehatan Sistem** adalah daftar tugas. Kotak paling atas menjawab satu pertanyaan: *ada yang
+perlu ditangani?* Di bawahnya, setiap hal yang perlu ditangani punya kartunya sendiri: apa yang
+ditemukan, seberapa mendesak (**Kritis** = hari ini), dan tombol untuk menanganinya. Operasi yang
+belum dicatat BBM aktualnya, misalnya, langsung bisa diunduh sebagai Excel, diisi, lalu diimpor
+kembali. Alasan dan langkah lengkapnya ada di lipatan *Kenapa ini penting, dan langkah
+lengkapnya*. Yang sudah baik dirangkum di **Selebihnya**.
 
 **Penggolongan kendaraan berubah.** Muncul bila katalog armada (tipe atau grup sebuah unit)
 diubah setelah model aktif dilatih, dan model itu memang memakai penggolongan tersebut. Prediksi
@@ -215,13 +220,12 @@ belum cukup, itu jujur — bukan kerusakan. Isi lebih banyak angka aktual
 arahnya: garis yang naik melewati garis putus-putus berarti prediksi makin meleset; titik
 terakhir berwarna merah bila sudah melewati batas.
 
-**Kesehatan Sistem.** Menunjukkan kapan pemantauan terakhir berhasil dan kapan pencadangan
-terakhir berhasil. Kalau tertulis **Kedaluwarsa**, angka di halaman ini mungkin sudah lama —
-hubungi penanggung jawab teknis.
+![Kesehatan Sistem: 3 hal perlu ditangani. Kinerja model menurun (kritis) dengan tombol Bandingkan dan ganti model; 1 baris impor perlu diperbaiki dengan tombol Impor ulang data historis; 3 operasi belum dicatat BBM aktualnya dengan langkah Isi sekaligus lewat Excel; lalu Selebihnya dan Perawatan server.](images/04-kesehatan-sistem.png)
 
-![Kesehatan Sistem: 4 peringatan aktif dikelompokkan menjadi Kinerja model menurun (kritis) dan Aktual belum dicatat (peringatan), masing-masing dengan kalimat Tindakan; 3 aktual BBM tertunda dengan tombol Catat aktual; pemantauan terjadwal Terkini.](images/04-kesehatan-sistem.png)
-
-Spanduk di atas juga memberi tahu apakah peringatan dikirim ke luar aplikasi. Bila tertulis *saluran pemberitahuan belum dikonfigurasi*, peringatan hanya terlihat di halaman ini — sampaikan ke penanggung jawab teknis.
+**Perawatan server** di bagian bawah untuk penanggung jawab teknis: kapan pemeriksaan terjadwal
+dan pencadangan terakhir berjalan, dan apakah peringatan dikirim ke luar aplikasi. Kalau tertulis
+**Terlambat**, **Belum pernah berjalan**, atau *saluran pemberitahuan belum dikonfigurasi*,
+sampaikan ke penanggung jawab teknis.
 
 ---
 

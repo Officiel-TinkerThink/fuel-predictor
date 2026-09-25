@@ -50,8 +50,8 @@
   </ul>
   <p class="link-row">
     <a class="text-link" href="/bahan-bakar-aktual">Lihat semua operasi yang menunggu <span aria-hidden="true">→</span></a>
-    <a class="text-link" href="/bahan-bakar-aktual/menunggu.xlsx">Unduh untuk diisi (Excel)</a>
   </p>
+  {{ ui.fill_by_sheet() }}
   {% else %}
   <p class="muted">Tidak ada yang menunggu — BBM aktual semua operasi yang sudah diprediksi sudah dicatat.</p>
   {% endif %}

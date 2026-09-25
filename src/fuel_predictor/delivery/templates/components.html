@@ -30,6 +30,19 @@
 </div>
 {%- endmacro %}
 
+{# Operations waiting for actual fuel, filled in one sheet instead of one
+   form each: the same three steps wherever the backlog shows. #}
+{% macro fill_by_sheet() -%}
+<div class="fill-by-sheet">
+  <p class="fill-by-sheet__title">Isi sekaligus lewat Excel</p>
+  <ol class="fill-by-sheet__steps">
+    <li><a class="button button--small" href="/bahan-bakar-aktual/menunggu.xlsx">Unduh daftarnya</a></li>
+    <li>Isi kolom <strong>Bahan Bakar Aktual (L)</strong> untuk operasi yang sudah selesai; baris yang dibiarkan kosong dilewati.</li>
+    <li><a class="button button--secondary button--small" href="/bahan-bakar-aktual-massal">Impor hasil isiannya</a></li>
+  </ol>
+</div>
+{%- endmacro %}
+
 {# The same, spelled plainly for links and form values. #}
 {% macro operation_ref(item) -%}{{ item.operation_code or item.operation_id }}{%- endmacro %}
 

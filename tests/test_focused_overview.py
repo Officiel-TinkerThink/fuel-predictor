@@ -26,8 +26,8 @@ def test_overview_links_to_details_without_repeating_their_tables(tmp_path: Path
             assert client.get(destination).status_code == 200
         # A compact overview must still disclose absent monitoring data.
         assert "belum pernah berhasil" in main
-        assert "Cadangan (backup) terakhir" not in main
-        assert "Cadangan (backup) terakhir" in client.get("/pemantauan/kesehatan-sistem").text
+        assert "Cadangan data" not in main
+        assert "Cadangan data" in client.get("/pemantauan/kesehatan-sistem").text
 
 
 def test_prediction_keeps_actions_visible_before_optional_comparisons(tmp_path: Path) -> None:
