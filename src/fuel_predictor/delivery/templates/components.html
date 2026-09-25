@@ -302,7 +302,6 @@
 {% macro confirm_button(dialog_id, label, title, body, form_action, csrf_token, tone='danger', reason_field=false, hidden_fields=none, trigger_class=none) -%}
 <button type="button" class="{{ trigger_class or ('button button--' ~ tone) }}" data-dialog="{{ dialog_id }}">{{ label }}</button>
 <dialog id="{{ dialog_id }}" aria-labelledby="{{ dialog_id }}-title">
-  <form method="dialog"><button class="visually-hidden" value="batal">Tutup</button></form>
   <h2 id="{{ dialog_id }}-title">{{ title }}</h2>
   <p>{{ body }}</p>
   <form method="post" action="{{ form_action }}">
@@ -320,7 +319,9 @@
     {% endif %}
     <div class="button-row">
       <button type="submit" class="button button--{{ tone }}">{{ label }}</button>
-      <button type="button" class="button button--secondary" data-dialog-close="{{ dialog_id }}">Kembali</button>
+      {# Without a field to fill, focus starts on the way out, so Enter never
+         confirms something destructive by accident. #}
+      <button type="button" class="button button--secondary" data-dialog-close="{{ dialog_id }}"{% if not reason_field %} autofocus{% endif %}>Kembali</button>
     </div>
   </form>
 </dialog>
@@ -339,7 +340,6 @@
   {% endif %}
   <button type="button" class="button button--secondary button--small" data-dialog="nama-grant-{{ index }}">Beri nama</button>
   <dialog id="nama-grant-{{ index }}" aria-labelledby="nama-grant-{{ index }}-title">
-    <form method="dialog"><button class="visually-hidden" value="batal">Tutup</button></form>
     <h2 id="nama-grant-{{ index }}-title">Nama untuk sambungan ini</h2>
     <p>Hanya untuk Anda membedakannya, misalnya "Laptop kantor". Agen tetap memakai nama,
       id, dan tokennya sendiri. Kosongkan untuk kembali ke nama agen.</p>

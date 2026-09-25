@@ -68,7 +68,6 @@
 </section>
 
 <dialog id="tambah-pengguna" aria-labelledby="tambah-pengguna-title"{% if add_dialog_open %} open{% endif %}>
-  <form method="dialog"><button class="visually-hidden" value="batal">Tutup</button></form>
   <h2 id="tambah-pengguna-title">Tambah pengguna</h2>
   <form method="post" action="/pengguna" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
