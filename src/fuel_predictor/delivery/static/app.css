@@ -1451,24 +1451,6 @@ th.numeric {
   max-width: var(--measure);
 }
 
-.table-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  align-items: end;
-  margin-bottom: var(--space-3);
-}
-
-.table-toolbar .field {
-  margin-bottom: 0;
-  max-width: 20rem;
-}
-
-/* The one button a toolbar carries sits at the far end, level with the fields. */
-.table-toolbar__action {
-  margin-left: auto;
-}
-
 /* A person's initial, standing in for a photo. */
 .avatar {
   flex: 0 0 auto;
@@ -1495,18 +1477,6 @@ dialog[open]:not(:modal) {
   inset: 0;
   margin: auto;
   z-index: 30;
-}
-
-.quick-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-
-.quick-actions .button {
-  flex: 1 1 14rem;
-  padding-block: var(--space-3);
-  font-size: 0.95rem;
 }
 
 .empty-state {
@@ -1941,8 +1911,7 @@ details.technical[open] summary {
   margin-bottom: var(--space-3);
 }
 
-code,
-.mono {
+code {
   font-family: var(--font-mono);
   font-size: 0.9em;
 }
@@ -2377,13 +2346,6 @@ dialog::backdrop {
   gap: var(--space-1);
 }
 
-.stop-list {
-  display: inline-grid;
-  gap: 0.15rem;
-  margin: 0;
-  padding-left: 1.2rem;
-}
-
 /* ---------- Simple info page (no form, just a message and a way back) ---------- */
 
 .info-card {
@@ -2495,19 +2457,6 @@ dialog::backdrop {
   width: 21px;
   height: 21px;
   flex: 0 0 21px;
-}
-
-.section-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-bottom: var(--space-4);
-}
-
-.section-heading h2 {
-  margin: 0;
 }
 
 /* The overview's starting point: one button, and the rarer way beside it. */
@@ -2793,7 +2742,6 @@ th[aria-sort="descending"] .collection-sort::after { content: " ↓"; }
 
   .app__nav,
   .button-row,
-  .table-toolbar,
   .collection-toolbar,
   .collection-pagination,
   .app__topbar .theme-toggle {
