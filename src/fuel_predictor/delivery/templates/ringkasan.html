@@ -26,7 +26,7 @@
 
 {% if shows_awaiting %}
 <section class="card">
-  <div class="card__title"><h2>Menunggu BBM aktual</h2>{% if awaiting %}{{ ui.badge(awaiting | length, 'warning') }}{% endif %}</div>
+  <div class="card__title"><h2>Menunggu BBM aktual</h2></div>
   {% if awaiting %}
   <p class="hint">{{ awaiting | length }} operasi sudah diprediksi tetapi belum dilaporkan hasilnya; terbaru di atas.</p>
   <ul class="row-list">
@@ -41,9 +41,12 @@
     </li>
     {% endfor %}
   </ul>
+  {# Four are shown; the link is only for the rest. #}
+  {% if awaiting | length > 4 %}
   <p class="link-row">
-    <a class="text-link" href="/bahan-bakar-aktual">Lihat semua operasi yang menunggu <span aria-hidden="true">→</span></a>
+    <a class="text-link" href="/bahan-bakar-aktual">Lihat semua {{ awaiting | length }} operasi <span aria-hidden="true">→</span></a>
   </p>
+  {% endif %}
   {{ ui.fill_by_sheet() }}
   {% else %}
   <p class="muted">Tidak ada yang menunggu — BBM aktual semua operasi yang sudah diprediksi sudah dicatat.</p>

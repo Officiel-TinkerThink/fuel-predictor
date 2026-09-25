@@ -126,9 +126,13 @@ class CreateDailyOperation:
                 total_distance_km = route_distance.total_distance_km
                 distance_source = DistanceSource.ROUTING_PROVIDER
         if total_distance_km is None:
+            # Blame the route only when there was one: a plan with no stops
+            # simply left the distance empty.
             raise DailyOperationValidationError(
                 "total_distance_km",
-                "Rute tidak dapat dihitung. Masukkan jarak total manual untuk melanjutkan.",
+                "Rute tidak dapat dihitung. Masukkan jarak total manual untuk melanjutkan."
+                if route_distance_manual_fallback
+                else "Jarak total wajib diisi.",
             )
         operation = DailyOperation(
             operation_id=self._operation_id_factory(),

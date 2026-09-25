@@ -1724,9 +1724,12 @@ dialog[open]:not(:modal) {
   max-width: 12rem;
 }
 
-.listing-toolbar .listing-toolbar__search {
-  flex: 1 1 14rem;
-  max-width: 22rem;
+/* The search box is the one wide field: its placeholder says what can be
+   searched for, and a narrower box cut that sentence off mid-word. */
+.listing-toolbar .listing-toolbar__search,
+.collection-toolbar .field:first-child {
+  flex: 1 1 16rem;
+  max-width: 30rem;
 }
 
 .listing-toolbar__submit {
@@ -1871,6 +1874,17 @@ dialog[open]:not(:modal) {
   grid-template-columns: minmax(9rem, auto) 1fr;
   gap: var(--space-2) var(--space-4);
   margin: 0;
+}
+
+.detail-list + .hint {
+  margin-top: var(--space-3);
+}
+
+/* A unit's name and group are short: kept on one line, a row is one line
+   tall instead of two for every "Vacuum Truck". */
+.fleet-table td:nth-child(2),
+.fleet-table td:nth-child(3) {
+  white-space: nowrap;
 }
 
 .detail-list dt {
@@ -2155,6 +2169,7 @@ dialog::backdrop {
    label - a person, an action - stand on their own line. */
 @media (max-width: 40rem) {
   .table--sortable,
+  .table--sortable caption,
   .table--sortable thead,
   .table--sortable tbody,
   .table--sortable tr,
@@ -2628,9 +2643,6 @@ dialog::backdrop {
   min-width: 0;
 }
 
-.collection-toolbar .field:first-child {
-  flex-grow: 2;
-}
 
 .collection-sort {
   border: 0;

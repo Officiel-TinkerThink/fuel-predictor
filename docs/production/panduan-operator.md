@@ -69,17 +69,17 @@ dulu, lalu masuk lagi dengan yang baru.
    - **Kendaraan** — pilih unit dari daftar, misalnya `VT 01` atau `Truck Crane 01`. Hanya ini
      yang perlu Anda sebutkan; tipe dan grupnya (misalnya *Vacuum Truck*) dibaca aplikasi dari
      katalog armada dan ditampilkan di hasil sebagai keterangan.
-   - **Rute & pemberhentian** — ketik nama lokasi; daftar menyaring sambil Anda mengetik.
-     Nama yang tidak ada di katalog ditolak beserta usulan nama yang mirip.
    - **Aktivitas** — *Mobilisasi*, atau *Mobilisasi + lifting*. Pilihan kedua hanya bisa dipilih
      untuk kendaraan yang bisa lifting (Truck Crane 01, Truck Crane 02, Wheel Crane — kolom
      *Lifting* di menu **Armada**); untuk kendaraan lain pilihan itu tidak aktif.
-   - **Jam lifting** — wajib diisi kalau aktivitas mencakup lifting.
-   - **Jarak total** — dihitung otomatis dari rute, jadi biasanya tidak ada yang perlu diisi.
-     Bila penyedia rute gagal menghitung, penyimpanan ditolak dan kolom **Jarak total manual**
-     muncul untuk diisi sendiri (seluruh perjalanan, termasuk kembali); estimasinya lalu
-     ditandai memakai jarak manual. Pada instalasi tanpa penyedia rute, kolom ini selalu ada
-     dan wajib diisi.
+   - **Jam lifting** — muncul dan wajib diisi kalau aktivitas mencakup lifting.
+   - **Rute & pemberhentian** (opsional) — ketik nama lokasi; daftar menyaring sambil Anda
+     mengetik. Nama yang tidak ada di katalog ditolak beserta usulan nama yang mirip.
+   - **Jarak total** — seluruh perjalanan, termasuk kembali. Begitu rute berisi dua lokasi atau
+     lebih, kolom ini menyingkir: jaraknya dihitung dari rute saat disimpan. Bila rute itu gagal
+     dihitung, penyimpanan ditolak dan kolom **Jarak total manual** muncul untuk diisi sendiri;
+     estimasinya lalu ditandai memakai jarak manual. (Pada instalasi tanpa penyedia rute, rute
+     hanya dicatat dan jarak total selalu diisi sendiri.)
 3. Tekan **Simpan & buat estimasi**. Operasi tersimpan lebih dulu, jadi angkanya bisa
    ditelusuri kembali nanti, lalu estimasinya langsung ditampilkan.
 

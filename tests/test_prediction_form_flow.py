@@ -134,20 +134,62 @@ class _PreviewOnly:
         raise RoutingProviderUnavailable("no preview in tests")
 
 
-def test_the_distance_is_asked_for_only_after_the_route_fails(tmp_path: Path) -> None:
-    """Nobody can know in advance that the route call will fail, so the form
-    does not ask for a fallback up front; the rejected save brings the field."""
-    app = create_app(
+def _routed_app(tmp_path: Path) -> object:
+    return create_app(
         database_path=tmp_path / "operations.sqlite3",
         routing_provider=UnavailableRoutingProvider(),
         route_preview=_PreviewOnly(),
         location_catalog=_CATALOG,
     )
-    with TestClient(app) as client:
-        form = client.get("/prediksi")
-        assert form.status_code == 200
-        assert 'name="total_distance_km"' not in form.text
 
+
+def _post_routed(client: TestClient, *fields: tuple[str, str]) -> Response:
+    response: Response = client.post(
+        "/operasi-harian",
+        content=urlencode(
+            [
+                ("vehicle_category", "ANGBER"),
+                ("activity_mode", "transport"),
+                ("distance_source", "routing_provider"),
+                *fields,
+            ]
+        ),
+        headers=_FORM,
+    )
+    return response
+
+
+def test_with_routing_the_distance_can_still_simply_be_typed(tmp_path: Path) -> None:
+    """The route says it is optional, so the distance field is there without
+    one. It sits in a wrapper app.js hides once two stops are chosen: then the
+    route gives the distance, and a second number to fill would only compete."""
+    with TestClient(_routed_app(tmp_path)) as client:  # type: ignore[arg-type]
+        form = client.get("/prediksi").text
+        typed = _post_routed(client, ("total_distance_km", "40"))
+
+    assert 'name="total_distance_km"' in form
+    assert "data-route-distance" in form
+    assert typed.status_code == 201, typed.text
+    assert "40 km" in typed.text
+
+
+def test_with_routing_neither_route_nor_distance_asks_for_the_distance(
+    tmp_path: Path,
+) -> None:
+    """No route was given, so no route failed: the message says what is missing."""
+    with TestClient(_routed_app(tmp_path)) as client:  # type: ignore[arg-type]
+        rejected = _post_routed(client)
+
+    assert rejected.status_code == 422
+    assert "Jarak total wajib diisi" in rejected.text
+    assert "Rute tidak dapat dihitung" not in rejected.text
+    assert 'href="#field-total_distance_km"' in rejected.text
+
+
+def test_without_routing_a_missing_distance_is_not_blamed_on_the_route(
+    tmp_path: Path,
+) -> None:
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
         rejected = client.post(
             "/operasi-harian",
             content=urlencode(
@@ -155,16 +197,30 @@ def test_the_distance_is_asked_for_only_after_the_route_fails(tmp_path: Path) ->
                     ("vehicle_category", "ANGBER"),
                     ("activity_mode", "transport"),
                     ("distance_source", "routing_provider"),
-                    ("stop_sequence", "POOL LIMAU"),
-                    ("stop_sequence", "KM-001"),
+                    ("total_distance_km", ""),
                 ]
             ),
             headers=_FORM,
         )
 
+    assert rejected.status_code == 422
+    assert "Jarak total wajib diisi" in rejected.text
+    assert "Rute tidak dapat dihitung" not in rejected.text
+
+
+def test_a_route_that_cannot_be_measured_asks_for_the_distance_by_hand(tmp_path: Path) -> None:
+    """Nobody can know in advance that the route call will fail; when it does,
+    the rejected save brings the distance field back, kept visible."""
+    with TestClient(_routed_app(tmp_path)) as client:  # type: ignore[arg-type]
+        rejected = _post_routed(
+            client, ("stop_sequence", "POOL LIMAU"), ("stop_sequence", "KM-001")
+        )
+
     assert rejected.status_code == 422, rejected.text
     assert "Rute tidak dapat dihitung" in rejected.text
-    assert 'name="total_distance_km"' in rejected.text
+    assert "Jarak total manual" in rejected.text
+    # Not in the wrapper app.js hides while a route is chosen: the route failed.
+    assert "data-route-distance" not in rejected.text
     assert 'href="#field-total_distance_km"' in rejected.text
     # The stops typed so far survive the round trip.
     assert 'value="POOL LIMAU"' in rejected.text and 'value="KM-001"' in rejected.text

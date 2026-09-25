@@ -270,8 +270,38 @@ def test_the_overview_counts_the_whole_backlog_and_says_when_nothing_waits(
 
     assert "Tidak ada yang menunggu" in nothing_yet
     assert "9 operasi sudah diprediksi" in overview
-    # Only the newest few are listed on the overview itself.
+    # Only the newest few are listed on the overview itself, and the link says
+    # how many the full list holds; the count is said once, not also in a badge.
     assert overview.count('href="/bahan-bakar-aktual?operation_id=') == 4
+    assert "Lihat semua 9 operasi" in overview
+    assert overview.count(">9<") == 0
+
+
+def test_a_short_backlog_is_listed_whole_without_a_see_all_link(
+    operator_client: TestClient, tmp_path: Path
+) -> None:
+    with TestClient(
+        create_app(database_path=tmp_path / "operations.sqlite3", bootstrap_administrator=_ADMIN)
+    ) as admin:
+        _sign_in(admin, *_ADMIN)
+        _train_baseline_with_csrf(admin)
+    token = _csrf(operator_client.get("/prediksi").text)
+    for distance in (20, 30):
+        operator_client.post(
+            "/operasi-harian",
+            data={
+                "vehicle_category": "ANGBER",
+                "activity_mode": "transport",
+                "total_distance_km": str(distance),
+                "distance_source": "manual",
+                "csrf_token": token,
+            },
+        )
+
+    overview = operator_client.get("/").text
+
+    assert overview.count('href="/bahan-bakar-aktual?operation_id=') == 2
+    assert "Lihat semua" not in overview
 
 
 def test_an_operator_is_not_offered_a_link_that_would_be_refused(

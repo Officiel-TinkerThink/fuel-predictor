@@ -413,6 +413,18 @@
     var mapImage = document.querySelector("#route-map");
     var mapCanvas = document.querySelector("#route-canvas");
     var statusLine = document.querySelector("#route-status");
+    // With a routing provider the chosen route gives the distance, so the
+    // typed one steps aside (and is not sent) while two stops are chosen.
+    var typedDistance = document.querySelector("[data-route-distance]");
+    var syncTypedDistance = function (routed) {
+      if (!typedDistance) {
+        return;
+      }
+      typedDistance.hidden = routed;
+      Array.prototype.forEach.call(typedDistance.querySelectorAll("input"), function (input) {
+        input.disabled = routed;
+      });
+    };
 
     // Stops are typed into inputs backed by one shared <datalist>; the
     // coordinates live on its options, read once into a map keyed the same
@@ -492,6 +504,7 @@
     var updateRouteDistance = function () {
       var stops = chosenStops();
       var points = chosenPoints();
+      syncTypedDistance(stops.length >= 2);
       if (stops.length < 2 || points.length < 2) {
         showEmptyRoute("Pilih minimal dua lokasi untuk menggambar rute.");
         return;
@@ -507,7 +520,9 @@
         mapImage.hidden = false;
       }
       if (statusLine) {
-        statusLine.textContent = "Rute Google Maps, dalam urutan yang dimasukkan.";
+        statusLine.textContent = typedDistance
+          ? "Jarak total dihitung dari rute ini saat disimpan."
+          : "Rute Google Maps, dalam urutan yang dimasukkan.";
       }
     };
 

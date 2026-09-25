@@ -67,7 +67,9 @@
     toolbar.setAttribute("aria-label", "Kontrol " + name);
     var search = element("input");
     search.type = "search";
-    search.placeholder = "Cari dalam " + name.toLocaleLowerCase("id");
+    // Not "Cari dalam <label>": lower-cased, a label like "Menunggu BBM
+    // aktual" read as "menunggu bbm aktual", and "Berhasil" as nonsense.
+    search.placeholder = "Ketik untuk menyaring";
     search.setAttribute("aria-controls", id);
     field(toolbar, "Cari", search, id + "-search");
     var size = element("select");

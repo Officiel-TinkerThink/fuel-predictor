@@ -4,7 +4,7 @@
 {% block content %}
 
 <section class="card">
-  {{ ui.listing_toolbar(listing, placeholder='Kode operasi, kendaraan, lokasi, atau status') }}
+  {{ ui.listing_toolbar(listing, placeholder='Kode, kendaraan, lokasi, atau status') }}
   {% if listing.items %}
   {# A route exists only for operations planned stop by stop; a column of
      dashes (a dead line in every phone card) says nothing. #}

@@ -34,17 +34,19 @@
        (CreateDailyOperation). A dropdown for it only hid this field behind
        a choice that changed nothing. #}
     <input type="hidden" name="distance_source" value="routing_provider">
-    {% if route_preview_available %}
-    {# The distance comes from the route. Nobody can know in advance that the
-       route call will fail, so a fallback is not asked for up front: the
-       field appears only once a save has come back with that failure (or a
-       value was already typed), and the error summary points straight at it. #}
-    {% set route_failed = (errors or []) | selectattr('field', 'equalto', 'total_distance_km') | list %}
-    {% if route_failed or values.get('total_distance_km') %}
-    {{ ui.number_field('total_distance_km', 'Jarak total manual', 'km', values.get('total_distance_km', ''), hint='Penyedia rute tidak dapat menghitung rute ini. Masukkan jarak seluruh perjalanan (termasuk kembali) agar operasi tetap tersimpan; estimasinya akan ditandai memakai jarak manual.', errors=errors, required=true, min=0.01) }}
-    {% endif %}
+    {# With routing, the route gives the distance, and the typed one is only
+       for a plan without a route: app.js hides this wrapper while two stops
+       are chosen. Nobody can know in advance that the route call will fail,
+       so the fallback is asked for only once a save has come back with that
+       failure, outside the wrapper so it stays. #}
+    {% set routed_stops = (values.get('stop_sequence') or []) | select | list %}
+    {% set route_failed = route_preview_available and routed_stops | length >= 2 and (errors or []) | selectattr('field', 'equalto', 'total_distance_km') | list %}
+    {% if route_failed %}
+    {{ ui.number_field('total_distance_km', 'Jarak total manual', 'km', values.get('total_distance_km', ''), hint='Jarak seluruh perjalanan, termasuk kembali. Estimasinya ditandai memakai jarak manual.', errors=errors, required=true, min=0.01) }}
     {% else %}
-    {{ ui.number_field('total_distance_km', 'Jarak total', 'km', values.get('total_distance_km', ''), hint='Masukkan total jarak perjalanan, termasuk perjalanan kembali.', errors=errors, required=true, min=0.01) }}
+    <div{% if route_preview_available %} data-route-distance{% endif %}>
+    {{ ui.number_field('total_distance_km', 'Jarak total', 'km', values.get('total_distance_km', ''), hint='Masukkan total jarak perjalanan, termasuk perjalanan kembali.' ~ (' Atau isi rute di atas: jaraknya dihitung saat disimpan.' if route_preview_available else ''), errors=errors, required=true, min=0.01) }}
+    </div>
     {% endif %}
     <div class="form-footer">
       <button type="submit" class="button">Simpan &amp; buat estimasi</button>
