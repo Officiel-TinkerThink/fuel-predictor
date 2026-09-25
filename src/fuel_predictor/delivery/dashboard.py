@@ -100,7 +100,7 @@ def build_dashboard_router(
                 monitoring=monitoring,
                 governance=governance,
                 is_healthy=len(critical_alerts) == 0,
-                critical_alert_count=len(critical_alerts),
+                critical_alerts=critical_alerts,
                 alert_kind_labels=ALERT_KIND_LABELS,
                 quick_actions=[
                     {"label": label, "href": href}

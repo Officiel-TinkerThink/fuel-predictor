@@ -58,7 +58,9 @@
 {% if is_healthy %}
 {{ ui.banner('success', 'Layanan berjalan normal', 'Tidak ada peringatan kritis saat ini.') }}
 {% else %}
-{{ ui.banner('danger', 'Perlu perhatian', critical_alert_count ~ ' peringatan kritis aktif. Lihat Kesehatan Sistem untuk detail.', 'Buka Kesehatan Sistem', '/pemantauan/kesehatan-sistem') }}
+{# The alert itself, not only a count: it already says what and by how much. #}
+{% set others = critical_alerts | length - 1 %}
+{{ ui.banner('danger', 'Perlu perhatian', critical_alerts[0].message ~ ((' Ada ' ~ others ~ ' peringatan kritis lain.') if others else ''), 'Buka Kesehatan Sistem', '/pemantauan/kesehatan-sistem') }}
 {% endif %}
 
 <div class="grid grid--metrics">

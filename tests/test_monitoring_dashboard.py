@@ -131,6 +131,7 @@ def test_monitoring_dashboard_shows_rolling_error_and_category_degradation(
         )
         dashboard = client.get("/api/v1/monitoring-dashboard")
         management = client.get("/pengelolaan-model")
+        overview = client.get("/").text
 
     assert actual.status_code == 201
     assert dashboard.status_code == 200
@@ -147,6 +148,8 @@ def test_monitoring_dashboard_shows_rolling_error_and_category_degradation(
     assert "meleset rata-rata 5,0 L dari BBM aktual yang tercatat, di atas batas 1,0 L" in (
         management.text
     )
+    # The overview states the alert rather than only counting it.
+    assert degradation["message"] in overview
 
 
 def test_evidently_feature_drift_uses_its_dataset_and_column_metrics() -> None:
