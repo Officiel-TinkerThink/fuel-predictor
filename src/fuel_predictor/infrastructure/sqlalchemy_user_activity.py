@@ -49,6 +49,7 @@ class SqlAlchemyUserActivityRepository:
                     DailyOperationRow.vehicle,
                     DailyOperationRow.total_distance_km,
                     ActualFuelRecordRow.operation_id.is_not(None).label("has_actual"),
+                    DailyOperationRow.cancelled_at.is_not(None).label("cancelled"),
                 )
                 .outerjoin(
                     ActualFuelRecordRow,
@@ -68,6 +69,7 @@ class SqlAlchemyUserActivityRepository:
                 total_distance_km=row.total_distance_km,
                 has_actual=bool(row.has_actual),
                 operation_code=row.operation_code,
+                cancelled=bool(row.cancelled),
             )
             for row in rows
         ]

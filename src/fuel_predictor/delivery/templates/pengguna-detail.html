@@ -77,17 +77,17 @@
 
 <section class="card">
   <h2>Pekerjaan</h2>
-  <p class="hint">Yang dibuat pengguna ini sendiri; angka 30 hari terakhir di samping totalnya.</p>
+  <p class="hint">Yang dibuat pengguna ini sendiri dalam 30 hari terakhir.</p>
   <div class="grid grid--metrics">
     <div class="metric">
       <p class="metric__label">Prediksi dibuat</p>
       <p class="metric__value"><span data-stat="operations-30d">{{ activity.operations_recent }}</span><span class="metric__unit">30 hari terakhir</span></p>
-      <p class="metric__context">Total <span data-stat="operations-total">{{ activity.operations_total }}</span></p>
+      {% if activity.operations_total != activity.operations_recent %}<p class="metric__context">Total <span data-stat="operations-total">{{ activity.operations_total }}</span></p>{% endif %}
     </div>
     <div class="metric">
       <p class="metric__label">BBM aktual dicatat</p>
       <p class="metric__value"><span data-stat="actuals-30d">{{ activity.actuals_recent }}</span><span class="metric__unit">30 hari terakhir</span></p>
-      <p class="metric__context">Total <span data-stat="actuals-total">{{ activity.actuals_total }}</span></p>
+      {% if activity.actuals_total != activity.actuals_recent %}<p class="metric__context">Total <span data-stat="actuals-total">{{ activity.actuals_total }}</span></p>{% endif %}
     </div>
   </div>
   {% if detail.recent_operations %}
@@ -99,7 +99,7 @@
         <strong><a href="/operasi-harian/{{ item.operation_id }}">{{ item.vehicle or 'Operasi' }}</a></strong>
         <span class="row-list__meta">{% if item.created_at %}{{ item.created_at | waktu }} · {% endif %}{{ item.total_distance_km | angka }} km · {{ ui.operation_code(item) }}</span>
       </div>
-      <span class="row-list__figure">{{ ui.badge('Aktual tercatat', 'success') if item.has_actual else ui.badge('Menunggu aktual', 'warning') }}</span>
+      <span class="row-list__figure">{% if item.has_actual %}{{ ui.badge('Aktual tercatat', 'success') }}{% elif item.cancelled %}{{ ui.badge('Dibatalkan', 'neutral') }}{% else %}{{ ui.badge('Menunggu aktual', 'warning') }}{% endif %}</span>
     </li>
     {% endfor %}
   </ul>
@@ -143,6 +143,6 @@
   {% endif %}
 </section>
 
-<div class="button-row"><a class="button button--secondary" href="/pengguna">Kembali ke daftar pengguna</a></div>
+
 
 {% endblock %}

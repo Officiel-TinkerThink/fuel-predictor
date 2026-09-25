@@ -165,3 +165,34 @@ def test_the_api_refuses_a_withdrawal_it_cannot_make(tmp_path: Path) -> None:
     assert missing.status_code == 422
     assert unknown.status_code == 404
     assert "cancelled_at" not in still
+
+
+def test_a_person_s_page_shows_their_withdrawn_plan_as_withdrawn(tmp_path: Path) -> None:
+    """Their recent operations listed a cancelled plan as "Menunggu aktual"."""
+    import re
+
+    from tests.test_two_roles import _ADMIN, _sign_in
+
+    database = tmp_path / "operations.sqlite3"
+    with TestClient(create_app(database_path=database, bootstrap_administrator=_ADMIN)) as client:
+        _sign_in(client, *_ADMIN)
+        operation = client.post(
+            "/api/v1/daily-operations",
+            json={
+                "vehicle_category": "ANGBER",
+                "activity_mode": "transport",
+                "total_distance_km": 20,
+                "distance_source": "manual",
+            },
+        ).json()
+        client.post(
+            f"/api/v1/daily-operations/{operation['operation_id']}/cancel",
+            json={"reason": "salah input"},
+        )
+        users = client.get("/pengguna").text
+        user_id = re.search(r'href="/pengguna/(USR-[^"]+)"', users)
+        assert user_id is not None
+        page = client.get(f"/pengguna/{user_id.group(1)}").text
+
+    row = page.split(operation["operation_code"], 1)[1].split("</li>", 1)[0]
+    assert "Dibatalkan" in row and "Menunggu aktual" not in row

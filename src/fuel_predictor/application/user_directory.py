@@ -39,6 +39,8 @@ class RecentOperation:
     total_distance_km: float
     has_actual: bool
     operation_code: str | None = None
+    # Withdrawn plans wait for nothing; without this they read "waiting".
+    cancelled: bool = False
 
 
 class UserActivityReader(Protocol):
