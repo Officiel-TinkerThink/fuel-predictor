@@ -168,14 +168,14 @@ class CreateDailyOperation:
 
 
 class GetDailyOperation:
-    def __init__(self, repository: DailyOperationReader) -> None:
+    """One operation, by its operation code or its `OPR-…` id: the code is
+    what people have in hand (ADR 0016)."""
+
+    def __init__(self, repository: DailyOperationLookup) -> None:
         self._repository = repository
 
-    def execute(self, operation_id: str) -> DailyOperation:
-        operation = self._repository.get(operation_id)
-        if operation is None:
-            raise DailyOperationNotFoundError(operation_id)
-        return operation
+    def execute(self, reference: str) -> DailyOperation:
+        return find_daily_operation(self._repository, reference)
 
 
 def find_daily_operation(lookup: DailyOperationLookup, reference: str) -> DailyOperation:

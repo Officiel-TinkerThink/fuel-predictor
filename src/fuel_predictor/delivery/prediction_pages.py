@@ -317,7 +317,7 @@ def build_prediction_pages_router(
                 render_error_page("Operasi tidak ditemukan", "Tidak ada operasi dengan ID ini."),
                 status_code=status.HTTP_404_NOT_FOUND,
             )
-        prediction = get_latest_prediction.execute(operation_id)
+        prediction = get_latest_prediction.execute(operation.operation_id)
         if prediction is None:
             return HTMLResponse(
                 render_error_page(
@@ -357,7 +357,7 @@ def build_prediction_pages_router(
                 ),
                 status_code=status.HTTP_404_NOT_FOUND,
             )
-        prediction = get_latest_prediction.execute(operation_id)
+        prediction = get_latest_prediction.execute(operation.operation_id)
         if prediction is None:
             return HTMLResponse(
                 _render_saved_operation(

@@ -109,3 +109,21 @@ def test_the_template_asks_for_the_code(tmp_path: Path) -> None:
     workbook = load_workbook(BytesIO(workbook_bytes), data_only=True)
     assert workbook["Bahan Bakar Aktual"]["A1"].value == "Kode Operasi (wajib)"
     assert csv_text.lstrip("﻿").startswith("Kode Operasi (wajib),")
+
+
+def test_an_operation_opens_by_its_code_as_well_as_its_id(tmp_path: Path) -> None:
+    """The code is what people have in hand; a link or API call with it opens
+    the same operation as its OPR- id."""
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        _train_baseline(client)
+        operation = _operation_with_prediction(client, 24)["operation"]
+
+        by_code = client.get(f"/api/v1/daily-operations/{operation['operation_code'].lower()}")
+        page = client.get(f"/operasi-harian/{operation['operation_code']}")
+        slip = client.get(f"/operasi-harian/{operation['operation_code']}/slip")
+
+    assert by_code.status_code == 200
+    assert by_code.json()["operation_id"] == operation["operation_id"]
+    assert page.status_code == 200
+    assert "Kode operasi — catat kode ini" in page.text
+    assert slip.status_code == 200
