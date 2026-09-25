@@ -205,6 +205,7 @@ from fuel_predictor.infrastructure.sqlalchemy_similar_operations import (
 )
 from fuel_predictor.infrastructure.sqlalchemy_user_activity import SqlAlchemyUserActivityRepository
 from fuel_predictor.infrastructure.sqlalchemy_vehicles import SqlAlchemyVehicleRepository
+from fuel_predictor.infrastructure.stored_model_scorer import StoredModelScorer
 from fuel_predictor.infrastructure.system_memory_probe import SystemMemoryProbe
 from fuel_predictor.infrastructure.zip_model_package_archive import ZipModelPackageArchiveReader
 
@@ -323,6 +324,22 @@ def create_app(
         else:
             tracking_directory = database_path.parent / "mlruns"
         model_store = MlflowBaselineModelStore.local(tracking_directory, resolved_vehicle_catalog)
+    artifact_store = FilesystemModelArtifactStore(root=settings.model_artifact_directory)
+    parse_model_package_manifest = ParseModelPackageManifest(
+        schema_validator=JsonSchemaManifestValidator(),
+        supported_feature_contract_versions=frozenset(
+            _split_setting(settings.supported_feature_contract_versions)
+        ),
+        supported_runtime_compatibility_versions=frozenset(
+            _split_setting(settings.supported_runtime_compatibility_versions)
+        ),
+    )
+    # Serving after a restart and the evaluations that re-score actuals reach a
+    # model by its artifact URI; packages are not in MLflow, so they go through
+    # a scorer that opens either kind, each model loaded once.
+    model_scorer = StoredModelScorer(
+        model_store, artifact_store, parse_model_package_manifest, build_loader
+    )
     train_baseline_candidate = TrainBaselineCandidate(
         historical_dataset_repository, model_store, prediction_repository, resolved_vehicle_catalog
     )
@@ -333,7 +350,7 @@ def create_app(
     generate_fuel_prediction = GenerateFuelPrediction(
         repository,
         prediction_repository,
-        model_store,
+        model_scorer,
         prediction_repository,
         settings.initial_safety_margin_liters,
         resolved_vehicle_catalog,
@@ -355,12 +372,12 @@ def create_app(
     list_awaiting_actual = ListOperationsAwaitingActualFuel(actual_fuel_repository)
     promote_candidate_model = PromoteCandidateModel(prediction_repository, prediction_repository)
     get_candidate_model_comparison = GetCandidateModelComparison(
-        prediction_repository, actual_fuel_repository, model_store, resolved_vehicle_catalog
+        prediction_repository, actual_fuel_repository, model_scorer, resolved_vehicle_catalog
     )
     get_model_governance_dashboard = GetModelGovernanceDashboard(
         prediction_repository,
         actual_fuel_repository,
-        model_store,
+        model_scorer,
         settings.max_active_model_mae_liters,
         resolved_vehicle_catalog,
     )
@@ -424,16 +441,6 @@ def create_app(
     monitoring_run_repository = SqlAlchemyMonitoringRunRepository(session_factory)
     backup_run_repository = SqlAlchemyBackupRunRepository(session_factory)
     validation_records = SqlAlchemyModelPackageValidationRepository(session_factory)
-    artifact_store = FilesystemModelArtifactStore(root=settings.model_artifact_directory)
-    parse_model_package_manifest = ParseModelPackageManifest(
-        schema_validator=JsonSchemaManifestValidator(),
-        supported_feature_contract_versions=frozenset(
-            _split_setting(settings.supported_feature_contract_versions)
-        ),
-        supported_runtime_compatibility_versions=frozenset(
-            _split_setting(settings.supported_runtime_compatibility_versions)
-        ),
-    )
     parse_package_smoke_tests = ParseSmokeTests(
         schema_validator=JsonSchemaValidator(SMOKE_TESTS_SCHEMA)
     )

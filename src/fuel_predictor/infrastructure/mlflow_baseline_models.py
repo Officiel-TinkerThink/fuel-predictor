@@ -29,6 +29,10 @@ class MlflowBaselineModelStore(BaselineModelStore):
         # Training reads each row's type and group from the catalog as it is
         # at training time, the same lens scoring will use (ADR 0015).
         self._vehicle_catalog = vehicle_catalog
+        # A logged model never changes under its runs:/ URI, so it is loaded
+        # once. Evaluations ask the same model about every recorded actual;
+        # reloading it from disk each time made the model pages slow.
+        self._loaded: dict[str, Pipeline] = {}
 
     @classmethod
     def local(
@@ -82,6 +86,9 @@ class MlflowBaselineModelStore(BaselineModelStore):
             return f"runs:/{run.info.run_id}/model", uncertainty
 
     def predict(self, artifact_uri: str, features: dict[str, str | float]) -> float:
-        mlflow.set_tracking_uri(self._tracking_uri)
-        pipeline = mlflow.sklearn.load_model(artifact_uri)
+        pipeline = self._loaded.get(artifact_uri)
+        if pipeline is None:
+            mlflow.set_tracking_uri(self._tracking_uri)
+            pipeline = mlflow.sklearn.load_model(artifact_uri)
+            self._loaded[artifact_uri] = pipeline
         return float(pipeline.predict([features])[0])
