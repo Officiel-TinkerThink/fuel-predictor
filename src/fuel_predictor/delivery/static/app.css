@@ -395,7 +395,7 @@ a:hover {
 
 .app__account .role {
   display: block;
-  opacity: 0.75;
+  color: var(--color-text-muted);
   font-size: 0.8rem;
 }
 
@@ -1367,6 +1367,11 @@ tbody tr.is-selected td {
   text-decoration-thickness: 2px;
 }
 
+/* The tinted box needs the darker brand shade for its link to be read. */
+.operation-code-callout .hint a {
+  color: var(--color-brand-strong);
+}
+
 .operation-code-callout__label {
   margin: 0;
   font-size: 0.82rem;
@@ -2021,11 +2026,9 @@ dialog::backdrop {
   font-size: 16px;
   letter-spacing: -2px;
   line-height: 1;
-  opacity: 0.35;
 }
 
 .stop-drag:hover {
-  opacity: 1;
   color: var(--color-brand);
 }
 
