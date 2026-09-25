@@ -113,6 +113,7 @@
     if (isTable && collection.tHead) {
       headers = Array.from(collection.tHead.rows[0].cells);
       collection.classList.add("table--sortable");
+      if (rows.length < 2) collection.dataset.singleRow = "";
       headers.forEach(function (header, column) {
         var label = header.textContent.trim();
         var sortable = !header.hasAttribute("data-no-sort");
@@ -123,7 +124,9 @@
           if (sortable) cell.dataset.label = label;
           record.values[column] = valueFor(cell, numeric);
         });
-        if (!sortable) return;
+        // One row has no order to change; on a phone its sort chips were a
+        // screenful of buttons above a single card.
+        if (!sortable || rows.length < 2) return;
         header.setAttribute("aria-sort", "none");
         var button = element("button", "collection-sort", label);
         button.type = "button";

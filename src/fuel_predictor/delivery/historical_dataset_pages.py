@@ -31,8 +31,8 @@ _DEMO_HISTORICAL_DATA = Path(
 )
 
 _PAGE_LEAD = (
-    "Unggah CSV atau Excel .xlsx. Baris kosong kalender diabaikan; baris yang perlu diperbaiki "
-    "akan dikarantina dalam laporan koreksi."
+    "Riwayat operasi beserta BBM yang disiapkan, untuk melatih kandidat model. Baris yang "
+    "bermasalah disisihkan beserta alasannya; baris lainnya tetap diimpor."
 )
 
 
@@ -125,7 +125,7 @@ def _render_form(caller: "ActiveCaller", error: str | None) -> str:
     return render(
         "impor-data-historis.html",
         caller=caller,
-        page_title="Impor Data Historis ANGBER",
+        page_title="Impor Data Historis",
         active_path="/impor-data-historis",
         eyebrow="DATA PELATIHAN",
         page_lead=_PAGE_LEAD,

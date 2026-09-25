@@ -182,14 +182,14 @@ def test_api_ignores_precreated_calendar_rows_that_only_contain_a_date(tmp_path:
 
 
 def test_api_reports_each_missing_required_header_once_for_correction(tmp_path: Path) -> None:
-    source = """Kategori ANGBER,Mode Aktivitas,Jarak Total (km),Bahan Bakar Disiapkan (L)
-ANGBER,transport,30,20
+    source = """Kategori ANGBER,Mode Aktivitas,Jarak Total (km),Sumber Jarak
+ANGBER,transport,30,manual
 """
 
     with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
         response = client.post(
             "/api/v1/historical-datasets",
-            files={"file": ("tanpa-sumber.csv", source.encode(), "text/csv")},
+            files={"file": ("tanpa-bbm.csv", source.encode(), "text/csv")},
         )
 
     assert response.status_code == 201
@@ -198,16 +198,42 @@ ANGBER,transport,30,20
             "sheet_name": "CSV",
             "row_number": 2,
             "reasons": [
-                {"field": "distance_source", "message": "Kolom Sumber jarak tidak ditemukan."}
+                {
+                    "field": "prepared_fuel_liters",
+                    "message": "Kolom Bahan bakar disiapkan tidak ditemukan.",
+                }
             ],
             "raw_values": {
                 "Kategori ANGBER": "ANGBER",
                 "Mode Aktivitas": "transport",
                 "Jarak Total (km)": "30",
-                "Bahan Bakar Disiapkan (L)": "20",
+                "Sumber Jarak": "manual",
             },
         }
     ]
+
+
+def test_history_without_category_or_distance_source_imports_with_the_defaults(
+    tmp_path: Path,
+) -> None:
+    """Every unit is ANGBER and a written distance is a manual one: the plan
+    sheet stopped asking for either, and history no longer insists."""
+    source = """Kendaraan,Aktivitas,Jarak Total (km),Bahan Bakar Disiapkan (L)
+VT 01,Mobilisasi,30,20
+VT 03,Mobilisasi,,20
+"""
+
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        response = client.post(
+            "/api/v1/historical-datasets",
+            files={"file": ("riwayat.csv", source.encode(), "text/csv")},
+        )
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["dataset_version"]["valid_operation_count"] == 1
+    # A value that is required and missing is still named.
+    assert body["correction_report"][0]["reasons"][0]["field"] == "total_distance_km"
 
 
 def test_indonesian_upload_form_shows_dataset_summary_and_correction_guidance(
@@ -227,7 +253,7 @@ def test_indonesian_upload_form_shows_dataset_summary_and_correction_guidance(
         )
 
     assert form.status_code == 200
-    assert "Impor Data Historis ANGBER" in form.text
+    assert "Impor Data Historis" in form.text
     assert response.status_code == 201
     assert "Dataset versi 1 berhasil dibuat" in response.text
     assert "1 operasi valid siap digunakan untuk pelatihan" in response.text

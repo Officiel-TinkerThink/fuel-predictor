@@ -9,10 +9,9 @@
 
 <section class="card">
   {{ ui.steps(['Siapkan riwayat', 'Unggah', 'Latih kandidat', 'Promosikan'], 2) }}
-  <p class="hint">Satu baris per operasi yang sudah terjadi, beserta BBM yang disiapkan untuknya.
-    Kolom wajib: kategori ANGBER, mode aktivitas, jarak total, bahan bakar disiapkan, dan
-    sumber jarak. Kolom jam lifting diterima dengan variasi header.
-    Belum punya berkasnya? <a href="/contoh-data-riwayat.csv">Unduh data contoh</a> yang siap diimpor.</p>
+  <p class="hint">Satu baris per operasi yang sudah terjadi: kendaraan, aktivitas, jarak total,
+    jam lifting bila ada, dan BBM yang disiapkan. Belum punya berkasnya?
+    <a href="/contoh-data-riwayat.csv">Unduh data contoh</a> yang siap diimpor.</p>
   <form method="post" action="/impor-data-historis" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     {{ ui.file_field('file', 'Berkas historis', '.csv,.xlsx', hint='CSV atau Excel .xlsx.') }}

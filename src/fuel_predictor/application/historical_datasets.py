@@ -155,7 +155,7 @@ class GetDatasetValidOperations:
 _HEADER_ALIASES = {
     "vehicle_category": {"kategori angber", "kategori kendaraan", "jenis kendaraan", "angber"},
     "vehicle": {"kendaraan", "unit", "unit kendaraan", "nama kendaraan", "armada", "vehicle"},
-    "activity_mode": {"mode aktivitas", "aktivitas", "jenis aktivitas"},
+    "activity_mode": {"mode aktivitas", "aktivitas", "aktivitas wajib", "jenis aktivitas"},
     "lifting_hours": {"jam lifting", "jam operasi lifting", "lifting hours", "lifting hour"},
     "total_distance_km": {"jarak total km", "jarak total", "total distance km"},
     "prepared_fuel_liters": {
@@ -166,13 +166,10 @@ _HEADER_ALIASES = {
     },
     "distance_source": {"sumber jarak", "distance source"},
 }
-_REQUIRED_FIELDS = {
-    "vehicle_category",
-    "activity_mode",
-    "total_distance_km",
-    "prepared_fuel_liters",
-    "distance_source",
-}
+_REQUIRED_FIELDS = {"activity_mode", "total_distance_km", "prepared_fuel_liters"}
+# Every unit is ANGBER and a distance written in a sheet is a manual one, as
+# on the plan sheet; history that still has these columns is read as before.
+_DEFAULTED_FIELDS = {"vehicle_category", "distance_source"}
 _FIELD_LABELS = {
     "vehicle_category": "Kategori kendaraan",
     "vehicle": "Kendaraan",
@@ -223,7 +220,7 @@ def _validate_row(
 ) -> tuple[HistoricalDailyOperation | None, list[CorrectionReason]]:
     issues: list[CorrectionReason] = []
     raw_by_field: dict[str, RawValue] = {}
-    for field in _REQUIRED_FIELDS | {"lifting_hours", "vehicle"}:
+    for field in _REQUIRED_FIELDS | _DEFAULTED_FIELDS | {"lifting_hours", "vehicle"}:
         header = mapped_headers.get(field)
         if header is None:
             if field in _REQUIRED_FIELDS:
@@ -235,8 +232,8 @@ def _validate_row(
 
     vehicle_category = (
         parse_vehicle_category(raw_by_field["vehicle_category"], issues)
-        if "vehicle_category" in raw_by_field
-        else None
+        if not is_blank(raw_by_field.get("vehicle_category"))
+        else VehicleCategory.ANGBER
     )
     vehicle = parse_vehicle(raw_by_field.get("vehicle"), issues, vehicle_catalog)
     activity_mode = (
@@ -259,8 +256,8 @@ def _validate_row(
     )
     distance_source = (
         parse_distance_source(raw_by_field["distance_source"], issues)
-        if "distance_source" in raw_by_field
-        else None
+        if not is_blank(raw_by_field.get("distance_source"))
+        else DistanceSource.MANUAL
     )
 
     if total_distance_km is not None and total_distance_km <= 0:

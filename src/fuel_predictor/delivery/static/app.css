@@ -2230,6 +2230,11 @@ dialog::backdrop {
     border-bottom: 0;
   }
 
+  /* A single card needs no sort bar: its labels are on the card itself. */
+  .table--sortable[data-single-row] thead {
+    display: none;
+  }
+
   /* On a card an empty cell is a label with nothing after it. */
   .table--sortable tbody td:empty {
     display: none;
