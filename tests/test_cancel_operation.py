@@ -102,3 +102,66 @@ def test_whoever_plans_may_cancel() -> None:
         "/operasi-harian/*/batalkan",
         Capability.CREATE_PREDICTION,
     ) in ROUTE_CAPABILITIES
+
+
+def test_the_api_withdraws_an_operation_by_code_once(tmp_path: Path) -> None:
+    """The same withdrawal as the page, for an agent or a script."""
+    from sqlalchemy import create_engine, text
+
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        _train_baseline(client)
+        operation = _operation_with_prediction(client, 24)["operation"]
+        standing = client.get(f"/api/v1/daily-operations/{operation['operation_id']}").json()
+        first = client.post(
+            f"/api/v1/daily-operations/{operation['operation_code']}/cancel",
+            json={"reason": "  Tercatat dua kali  "},
+        )
+        again = client.post(
+            f"/api/v1/daily-operations/{operation['operation_id']}/cancel",
+            json={"reason": "lagi"},
+        )
+        waiting = client.get("/bahan-bakar-aktual").text
+
+    assert "cancelled_at" not in standing
+    assert first.status_code == 200, first.text
+    assert first.json()["cancel_reason"] == "Tercatat dua kali"
+    assert first.json()["cancelled_at"]
+    # Withdrawing twice changes nothing and is recorded once.
+    assert again.status_code == 200
+    assert again.json()["cancel_reason"] == "Tercatat dua kali"
+    assert f'operation_id={operation["operation_code"]}"' not in waiting
+    url = f"sqlite+pysqlite:///{(tmp_path / 'operations.sqlite3').as_posix()}"
+    with create_engine(url).connect() as db:
+        recorded = db.execute(
+            text("SELECT COUNT(*) FROM audit_records WHERE action = 'operation_cancelled'")
+        ).scalar_one()
+    assert recorded == 1
+
+
+def test_the_api_refuses_a_withdrawal_it_cannot_make(tmp_path: Path) -> None:
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        _train_baseline(client)
+        recorded = _operation_with_prediction(client, 24)["operation"]["operation_id"]
+        client.post(
+            f"/api/v1/daily-operations/{recorded}/actual-fuel",
+            json={"actual_fuel_liters": 21, "measurement_source": "fuel_meter"},
+        )
+        standing = _operation_with_prediction(client, 36)["operation"]["operation_id"]
+
+        with_actual = client.post(
+            f"/api/v1/daily-operations/{recorded}/cancel", json={"reason": "salah"}
+        )
+        blank = client.post(f"/api/v1/daily-operations/{standing}/cancel", json={"reason": " "})
+        missing = client.post(f"/api/v1/daily-operations/{standing}/cancel", json={})
+        unknown = client.post(
+            "/api/v1/daily-operations/260101-0000-VT99/cancel", json={"reason": "salah"}
+        )
+        still = client.get(f"/api/v1/daily-operations/{standing}").json()
+
+    assert with_actual.status_code == 409
+    assert with_actual.json()["error"]["code"] == "operation_has_actual_fuel"
+    assert blank.status_code == 422
+    assert blank.json()["errors"][0]["field"] == "reason"
+    assert missing.status_code == 422
+    assert unknown.status_code == 404
+    assert "cancelled_at" not in still

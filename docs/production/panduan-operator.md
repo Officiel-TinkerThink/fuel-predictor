@@ -75,8 +75,8 @@ dulu, lalu masuk lagi dengan yang baru.
      untuk kendaraan yang bisa lifting (Truck Crane 01, Truck Crane 02, Wheel Crane — kolom
      *Lifting* di menu **Armada**); untuk kendaraan lain pilihan itu tidak aktif.
    - **Jam lifting** — wajib diisi kalau aktivitas mencakup lifting.
-   - **Jarak tempuh** — dihitung otomatis dari rute, jadi biasanya tidak ada yang perlu diisi.
-     Bila penyedia rute gagal menghitung, penyimpanan ditolak dan kolom **Jarak tempuh manual**
+   - **Jarak total** — dihitung otomatis dari rute, jadi biasanya tidak ada yang perlu diisi.
+     Bila penyedia rute gagal menghitung, penyimpanan ditolak dan kolom **Jarak total manual**
      muncul untuk diisi sendiri (seluruh perjalanan, termasuk kembali); estimasinya lalu
      ditandai memakai jarak manual. Pada instalasi tanpa penyedia rute, kolom ini selalu ada
      dan wajib diisi.

@@ -368,6 +368,7 @@ def create_app(
         repository,
     )
     record_actual_fuel = RecordActualFuel(repository, actual_fuel_repository)
+    cancel_daily_operation = CancelDailyOperation(repository, actual_fuel_repository)
     bulk_actual_fuel = BulkActualFuel(
         SpreadsheetHistoricalDatasetSourceReader(), record_actual_fuel
     )
@@ -623,7 +624,7 @@ def create_app(
             resolved_route_preview,
             find_similar_operations,
             events=events,
-            cancel_daily_operation=CancelDailyOperation(repository, actual_fuel_repository),
+            cancel_daily_operation=cancel_daily_operation,
         )
     )
     app.include_router(
@@ -662,6 +663,7 @@ def create_app(
             get_monitoring_dashboard,
             events=events,
             vehicle_catalog=resolved_vehicle_catalog,
+            cancel_daily_operation=cancel_daily_operation,
         )
     )
     app.include_router(

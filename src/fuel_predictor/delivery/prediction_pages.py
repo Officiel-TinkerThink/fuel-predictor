@@ -561,7 +561,7 @@ def _render_form(
         active_path="/prediksi",
         eyebrow="PERENCANAAN BAHAN BAKAR",
         page_lead=(
-            "Pilih kendaraan, aktivitas, dan jarak tempuhnya. Begitu disimpan, estimasi BBM "
+            "Pilih kendaraan, aktivitas, dan jarak totalnya. Begitu disimpan, estimasi BBM "
             "dan kode operasinya langsung dibuat."
         ),
         values=values,

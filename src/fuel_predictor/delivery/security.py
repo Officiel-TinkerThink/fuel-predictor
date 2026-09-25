@@ -118,6 +118,7 @@ ROUTE_CAPABILITIES: tuple[tuple[str, str, Capability], ...] = (
     ("POST", "/api/v1/daily-operations", Capability.CREATE_PREDICTION),
     ("GET", "/api/v1/daily-operations/*", Capability.CREATE_PREDICTION),
     ("POST", "/api/v1/daily-operations/*/predictions", Capability.CREATE_PREDICTION),
+    ("POST", "/api/v1/daily-operations/*/cancel", Capability.CREATE_PREDICTION),
     ("POST", "/api/v1/daily-operations/*/actual-fuel", Capability.RECORD_ACTUAL_FUEL),
     ("POST", "/api/v1/historical-datasets", Capability.MANAGE_MODELS),
     ("GET", "/api/v1/bulk-operation-predictions/template", Capability.IMPORT_OPERATIONS),

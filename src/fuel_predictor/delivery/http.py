@@ -26,11 +26,13 @@ from fuel_predictor.application.bulk_operation_predictions import (
     BulkOperationPredictionResult,
 )
 from fuel_predictor.application.daily_operations import (
+    CancelDailyOperation,
     CreateDailyOperation,
     CreateDailyOperationCommand,
     DailyOperationNotFoundError,
     GetDailyOperation,
     OperationCancelledError,
+    OperationHasActualFuelError,
 )
 from fuel_predictor.application.historical_datasets import (
     DatasetVersionNotFoundError,
@@ -118,6 +120,14 @@ class DailyOperationResponse(BaseModel):
     distance_source: DistanceSource
     stop_sequence: list[str] | None = None
     route_distance_manual_fallback: bool | None = None
+    # Set once the operation is withdrawn; absent while it stands.
+    cancelled_at: datetime | None = None
+    cancelled_by: str | None = None
+    cancel_reason: str | None = None
+
+
+class CancelDailyOperationRequest(BaseModel):
+    reason: str
 
 
 class DatasetVersionResponse(BaseModel):
@@ -414,6 +424,7 @@ def build_router(
     get_monitoring_dashboard: GetMonitoringDashboard,
     events: ImportantEvents,
     vehicle_catalog: VehicleCatalog | None = None,
+    cancel_daily_operation: CancelDailyOperation | None = None,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -432,6 +443,26 @@ def build_router(
             request, create_daily_operation, created_by=actor_of(http_request)
         )
         return _operation_response(operation)
+
+    if cancel_daily_operation is not None:
+        cancel = cancel_daily_operation
+
+        @router.post(
+            "/api/v1/daily-operations/{operation_id}/cancel",
+            response_model=DailyOperationResponse,
+            response_model_exclude_none=True,
+        )
+        def cancel_operation(
+            operation_id: str, request: CancelDailyOperationRequest, http_request: Request
+        ) -> DailyOperationResponse:
+            """Withdraw a mistaken or duplicate plan, as the estimate page does."""
+            already = get_daily_operation.execute(operation_id).is_cancelled
+            operation = cancel.execute(
+                operation_id, actor=actor_of(http_request), reason=request.reason
+            )
+            if not already:
+                events.operation_cancelled(actor_of(http_request), operation)
+            return _operation_response(operation)
 
     @router.get(
         "/api/v1/daily-operations/{operation_id}",
@@ -705,6 +736,9 @@ def _operation_response(operation: DailyOperation) -> DailyOperationResponse:
         route_distance_manual_fallback=(
             operation.route_distance_manual_fallback if operation.stop_sequence else None
         ),
+        cancelled_at=operation.cancelled_at,
+        cancelled_by=operation.cancelled_by,
+        cancel_reason=operation.cancel_reason,
     )
 
 
@@ -1108,6 +1142,20 @@ def register_error_handlers(app: FastAPI) -> None:
                 "error": {
                     "code": "operation_cancelled",
                     "message": "Operasi ini sudah dibatalkan; BBM aktualnya tidak dicatat.",
+                }
+            },
+        )
+
+    @app.exception_handler(OperationHasActualFuelError)
+    async def handle_operation_has_actual_fuel(
+        _request: Request, _error: OperationHasActualFuelError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={
+                "error": {
+                    "code": "operation_has_actual_fuel",
+                    "message": "Operasi ini sudah punya BBM aktual, jadi tidak bisa dibatalkan.",
                 }
             },
         )
