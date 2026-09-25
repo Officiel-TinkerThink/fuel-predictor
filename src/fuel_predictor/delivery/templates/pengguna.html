@@ -6,17 +6,17 @@
 {{ ui.error_summary(errors, 'Pengguna belum dapat disimpan') }}
 {% if notice %}{{ ui.banner('success', 'Tersimpan', notice) }}{% endif %}
 
-<div class="grid grid--metrics">
-  {{ ui.metric('Pengguna', directory.entries | length ~ ' pengguna', context=directory.active_count ~ ' aktif · ' ~ (directory.entries | length - directory.active_count) ~ ' nonaktif') }}
-  {{ ui.metric('Administrator', directory.administrator_count, context='Dapat mengelola model, pengguna, dan integrasi.') }}
-  {{ ui.metric('Operator', directory.entries | length - directory.administrator_count, context='Membuat prediksi dan mencatat BBM aktual.') }}
-</div>
-
+{# The counts in one line: three tiles for them filled a phone's first
+   screen and said what the list below already shows. #}
+{% set total = directory.entries | length %}
+{% set inactive = total - directory.active_count %}
 <section class="card">
   <div class="card__title">
     <h2>Daftar pengguna</h2>
     <button type="button" class="button" data-dialog="tambah-pengguna">+ Tambah pengguna</button>
   </div>
+  <p class="hint">{{ total }} pengguna: {{ directory.administrator_count }} administrator,
+    {{ total - directory.administrator_count }} operator · {{ directory.active_count }} aktif{% if inactive %}, {{ inactive }} nonaktif{% endif %}.</p>
   {% call ui.listing_toolbar(listing, placeholder='Nama, nama pengguna, atau email') %}
   <div class="field">
     <label for="status">Status</label>
@@ -38,7 +38,6 @@
           <th>Status</th>
           {{ ui.sort_th(listing, 'masuk', 'Terakhir masuk') }}
           {{ ui.sort_th(listing, 'prediksi', '30 hari', numeric=true) }}
-          <th><span class="visually-hidden">Tindakan</span></th>
         </tr>
       </thead>
       <tbody>
@@ -51,11 +50,10 @@
                 <span class="hint">{{ user.username }}{% if user.email %} · {{ user.email }}{% endif %}</span></span></span>
           </td>
           <td data-label="Peran">{{ ui.badge(role_labels[user.role], 'info' if user.role.value == 'administrator' else 'neutral') }}</td>
-          <td data-label="Status">{{ ui.badge('Aktif', 'success') if user.is_active else ui.badge('Nonaktif', 'neutral') }}</td>
+          <td data-label="Status">{% if not user.is_active %}{{ ui.badge('Nonaktif', 'neutral') }}{% endif %}</td>
           <td data-label="Terakhir masuk">{% if activity.last_sign_in %}{{ activity.last_sign_in | waktu }}{% else %}<span class="hint">Belum pernah</span>{% endif %}
             {% if activity.failed_sign_ins_recent %}<br><span class="text-danger">{{ activity.failed_sign_ins_recent }}× gagal masuk</span>{% endif %}</td>
           <td class="numeric" data-label="30 hari">{{ activity.operations_recent }} prediksi<br><span class="hint">{{ activity.actuals_recent }} aktual</span></td>
-          <td><a class="button button--secondary button--small" href="/pengguna/{{ user.user_id }}">Buka</a></td>
         </tr>
         {% endfor %}
       </tbody>

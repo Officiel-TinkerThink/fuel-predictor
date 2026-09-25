@@ -71,3 +71,19 @@ def test_the_audit_trail_speaks_the_pages_words(tmp_path: Path) -> None:
     assert '<span class="hint">diukur dengan:</span> Meter BBM' in recorded
     assert '<span class="hint">liter:</span> 47</li>' in recorded
     assert "fuel_meter" not in recorded.replace("actual_fuel_recorded", "")
+
+
+def test_the_user_list_counts_in_a_line_and_opens_each_person_once(tmp_path: Path) -> None:
+    from tests.test_two_roles import _ADMIN, _sign_in
+
+    database = tmp_path / "operations.sqlite3"
+    with TestClient(create_app(database_path=database, bootstrap_administrator=_ADMIN)) as client:
+        _sign_in(client, *_ADMIN)
+        main = client.get("/pengguna").text.split("<main ", 1)[1]
+
+    assert "1 pengguna: 1 administrator, 0 operator · 1 aktif." in " ".join(main.split())
+    assert 'class="metric' not in main
+    # The name is the link; a second "Buka" button went to the same place.
+    assert ">Buka</a>" not in main
+    # Everyone listed is active: no badge repeating it on every row.
+    assert ">✓ Aktif<" not in main and "Nonaktif</span>" not in main
