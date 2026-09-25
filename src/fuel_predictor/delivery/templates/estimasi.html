@@ -62,7 +62,7 @@
     <p class="hint">{{ prediction.safety_policy }}</p>
     <dl class="detail-list">
       {% if operation and operation.operation_code %}<dt>ID operasi</dt><dd><code class="mono-id">{{ prediction.operation_id }}</code></dd>{% endif %}
-      <dt>Sumber jarak rute</dt><dd>{{ prediction.route_distance_source.value }}</dd>
+      <dt>Jarak</dt><dd>{{ 'Dihitung dari rute' if prediction.route_distance_source.value == 'routing_provider' else 'Diketik' }}</dd>
       <dt>Model</dt><dd>{{ ui.model_name(prediction.model) }} · {{ prediction.model.algorithm }} <span class="hint">{{ prediction.model.model_version_id }}</span></dd>
       <dt>Versi dataset</dt><dd>{{ prediction.model.dataset_version_id }}</dd>
       <dt>Versi fitur</dt><dd>{{ prediction.model.feature_version }}</dd>
