@@ -547,7 +547,10 @@ def _render_form(
         page_title="Buat Operasi Harian",
         active_path="/prediksi",
         eyebrow="PERENCANAAN BAHAN BAKAR",
-        page_lead="Catat satu rencana operasi ANGBER secara lengkap dan konsisten.",
+        page_lead=(
+            "Pilih kendaraan, aktivitas, dan jarak tempuhnya. Begitu disimpan, estimasi BBM "
+            "dan kode operasinya langsung dibuat."
+        ),
         values=values,
         errors=errors,
         vehicle_groups=vehicle_groups,

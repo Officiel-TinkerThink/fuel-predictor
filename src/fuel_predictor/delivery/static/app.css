@@ -2430,7 +2430,7 @@ dialog::backdrop {
   margin-bottom: var(--space-4);
 }
 
-.form-section-heading span {
+.form-section-heading > span[aria-hidden="true"] {
   display: grid;
   place-items: center;
   width: 28px;
@@ -2439,6 +2439,13 @@ dialog::backdrop {
   background: var(--color-brand-soft);
   color: var(--color-brand-strong);
   font-size: 0.8rem;
+}
+
+/* "(opsional)" after a section title, flowing with it when it wraps. */
+.form-section-heading .optional {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 400;
 }
 
 .form-fields {
