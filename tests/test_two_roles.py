@@ -237,3 +237,36 @@ def _train_baseline_with_csrf(admin: TestClient) -> None:
     ).json()
     promoted = admin.post(f"/api/v1/model-candidates/{candidate['model_version_id']}/promote")
     assert promoted.status_code == 200, promoted.text
+
+
+def test_the_overview_counts_the_whole_backlog_and_says_when_nothing_waits(
+    operator_client: TestClient, tmp_path: Path
+) -> None:
+    """The count on the overview was the length of a list cut at eight, so a
+    backlog of twenty read as eight; and with nothing waiting the section
+    vanished instead of saying all was recorded."""
+    nothing_yet = operator_client.get("/").text
+    with TestClient(
+        create_app(database_path=tmp_path / "operations.sqlite3", bootstrap_administrator=_ADMIN)
+    ) as admin:
+        _sign_in(admin, *_ADMIN)
+        _train_baseline_with_csrf(admin)
+    token = _csrf(operator_client.get("/prediksi").text)
+    for distance in range(20, 29):
+        operator_client.post(
+            "/operasi-harian",
+            data={
+                "vehicle_category": "ANGBER",
+                "activity_mode": "transport",
+                "total_distance_km": str(distance),
+                "distance_source": "manual",
+                "csrf_token": token,
+            },
+        )
+
+    overview = operator_client.get("/").text
+
+    assert "Tidak ada yang menunggu" in nothing_yet
+    assert "9 operasi sudah diprediksi" in overview
+    # Only the newest few are listed on the overview itself.
+    assert overview.count('href="/bahan-bakar-aktual?operation_id=') == 4

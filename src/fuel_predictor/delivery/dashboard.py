@@ -75,6 +75,7 @@ def build_dashboard_router(
             alert for alert in monitoring.active_alerts if alert.severity.value == "critical"
         ]
         can_monitor = caller.allows(Capability.VIEW_MONITORING)
+        shows_awaiting = not can_monitor and caller.allows(Capability.RECORD_ACTUAL_FUEL)
         return HTMLResponse(
             render(
                 "ringkasan.html",
@@ -92,11 +93,10 @@ def build_dashboard_router(
                 # still waiting for actual fuel; the health of the model and
                 # the service is the administrator's to read.
                 can_monitor=can_monitor,
-                awaiting=(
-                    ()
-                    if can_monitor or not caller.allows(Capability.RECORD_ACTUAL_FUEL)
-                    else list_awaiting_actual.execute()[:8]
-                ),
+                shows_awaiting=shows_awaiting,
+                # All of them: the page shows the newest few, the count is the
+                # whole backlog.
+                awaiting=tuple(list_awaiting_actual.execute()) if shows_awaiting else (),
                 monitoring=monitoring,
                 governance=governance,
                 is_healthy=len(critical_alerts) == 0,
