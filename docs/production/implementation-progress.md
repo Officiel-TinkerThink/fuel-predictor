@@ -731,10 +731,39 @@ the bottom of this section.
       The operator guide's screenshots are now captured and embedded, so it is ready to hand to
       a usability-test participant.
 
+## After the phases: operator-facing refinements (September 2026)
+
+Built with the operators' day in mind; each item has tests, and the ADRs hold the rules.
+
+- **Operation codes** (ADR 0016) — `yymmdd-hhmm-<vehicle code>`, written on a printable fuel
+  slip and typed back weeks later; the form, the sheets and the API take it wherever an `OPR-` id
+  was taken.
+- **Fleet taxonomy** (ADR 0015) — group, type and unit per vehicle, in the vehicle code and on
+  the Armada page; only units that can lift may be planned with lifting.
+- **Model codes and per-model performance** — every model is named (`M-260924-01`) on every
+  prediction, and measured on its own predictions.
+- **Withdrawing a mistaken plan** (ADR 0017) — cancelled with a reason, kept for the record,
+  left out of everything that means "operations that happened".
+- **Actual fuel by sheet** — the operations waiting for actual fuel download as an Excel sheet
+  (dropdowns, litres checked as typed), are filled over the week and uploaded as often as needed;
+  a figure already on record is a repeat, not an error. The same "Isi sekaligus lewat Excel"
+  steps sit wherever the backlog shows.
+- **Bulk plans** — the template asks what the single form asks, in its words, with the fleet as
+  a dropdown; the result hands back only the rows to fix, so fixing never plans a row twice.
+- **Pages that say each thing once** — the estimate leads with the allocation and the code;
+  Kesehatan Sistem is a to-do list with the buttons that do each thing; lists drop the controls
+  a short list does not need; no page offers a link its reader may not open (a test walks an
+  operator's day to hold that).
+- **Operational** — static files are addressed by content hash (Cloudflare keeps them for four
+  hours); uploads are bounded at 10 MB / 20.000 rows; an unexpected failure gets the app's own
+  error page; the active model loads at startup, so the first request after a deploy is not the
+  one that waits; every page passes an axe-core scan in both themes.
+
 ## Notes for whoever picks this up next
 
-- Full test suite (334 tests as of this writing) passes; `ruff check` and `mypy --strict` are clean.
-  Keep it that way — run all three before committing.
+- Full test suite (770 tests as of 26 September 2026, about 20 minutes serially) passes; `ruff
+  check` and `mypy --strict` are clean. CI runs the linters and only *collects* the tests, so run
+  the suite yourself before pushing - keep all three clean.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
   doesn't composite frames (`screenshot` fails with "pane is not displayed"), and coordinate/ref
   clicks on real `<button type="submit">` elements can silently no-op even though `read_page` shows
