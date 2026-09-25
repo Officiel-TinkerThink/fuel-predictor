@@ -116,6 +116,14 @@ aktual untuk salah satunya saja.
 Daftar lengkap kode kendaraan — grup, tipe, dan ejaan lain tiap unit — ada di menu **Armada**.
 Buka menu itu kalau ragu kode mana milik kendaraan mana.
 
+**Cetak slipnya.** Tombol **Cetak slip** di halaman estimasi membuka slip BBM siap cetak: kode
+operasi besar-besar, kendaraan, rute, alokasi, dan baris kosong untuk liter yang benar-benar
+terpakai, cara mengukurnya, dan siapa yang mencatat. Bawa slip itu ke titik pengisian BBM; setelah
+operasi selesai, liter di slip itulah yang dicatat.
+
+Aktivitas hanya dua: **Mobilisasi**, atau **Mobilisasi + lifting**. Pilihan kedua hanya aktif
+untuk kendaraan yang bisa lifting (kolom *Lifting* di menu **Armada**).
+
 Estimasi yang sudah dibuat bisa dibuka lagi kapan saja dari menu **Riwayat Prediksi**:
 daftarnya terbaru di atas, ada kotak pencarian, dan tiap baris menunjukkan apakah BBM aktualnya
 sudah dicatat.
@@ -139,6 +147,8 @@ mencakup lifting`.
 
 Setiap baris yang berhasil mendapat kode operasinya sendiri. Unduh hasilnya (CSV): kolom
 **Kode operasi** ada di sebelah baris sumbernya, jadi kode tiap operasi bisa langsung dicatat.
+Tombol **Cetak semua slip** mencetak slip BBM untuk setiap operasi dalam unggahan itu, satu slip
+per halaman.
 
 Perbaiki baris tersebut di berkas asli, lalu unggah ulang. Baris yang sudah berhasil tidak
 terhitung dua kali.
@@ -159,10 +169,16 @@ memburuk berbulan-bulan tanpa ada yang tahu.
 - **Satu per satu:** menu **Catat Aktual**. Daftar *Menunggu BBM aktual* di halaman itu
   memuat operasi yang belum dilaporkan, terbaru di atas, masing-masing dengan kode operasinya.
   Ketik kode yang Anda catat, atau tekan **Catat** di baris operasinya — kodenya terisi sendiri —
-  lalu isi jumlah liter sebenarnya. Halaman hasil estimasi juga punya
-  tombol **Catat BBM aktual untuk operasi ini** yang langsung ke formulir yang sama.
-- **Sekaligus:** menu **Impor Massal**, pakai templatnya, sama seperti prediksi massal. Isi
-  kolom **Kode Operasi** dengan kode yang dicatat; ID lama `OPR-…` juga masih diterima.
+  lalu isi jumlah liter sebenarnya. Begitu kodenya cocok, formulir menampilkan operasinya
+  (kendaraan, waktu prediksi, alokasi) supaya Anda yakin mencatat operasi yang benar. Kalau liter
+  yang diketik jauh dari alokasinya, muncul peringatan: periksa lagi angka dan kodenya.
+- **Sekaligus, cara termudah:** tekan **Unduh daftar ini (Excel)** di halaman Catat Aktual (atau
+  **Unduh operasi yang menunggu** di Impor Massal). Berkasnya sudah berisi kode, kendaraan, waktu,
+  rute, dan alokasi setiap operasi yang menunggu; isi saja kolom **Bahan Bakar Aktual (L)**, lalu
+  unggah di menu **Impor Massal**. Baris yang belum diisi dilewati, jadi berkas yang sama boleh
+  diisi bertahap sepanjang minggu dan diunggah berkali-kali.
+- **Dengan templat kosong:** menu **Impor Massal**, isi kolom **Kode Operasi** dengan kode yang
+  dicatat; ID lama `OPR-…` juga masih diterima.
 
 Lakukan ini rutin — mingguan sudah cukup.
 

@@ -2670,9 +2670,9 @@ th[aria-sort="descending"] .collection-sort::after { content: " ↓"; }
 .slip__code {
   margin: var(--space-1) 0 var(--space-2);
   font-family: var(--font-mono);
-  font-size: clamp(1.1rem, 5vw, 2rem);
+  font-size: clamp(1rem, 4.4vw, 2rem);
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   overflow-wrap: anywhere;
 }
 
@@ -2755,6 +2755,31 @@ th[aria-sort="descending"] .collection-sort::after { content: " ↓"; }
   margin: var(--space-6) 0 0;
   font-size: 0.8rem;
   color: #5b6b76;
+}
+
+/* On a phone the labels sit above their line, so the line and the choices
+   get the full width instead of wrapping into a column. */
+@media (max-width: 30rem) {
+  .slip {
+    padding: var(--space-4);
+  }
+
+  .slip__line {
+    flex-wrap: wrap;
+  }
+
+  .slip__line > span:first-child {
+    flex-basis: 100%;
+  }
+
+  .slip__facts {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .slip__facts dd {
+    margin-bottom: var(--space-2);
+  }
 }
 
 /* The bulk result's slips exist for printing only. */
