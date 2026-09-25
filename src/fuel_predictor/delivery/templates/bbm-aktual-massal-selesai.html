@@ -3,45 +3,51 @@
 
 {% block content %}
 
-{% set summary = accepted_count ~ ' baris valid disimpan. ' ~ quarantined_count ~ ' baris dikarantina. ' ~ ignored_count ~ ' baris kosong diabaikan.' %}
-{% if unfilled_count %}{% set summary = summary ~ ' ' ~ unfilled_count ~ ' operasi belum diisi liternya dan dilewati; isi lalu unggah lagi kapan saja.' %}{% endif %}
-{{ ui.banner('success', 'Bahan bakar aktual sudah diproses', summary) }}
+{# What happened, in the order it matters; nothing that is zero. #}
+{% set parts = [] %}
+{% if accepted_count %}{% set _ = parts.append(accepted_count ~ ' BBM aktual tersimpan.') %}{% endif %}
+{% if already_count %}{% set _ = parts.append(already_count ~ ' sudah tercatat sebelumnya dengan angka yang sama.') %}{% endif %}
+{% if unfilled_count %}{% set _ = parts.append(unfilled_count ~ ' operasi belum diisi liternya; isi lalu unggah lagi kapan saja.') %}{% endif %}
+{% if quarantined_count %}{% set _ = parts.append(quarantined_count ~ ' baris perlu diperbaiki, lihat di bawah.') %}{% endif %}
+{% if not parts %}{% set _ = parts.append('Tidak ada baris berisi liter aktual di berkas ini.') %}{% endif %}
+{{ ui.banner('warning' if quarantined_count else 'success', 'Berkas sudah diproses', parts | join(' ')) }}
 
+{% if result.correction_report %}
 <section class="card">
-  {% if result.accepted_rows %}
+  <h2>Baris yang perlu diperbaiki</h2>
+  <p class="hint">Perbaiki di berkas, lalu unggah lagi berkas yang sama. Baris yang sudah tersimpan
+    tidak akan tercatat dua kali.</p>
   <div class="table-wrap">
-    <table data-list data-list-label="Baris berhasil disimpan">
-      <caption>Baris berhasil disimpan</caption>
-      <thead><tr><th>Baris sumber</th><th>Kode operasi</th><th class="numeric">Aktual</th><th>Sumber</th></tr></thead>
+    <table data-list data-list-label="Baris yang perlu diperbaiki">
+      <thead><tr><th>Baris</th><th>Kode operasi</th><th>Masalah</th></tr></thead>
       <tbody>
-        {% for row in result.accepted_rows %}
+        {% for issue in result.correction_report %}
+        {% set code_header = issue.source.original_headers.get('operation_id') %}
         <tr>
-          <td>{{ row.source.sheet_name }} {{ row.source.row_number }}</td>
-          <td><code class="operation-code">{{ row.operation_code or row.actual_fuel.operation_id }}</code></td>
-          <td class="numeric">{{ row.actual_fuel.actual_fuel_liters | angka }} L</td>
-          <td>{{ row.actual_fuel.measurement_source.value }}</td>
+          <td data-sort-value="{{ issue.source.row_number }}">{{ issue.source.row_number }}</td>
+          <td>{% if code_header and issue.source.raw_values.get(code_header) %}<code class="operation-code">{{ issue.source.raw_values.get(code_header) }}</code>{% else %}—{% endif %}</td>
+          <td>{{ issue.reasons | map(attribute='message') | join('; ') }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-  {% else %}
-  {{ ui.empty_state('Tidak ada baris yang berhasil disimpan.') }}
-  {% endif %}
+  <p><a class="button button--secondary" href="/bahan-bakar-aktual-massal">Unggah lagi</a></p>
 </section>
+{% endif %}
 
-{% if result.correction_report %}
+{% if result.accepted_rows %}
 <section class="card">
-  <h2>Laporan koreksi</h2>
+  <h2>Tersimpan</h2>
   <div class="table-wrap">
-    <table data-list data-list-label="Laporan koreksi">
-      <caption>{{ result.correction_report | length }} baris dikarantina</caption>
-      <thead><tr><th>Baris sumber</th><th>Alasan</th></tr></thead>
+    <table data-list data-list-label="Tersimpan">
+      <thead><tr><th>Baris</th><th>Kode operasi</th><th class="numeric">Aktual</th></tr></thead>
       <tbody>
-        {% for issue in result.correction_report %}
+        {% for row in result.accepted_rows %}
         <tr>
-          <td>{{ issue.source.sheet_name }} {{ issue.source.row_number }}</td>
-          <td>{{ issue.reasons | map(attribute='message') | join('; ') }}</td>
+          <td data-sort-value="{{ row.source.row_number }}">{{ row.source.row_number }}</td>
+          <td><code class="operation-code">{{ row.operation_code or row.actual_fuel.operation_id }}</code></td>
+          <td class="numeric">{{ row.actual_fuel.actual_fuel_liters | angka }} L</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -49,7 +55,5 @@
   </div>
 </section>
 {% endif %}
-
-<p><a class="button button--secondary" href="/pemantauan/kinerja-model">Lihat kinerja prediksi</a></p>
 
 {% endblock %}

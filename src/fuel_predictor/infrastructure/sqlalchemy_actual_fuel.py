@@ -30,8 +30,12 @@ class SqlAlchemyActualFuelRepository:
         self._session_factory = session_factory
 
     def has_actual(self, operation_id: str) -> bool:
+        return self.recorded_liters(operation_id) is not None
+
+    def recorded_liters(self, operation_id: str) -> float | None:
         with self._session_factory() as session:
-            return session.get(ActualFuelRecordRow, operation_id) is not None
+            row = session.get(ActualFuelRecordRow, operation_id)
+            return None if row is None else row.actual_fuel_liters
 
     def add(self, record: ActualFuelRecord) -> None:
         try:

@@ -55,11 +55,10 @@ def test_an_operation_and_its_actual_record_name_the_person(tmp_path: Path) -> N
             ),
             headers={"content-type": "application/x-www-form-urlencoded"},
         )
-        operation_id = saved.text.split("<dt>ID operasi</dt><dd><strong>", 1)[1].split(
-            "</strong>", 1
-        )[0]
+        # The page names the operation by the code people write down.
+        code = saved.text.split('class="operation-code">', 1)[1].split("<", 1)[0]
         recorded = client.post(
-            f"/api/v1/daily-operations/{operation_id}/actual-fuel",
+            f"/api/v1/daily-operations/{code}/actual-fuel",
             json={"actual_fuel_liters": 25, "measurement_source": "fuel_meter"},
         )
     finally:
@@ -70,12 +69,15 @@ def test_an_operation_and_its_actual_record_name_the_person(tmp_path: Path) -> N
     url = f"sqlite+pysqlite:///{(tmp_path / 'operations.sqlite3').as_posix()}"
     with create_engine(url).connect() as db:
         operation = db.execute(
-            text("SELECT created_by, created_at FROM daily_operations WHERE operation_id = :id"),
-            {"id": operation_id},
+            text(
+                "SELECT operation_id, created_by, created_at FROM daily_operations "
+                "WHERE operation_code = :code"
+            ),
+            {"code": code},
         ).one()
         actual = db.execute(
             text("SELECT recorded_by FROM actual_fuel_records WHERE operation_id = :id"),
-            {"id": operation_id},
+            {"id": operation.operation_id},
         ).one()
     assert operation.created_by == "admin"
     assert operation.created_at is not None

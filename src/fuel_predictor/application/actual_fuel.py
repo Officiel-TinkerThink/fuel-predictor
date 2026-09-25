@@ -21,6 +21,8 @@ from fuel_predictor.domain.prediction import ModelLifecycleStatus, ModelVersion
 class ActualFuelWriter(Protocol):
     def add(self, record: ActualFuelRecord) -> None: ...
 
+    def recorded_liters(self, operation_id: str) -> float | None: ...
+
 
 class PredictionOutcomeReader(Protocol):
     def get_prediction_outcomes(self) -> Sequence["PredictionOutcome"]: ...
@@ -42,7 +44,20 @@ class AwaitingActualFuelReader(Protocol):
 
 
 class ActualFuelAlreadyRecordedError(ValueError):
-    pass
+    """The operation already has its actual fuel.
+
+    Carries the figure on record when it is known, so the same sheet uploaded
+    again - filled in over the week, as the waiting sheet is meant to be - can
+    be told apart from a conflicting figure.
+    """
+
+    def __init__(self, recorded_liters: float | None = None) -> None:
+        super().__init__("Bahan bakar aktual untuk operasi ini sudah tercatat.")
+        self.recorded_liters = recorded_liters
+
+    def repeats(self, liters: float) -> bool:
+        """Whether `liters` is the figure already on record."""
+        return self.recorded_liters is not None and abs(self.recorded_liters - liters) < 0.005
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,6 +84,9 @@ class RecordActualFuel:
             raise OperationCancelledError(operation.operation_id)
         if command.actual_fuel_liters <= 0:
             raise ValueError("Bahan bakar aktual harus lebih besar dari 0.")
+        recorded = self.actual_fuel_writer.recorded_liters(operation.operation_id)
+        if recorded is not None:
+            raise ActualFuelAlreadyRecordedError(recorded)
         record = ActualFuelRecord(
             operation_id=operation.operation_id,
             actual_fuel_liters=command.actual_fuel_liters,

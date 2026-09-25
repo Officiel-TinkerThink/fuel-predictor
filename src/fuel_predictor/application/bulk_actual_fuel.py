@@ -42,6 +42,9 @@ class BulkActualFuelResult:
     # Rows naming an operation but no litres yet: a sheet of waiting operations
     # is filled in over days, and the rows not done yet are not mistakes.
     unfilled_row_count: int = 0
+    # Rows whose figure is already on record: the same sheet uploaded again
+    # after more rows were filled. Nothing to do, and not a mistake either.
+    already_recorded_row_count: int = 0
 
 
 class BulkActualFuel:
@@ -63,6 +66,7 @@ class BulkActualFuel:
         issues: list[DataQualityIssue] = []
         ignored_blank_row_count = 0
         unfilled_row_count = 0
+        already_recorded_row_count = 0
         data_sheets = 0
         for sheet in self._source_reader.read(source_filename, content):
             mapped_headers = _map_headers(sheet.headers)
@@ -107,16 +111,14 @@ class BulkActualFuel:
                             (CorrectionReason("operation_id", "Operasi ini sudah dibatalkan."),),
                         )
                     )
-                except ActualFuelAlreadyRecordedError:
+                except ActualFuelAlreadyRecordedError as error:
+                    if error.repeats(command.actual_fuel_liters):
+                        already_recorded_row_count += 1
+                        continue
                     issues.append(
                         DataQualityIssue(
                             source,
-                            (
-                                CorrectionReason(
-                                    "operation_id",
-                                    "Bahan bakar aktual untuk operasi ini sudah tercatat.",
-                                ),
-                            ),
+                            (CorrectionReason("actual_fuel_liters", _conflict(error, command)),),
                         )
                     )
                 else:
@@ -133,11 +135,27 @@ class BulkActualFuel:
             correction_report=tuple(issues),
             ignored_blank_row_count=ignored_blank_row_count,
             unfilled_row_count=unfilled_row_count,
+            already_recorded_row_count=already_recorded_row_count,
         )
 
     def _operation_code(self, record: ActualFuelRecord) -> str | None:
         operation = self._record_actual_fuel.operation_reader.get(record.operation_id)
         return operation.operation_code if operation is not None else None
+
+
+def _conflict(error: ActualFuelAlreadyRecordedError, command: RecordActualFuelCommand) -> str:
+    if error.recorded_liters is None:
+        return "Bahan bakar aktual untuk operasi ini sudah tercatat."
+    return (
+        f"Sudah tercatat {_liters(error.recorded_liters)} L, berbeda dengan "
+        f"{_liters(command.actual_fuel_liters)} L di berkas. Angka yang sudah tercatat "
+        "tidak diubah lewat impor."
+    )
+
+
+def _liters(value: float) -> str:
+    """As the page shows numbers: comma decimal, no trailing zeros."""
+    return f"{value:.2f}".rstrip("0").rstrip(".").replace(".", ",")
 
 
 _HEADER_ALIASES = {

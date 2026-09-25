@@ -21,7 +21,7 @@ from fuel_predictor.application.daily_operations import (
 from fuel_predictor.application.historical_datasets import HistoricalDatasetImportError
 from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.delivery.http import ActualFuelRequest, translate_validation_errors
-from fuel_predictor.delivery.rendering import render, site_time
+from fuel_predictor.delivery.rendering import format_decimal, render, site_time
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.daily_operation import DailyOperationValidationError
 from fuel_predictor.infrastructure.actual_fuel_template import waiting_xlsx
@@ -114,17 +114,12 @@ def build_actual_fuel_pages_router(
                 ),
                 status_code=status.HTTP_409_CONFLICT,
             )
-        except ActualFuelAlreadyRecordedError:
+        except ActualFuelAlreadyRecordedError as error:
             return HTMLResponse(
                 _form(
                     caller,
                     submitted,
-                    [
-                        {
-                            "field": "operation_id",
-                            "message": "Bahan bakar aktual untuk operasi ini sudah tercatat.",
-                        }
-                    ],
+                    [{"field": "operation_id", "message": _already_recorded(error, validated)}],
                 ),
                 status_code=status.HTTP_409_CONFLICT,
             )
@@ -186,8 +181,8 @@ def build_actual_fuel_pages_router(
                 result=result,
                 accepted_count=len(result.accepted_rows),
                 quarantined_count=len(result.correction_report),
-                ignored_count=result.ignored_blank_row_count,
                 unfilled_count=result.unfilled_row_count,
+                already_count=result.already_recorded_row_count,
             ),
             status_code=status.HTTP_201_CREATED,
         )
@@ -231,4 +226,16 @@ def _render_bulk_form(caller: "ActiveCaller", error: str | None) -> str:
             "disisihkan beserta alasannya; baris lainnya tetap disimpan."
         ),
         error=error,
+    )
+
+
+def _already_recorded(error: ActualFuelAlreadyRecordedError, request: ActualFuelRequest) -> str:
+    """Says the figure on record, so a person can tell a repeat from a mistake."""
+    if error.recorded_liters is None:
+        return "Bahan bakar aktual untuk operasi ini sudah tercatat."
+    recorded = format_decimal(error.recorded_liters)
+    if error.repeats(request.actual_fuel_liters):
+        return f"Sudah tercatat dengan angka yang sama ({recorded} L); tidak perlu dicatat lagi."
+    return (
+        f"Operasi ini sudah tercatat {recorded} L. Angka yang sudah tercatat tidak diubah di sini."
     )

@@ -263,6 +263,8 @@ class BulkActualFuelResponse(BaseModel):
     ignored_blank_row_count: int
     # Rows naming an operation with no litres yet: skipped, not errors.
     unfilled_row_count: int = 0
+    # Rows repeating a figure already on record: the same sheet uploaded again.
+    already_recorded_row_count: int = 0
     accepted_rows: list[BulkActualFuelAcceptedRowResponse]
     correction_report: list[BulkCorrectionReportRowResponse]
 
@@ -785,6 +787,7 @@ def _bulk_actual_fuel_response(result: BulkActualFuelResult) -> BulkActualFuelRe
         quarantined_row_count=len(result.correction_report),
         ignored_blank_row_count=result.ignored_blank_row_count,
         unfilled_row_count=result.unfilled_row_count,
+        already_recorded_row_count=result.already_recorded_row_count,
         accepted_rows=[
             BulkActualFuelAcceptedRowResponse(
                 source=source_response(row.source),
