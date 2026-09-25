@@ -4,10 +4,11 @@ Templates receive plain data assembled here. They never touch a repository, a
 use case, or a domain object's behaviour.
 """
 
+import hashlib
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, tzinfo
-from functools import partial
+from functools import cache, partial
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -116,7 +117,19 @@ def build_environment() -> Environment:
     environment.filters["angka"] = format_decimal
     environment.filters["aktivitas"] = activity_label
     environment.filters["waktu"] = format_datetime
+    environment.globals["static_version"] = static_version
     return environment
+
+
+@cache
+def static_version(name: str) -> str:
+    """A short hash of a static file's bytes, for its address.
+
+    The files are served behind a CDN that keeps them for hours, so after a
+    deploy the new pages loaded the previous deploy's stylesheet. A changed
+    file now has a new address; an unchanged one keeps its cached copy.
+    """
+    return hashlib.sha256((STATIC_DIRECTORY / name).read_bytes()).hexdigest()[:12]
 
 
 def navigation_for(caller: ActiveCaller | None) -> list[SimpleNamespace]:
