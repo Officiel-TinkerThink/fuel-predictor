@@ -15,20 +15,13 @@
 </section>
 {% endif %}
 
-{% if quick_actions %}
-<section class="workspace-actions" aria-labelledby="daily-work">
-  <div class="section-heading"><h2 id="daily-work">Mulai dari sini</h2><span class="hint">Rencanakan. Jalankan. Catat.</span></div>
-  <div class="task-grid">
-    {% for action in quick_actions %}
-    <a class="task-card{% if loop.first %} task-card--primary{% endif %}" href="{{ action.href }}">
-      {{ ui.icon('route' if loop.first else ('fuel' if loop.index == 2 else 'upload')) }}
-      <strong>{{ action.label }}</strong>
-      <span>{% if loop.first %}Siapkan kebutuhan BBM untuk satu operasi.{% elif loop.index == 2 %}Lengkapi hasil operasi yang sudah selesai.{% else %}Proses beberapa operasi dalam satu unggahan.{% endif %}</span>
-      <span class="task-card__action">{% if loop.first %}Mulai prediksi{% else %}Buka halaman{% endif %} <span aria-hidden="true">→</span></span>
-    </a>
-    {% endfor %}
-  </div>
-</section>
+{# The day's starting point, with the less common way beside it. The
+   sidebar lists every page; this does not repeat it. #}
+{% if may_open('/prediksi') %}
+<div class="start-row">
+  <a class="button button--large" href="/prediksi">{{ ui.icon('route') }} Buat prediksi</a>
+  {% if may_open('/prediksi-operasi-massal') %}<a class="text-link" href="/prediksi-operasi-massal">atau unggah banyak operasi sekaligus</a>{% endif %}
+</div>
 {% endif %}
 
 {% if shows_awaiting %}
@@ -69,13 +62,13 @@
 
 <div class="grid grid--metrics">
   {% if governance.active_model %}
-  {{ ui.metric('Model aktif', governance.active_model.model_code or ('v' ~ governance.active_model.version), context=governance.active_model.algorithm, href='/pengelolaan-model') }}
+  {{ ui.metric('Model aktif', governance.active_model.model_code or ('v' ~ governance.active_model.version), context=('Aktif sejak ' ~ (governance.active_model.promoted_at | waktu)) if governance.active_model.promoted_at else none, href='/pengelolaan-model') }}
   {% else %}
   {{ ui.metric('Model aktif', 'Belum ada', unavailable=true, context='Latih dan promosikan kandidat baseline.', href='/pengelolaan-model') }}
   {% endif %}
 
   {% if governance.active_performance and governance.active_performance.mae_liters is not none %}
-  {{ ui.metric('Selisih rata-rata prediksi', governance.active_performance.mae_liters | angka, unit='L', context='MAE dari ' ~ governance.active_performance.matched_record_count ~ ' operasi dengan aktual', href='/pemantauan/kinerja-model') }}
+  {{ ui.metric('Selisih rata-rata prediksi', governance.active_performance.mae_liters | angka, unit='L', context=('Di atas batas · ' if governance.retraining_recommended else '') ~ 'dari ' ~ governance.active_performance.matched_record_count ~ ' operasi dengan aktual', href='/pemantauan/kinerja-model') }}
   {% else %}
   {{ ui.metric('Selisih rata-rata prediksi', 'Belum cukup data', unavailable=true, context='Perlu hasil aktual yang tercocokkan dengan prediksi.', href='/pemantauan/kinerja-model') }}
   {% endif %}
@@ -93,16 +86,9 @@
   {{ ui.metric('Aktual BBM belum tercatat', monitoring.missing_actual_prediction_count, context='Lebih dari ' ~ monitoring.missing_actual_after_days ~ ' hari sejak prediksi', href='/bahan-bakar-aktual') }}
 </div>
 
-<section class="card overview-details">
-  <div class="section-heading"><h2>Jelajahi lebih lanjut</h2><span class="hint">Detail tersedia di halaman masing-masing</span></div>
-  <div class="destination-grid">
-    <a class="destination" href="/pemantauan/kesehatan-sistem">{{ ui.icon('pulse') }}<span><strong>Kesehatan sistem</strong><span>{{ monitoring.active_alerts | length }} peringatan aktif · kualitas data &amp; cadangan</span></span><span aria-hidden="true">→</span></a>
-    <a class="destination" href="/pengelolaan-model">{{ ui.icon('layers') }}<span><strong>Pengelolaan model</strong><span>{{ governance.candidate_models | length }} kandidat menunggu tinjauan</span></span><span aria-hidden="true">→</span></a>
-  </div>
-  {% if freshness.is_stale or freshness.last_success is none or freshness.last_attempt_failed %}
-  <p class="overview-notice">Pemantauan {% if freshness.last_success is none %}belum pernah berhasil{% elif freshness.is_stale %}kedaluwarsa{% else %}terakhir gagal{% endif %}. <a href="/pemantauan/kesehatan-sistem">Periksa status pemantauan</a>.</p>
-  {% endif %}
-</section>
+{% if freshness.is_stale or freshness.last_success is none or freshness.last_attempt_failed %}
+<p class="overview-notice">Pemeriksaan terjadwal {% if freshness.last_success is none %}belum pernah berhasil{% elif freshness.is_stale %}kedaluwarsa{% else %}terakhir gagal{% endif %}. <a href="/pemantauan/kesehatan-sistem">Lihat Kesehatan Sistem</a>.</p>
+{% endif %}
 {% endif %}
 
 {% endblock %}

@@ -607,7 +607,6 @@ def create_app(
             list_awaiting_actual,
             guard,
             monitoring_run_repository,
-            backup_run_repository,
             settings.monitoring_stale_after_hours,
         )
     )

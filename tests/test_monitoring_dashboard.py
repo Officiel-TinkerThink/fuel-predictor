@@ -148,8 +148,10 @@ def test_monitoring_dashboard_shows_rolling_error_and_category_degradation(
     assert "meleset rata-rata 5,0 L dari BBM aktual yang tercatat, di atas batas 1,0 L" in (
         management.text
     )
-    # The overview states the alert rather than only counting it.
+    # The overview states the alert rather than only counting it, and the
+    # average-miss tile says it is over the limit.
     assert degradation["message"] in overview
+    assert "Di atas batas" in overview
 
 
 def test_evidently_feature_drift_uses_its_dataset_and_column_metrics() -> None:

@@ -15,13 +15,11 @@ from fuel_predictor.application.identity import ListAuditRecords
 from fuel_predictor.application.model_lifecycle import GetModelGovernanceDashboard
 from fuel_predictor.application.monitoring import GetMonitoringDashboard
 from fuel_predictor.application.monitoring_runs import (
-    BackupRunRepository,
     MonitoringFreshness,
     MonitoringRunRepository,
 )
 from fuel_predictor.delivery.audit_view import audit_row
 from fuel_predictor.delivery.listing import ListingQuery, SortOption, paginate
-from fuel_predictor.delivery.monitoring_pages import ALERT_KIND_LABELS
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.identity import Capability
@@ -34,14 +32,6 @@ _AUDIT_SORTS = (
     SortOption("tindakan", "Tindakan", lambda r: r["action_label"], default_direction="asc"),
 )
 
-# The day's work, in the order it happens: plan, then report what was burned.
-# The overview leads with these so nobody has to hunt the sidebar for them.
-_QUICK_ACTIONS = (
-    ("Buat prediksi", "/prediksi", Capability.CREATE_PREDICTION),
-    ("Catat BBM aktual", "/bahan-bakar-aktual", Capability.RECORD_ACTUAL_FUEL),
-    ("Prediksi massal dari berkas", "/prediksi-operasi-massal", Capability.IMPORT_OPERATIONS),
-)
-
 
 def build_dashboard_router(
     get_monitoring_dashboard: GetMonitoringDashboard,
@@ -50,7 +40,6 @@ def build_dashboard_router(
     list_awaiting_actual: ListOperationsAwaitingActualFuel,
     guard: SecurityGuard,
     monitoring_runs: MonitoringRunRepository,
-    backup_runs: BackupRunRepository,
     monitoring_stale_after_hours: int = 26,
 ) -> APIRouter:
     def _freshness() -> MonitoringFreshness:
@@ -101,12 +90,6 @@ def build_dashboard_router(
                 governance=governance,
                 is_healthy=len(critical_alerts) == 0,
                 critical_alerts=critical_alerts,
-                alert_kind_labels=ALERT_KIND_LABELS,
-                quick_actions=[
-                    {"label": label, "href": href}
-                    for label, href, capability in _QUICK_ACTIONS
-                    if caller.allows(capability)
-                ],
                 # A fresh installation has nothing to predict with until history
                 # is imported and a candidate trained and promoted. Only the
                 # people who can do those steps are walked through them.
@@ -115,7 +98,6 @@ def build_dashboard_router(
                 ),
                 candidate_count=len(governance.candidate_models),
                 freshness=_freshness(),
-                last_backup=backup_runs.latest(),
             )
         )
 

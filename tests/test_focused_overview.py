@@ -24,6 +24,8 @@ def test_overview_links_to_details_without_repeating_their_tables(tmp_path: Path
         ):
             assert f'href="{destination}"' in main
             assert client.get(destination).status_code == 200
+        # The sidebar lists the pages; the overview does not repeat them as cards.
+        assert "Mulai dari sini" not in main and "Jelajahi lebih lanjut" not in main
         # A compact overview must still disclose absent monitoring data.
         assert "belum pernah berhasil" in main
         assert "Cadangan data" not in main

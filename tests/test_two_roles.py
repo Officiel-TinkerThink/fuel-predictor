@@ -119,8 +119,10 @@ def test_pages_outside_the_operators_job_are_refused(operator_client: TestClient
 def test_the_overview_shows_an_operator_only_their_part(operator_client: TestClient) -> None:
     page = operator_client.get("/").text
 
-    assert "Mulai dari sini" in page
-    assert "Buat prediksi" in page and "Catat BBM aktual" in page
+    # Their two jobs: plan, and report what was used.
+    main = page.split("<main ", 1)[1]
+    assert 'href="/prediksi"' in main and "Buat prediksi" in main
+    assert "Menunggu BBM aktual" in main
     for admin_only in (
         "Model aktif",
         "Pergeseran data",
