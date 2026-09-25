@@ -196,3 +196,35 @@ def test_a_person_s_page_shows_their_withdrawn_plan_as_withdrawn(tmp_path: Path)
 
     row = page.split(operation["operation_code"], 1)[1].split("</li>", 1)[0]
     assert "Dibatalkan" in row and "Menunggu aktual" not in row
+
+
+def test_a_withdrawn_plan_is_not_offered_as_a_similar_day(tmp_path: Path) -> None:
+    """It never happened, so it is no precedent for fuel."""
+
+    def plan(client: TestClient, distance: int) -> dict[str, str]:
+        operation: dict[str, str] = client.post(
+            "/api/v1/daily-operations",
+            json={
+                "vehicle_category": "ANGBER",
+                "vehicle": "Prime Mover",
+                "activity_mode": "transport",
+                "total_distance_km": distance,
+                "distance_source": "manual",
+            },
+        ).json()
+        client.post(f"/api/v1/daily-operations/{operation['operation_id']}/predictions")
+        return operation
+
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        _train_baseline(client)
+        plan(client, 41)
+        withdrawn = plan(client, 77)
+        client.post(
+            f"/api/v1/daily-operations/{withdrawn['operation_id']}/cancel",
+            json={"reason": "salah input"},
+        )
+        page = client.get(f"/operasi-harian/{plan(client, 50)['operation_id']}").text
+
+    similar = page.split("Operasi serupa sebelumnya", 1)[1]
+    assert "41 km" in similar
+    assert "77 km" not in similar

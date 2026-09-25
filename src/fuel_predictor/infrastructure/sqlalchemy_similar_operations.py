@@ -66,7 +66,8 @@ class SqlAlchemyHistoricalOperationSource:
         """Operations planned through the app or an agent, with the estimate
         they were given and the actual fuel if one was entered since. A bare
         operation with neither is a plan that never went anywhere; it tells a
-        planner nothing about fuel and is left out."""
+        planner nothing about fuel and is left out - as is a withdrawn plan,
+        which never happened."""
         latest_prediction_id = (
             select(PredictionRow.prediction_id)
             .where(PredictionRow.operation_id == DailyOperationRow.operation_id)
@@ -86,6 +87,7 @@ class SqlAlchemyHistoricalOperationSource:
                 )
                 .where(
                     DailyOperationRow.vehicle_category == vehicle_category.value,
+                    DailyOperationRow.cancelled_at.is_(None),
                     (PredictionRow.prediction_id.is_not(None))
                     | (ActualFuelRecordRow.operation_id.is_not(None)),
                 )
