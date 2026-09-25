@@ -23,23 +23,6 @@
 </section>
 
 <section class="card">
-  <h2>Grup dan tipe</h2>
-  <dl class="detail-list fleet-taxonomy">
-    {% for group in groups %}
-    <dt>{% if group.code %}<code class="operation-code">{{ group.code }}</code> {% endif %}{{ group.name }}</dt>
-    <dd>
-      <ul class="fleet-taxonomy__types">
-        {% for type in group.types %}
-        <li>{% if type.code %}<code class="operation-code">{{ type.code }}</code> <strong>{{ type.name }}</strong>{% else %}<span class="muted">Tipe belum dicatat</span>{% endif %}
-          <span class="hint">· {{ type.units | map(attribute='name') | join(', ') }}</span></li>
-        {% endfor %}
-      </ul>
-    </dd>
-    {% endfor %}
-  </dl>
-</section>
-
-<section class="card">
   <div class="table-wrap">
     <table data-list data-list-label="Kendaraan" data-list-per-page="50">
       <caption>{{ units | length }} kendaraan</caption>

@@ -100,3 +100,12 @@ def test_the_code_on_a_saved_operation_names_its_parts(client: TestClient) -> No
     assert "P410 = Scania P410 6X6" in page
     assert "VT01 = VT 01" in page
     assert 'href="/armada"' in html
+
+
+def test_group_and_type_are_shown_once_in_the_table(client: TestClient) -> None:
+    """A separate group-and-type summary repeated what the table's columns
+    already say; the table is the one place to read them."""
+    page = client.get("/armada").text
+
+    assert "<th>Grup</th>" in page and "<th>Tipe</th>" in page
+    assert "Grup dan tipe" not in page

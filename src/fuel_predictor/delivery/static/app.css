@@ -1310,17 +1310,6 @@ tbody tr.is-selected td {
   overflow-wrap: anywhere;
 }
 
-.fleet-taxonomy__types {
-  margin: 0;
-  padding-left: var(--space-4);
-}
-
-/* A definition list's values are bold; here only the type name is. */
-.fleet-taxonomy dd,
-.fleet-taxonomy dt {
-  font-weight: 400;
-}
-
 .operation-code-callout__legend {
   display: flex;
   flex-wrap: wrap;
