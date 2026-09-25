@@ -26,6 +26,10 @@ def test_units_sit_under_their_group(tmp_path: Path) -> None:
     assert '<optgroup label="Crane">' in form
     start = form.index('<optgroup label="Truck">')
     truck_group = form[start : form.index("</optgroup>", start)]
-    assert '<option value="Prime Mover">Prime Mover</option>' in truck_group
+    # The unit's type follows its name, so two machines of a group tell apart.
+    assert (
+        '<option value="Prime Mover">Prime Mover · Scania P460A 6x6 Tractor Head</option>'
+        in truck_group
+    )
     # The group is the heading now, not a suffix on every option.
     assert "Prime Mover — Truck" not in form
