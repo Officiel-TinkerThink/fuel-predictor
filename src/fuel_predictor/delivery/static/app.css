@@ -1306,6 +1306,15 @@ tbody tr.is-selected td {
   color: var(--color-text-muted);
 }
 
+/* A withdrawn plan's number is kept for the record, not for preparing fuel. */
+.allocation-hero--cancelled {
+  border-color: var(--color-border);
+}
+
+.allocation-hero--cancelled .allocation-hero__value {
+  color: var(--color-text-muted);
+}
+
 .allocation-hero__explain {
   margin: 0;
   max-width: var(--measure);

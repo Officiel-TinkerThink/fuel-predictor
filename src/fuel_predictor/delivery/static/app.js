@@ -18,6 +18,8 @@
     navToggle.addEventListener("click", function () {
       var open = navHeader.classList.toggle("app__nav--open");
       navToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      // The button says what it does next, so the way out is plain.
+      navToggle.textContent = open ? "Tutup" : "Menu";
     });
   }
 

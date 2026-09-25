@@ -21,7 +21,7 @@
    estimate behind the number is one sentence, not two more tiles. #}
 {% set margin = prediction.recommended_allocation_liters - prediction.estimated_fuel_requirement_liters %}
 <div class="estimate-summary">
-  <section class="card allocation-hero" aria-labelledby="alokasi-rekomendasi">
+  <section class="card allocation-hero{% if operation and operation.is_cancelled %} allocation-hero--cancelled{% endif %}" aria-labelledby="alokasi-rekomendasi">
     <p class="allocation-hero__label" id="alokasi-rekomendasi">Alokasi rekomendasi</p>
     <p class="allocation-hero__value">{{ prediction.recommended_allocation_liters | angka }}<span> L</span></p>
     <p class="allocation-hero__explain">Estimasi kebutuhan <strong>{{ prediction.estimated_fuel_requirement_liters | angka }} L</strong>
