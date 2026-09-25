@@ -9,6 +9,10 @@
 {{ ui.banner('info', 'Estimasi dibuat ' ~ (prediction.created_at | waktu), 'Estimasi ini dipelajari dari catatan bahan bakar disiapkan. Nilai ini bukan konsumsi aktual yang telah diverifikasi.') }}
 {% endif %}
 
+{% if operation and operation.is_cancelled %}
+{{ ui.cancelled_banner(operation) }}
+{% endif %}
+
 {% if prediction.route_distance_manual_fallback %}
 {{ ui.banner('warning', 'Jarak manual dipakai', 'Penyedia rute tidak tersedia saat perencanaan; prediksi ini memakai jarak total manual.') }}
 {% endif %}
@@ -25,9 +29,12 @@
 
 <div class="button-row result-actions">
   <a class="button" href="/prediksi">Buat operasi lain</a>
+  {% if not (operation and operation.is_cancelled) %}
   <a class="button button--secondary" href="/bahan-bakar-aktual?operation_id={{ (operation and operation.operation_code) or prediction.operation_id }}">Catat BBM aktual untuk operasi ini</a>
   <a class="button button--secondary" href="/operasi-harian/{{ prediction.operation_id }}/slip" target="_blank" rel="noopener">Cetak slip</a>
+  {% endif %}
 </div>
+{% if can_cancel %}{{ ui.cancel_operation_button(operation, csrf_token) }}{% endif %}
 
 <section class="card">
   <dl class="detail-list">

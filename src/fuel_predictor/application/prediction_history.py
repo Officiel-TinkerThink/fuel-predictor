@@ -30,6 +30,8 @@ class PredictionHistoryEntry:
     # numbers from the next's.
     model_version_id: str | None = None
     model_code: str | None = None
+    # Withdrawn before any actual fuel: nothing more to record for it.
+    cancelled: bool = False
 
 
 class PredictionHistoryReader(Protocol):

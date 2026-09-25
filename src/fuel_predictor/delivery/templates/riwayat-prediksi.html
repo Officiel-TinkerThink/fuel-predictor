@@ -35,6 +35,7 @@
             {% set diff = item.actual_fuel_liters - item.estimated_fuel_requirement_liters %}
             {{ ui.badge((item.actual_fuel_liters | angka) ~ ' L', 'warning' if item.actual_fuel_liters > item.recommended_allocation_liters else 'success') }}
             <br><span class="hint">{{ '+' if diff > 0 else ('−' if diff < 0 else '±') }}{{ diff | abs | angka(1) }} L dari estimasi{% if item.actual_fuel_liters > item.recommended_allocation_liters %} · melebihi alokasi{% endif %}</span>
+            {% elif item.cancelled %}{{ ui.badge('Dibatalkan', 'neutral') }}
             {% else %}<a class="button button--secondary button--small" href="/bahan-bakar-aktual?operation_id={{ ui.operation_ref(item) }}">Catat</a>{% endif %}
           </td>
         </tr>

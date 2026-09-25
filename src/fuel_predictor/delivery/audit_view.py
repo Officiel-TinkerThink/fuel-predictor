@@ -7,6 +7,7 @@ from fuel_predictor.domain.identity import AuditRecord
 _ACTION_LABELS = {
     "sign_in_failed": "Masuk gagal",
     "operation_planned": "Operasi direncanakan dan diestimasi",
+    "operation_cancelled": "Operasi dibatalkan",
     "actual_fuel_recorded": "BBM aktual dicatat",
     "bulk_prediction_imported": "Prediksi massal dari berkas",
     "bulk_actual_imported": "BBM aktual massal dari berkas",

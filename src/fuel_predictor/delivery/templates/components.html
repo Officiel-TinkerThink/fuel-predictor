@@ -17,6 +17,19 @@
 <code class="operation-code">{{ model.model_code or model.model_version_id }}</code>
 {%- endmacro %}
 
+{# A withdrawn operation, said once, the same way on every page that shows it. #}
+{% macro cancelled_banner(operation) -%}
+{{ banner('warning', 'Operasi dibatalkan', 'Dibatalkan ' ~ (operation.cancelled_at | waktu) ~ ((' oleh ' ~ operation.cancelled_by) if operation.cancelled_by else '') ~ '. Alasan: ' ~ operation.cancel_reason ~ '. BBM aktual tidak dicatat untuk operasi ini.') }}
+{%- endmacro %}
+
+{# Withdrawing a mistaken or duplicate plan; offered only while no actual fuel
+   is recorded (the server checks again). #}
+{% macro cancel_operation_button(operation, csrf_token) -%}
+<div class="cancel-operation">
+  {{ confirm_button('batalkan-operasi', 'Batalkan operasi', 'Batalkan operasi ini?', 'Untuk operasi yang salah input atau tercatat dua kali. Operasi yang dibatalkan keluar dari daftar menunggu BBM aktual dan tidak bisa dicatat BBM aktualnya; datanya tetap tersimpan.', '/operasi-harian/' ~ operation.operation_id ~ '/batalkan', csrf_token, reason_field=true) }}
+</div>
+{%- endmacro %}
+
 {# The same, spelled plainly for links and form values. #}
 {% macro operation_ref(item) -%}{{ item.operation_code or item.operation_id }}{%- endmacro %}
 

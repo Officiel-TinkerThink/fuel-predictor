@@ -52,6 +52,22 @@ class OperationCodeTakenError(ValueError):
     """Another operation was stored with this code first."""
 
 
+class OperationCancelledError(ValueError):
+    """The operation was withdrawn; nothing more is recorded against it."""
+
+
+class OperationHasActualFuelError(ValueError):
+    """Actual fuel is recorded for the operation, so it happened: not cancellable."""
+
+
+class DailyOperationCanceller(DailyOperationLookup, Protocol):
+    def cancel(self, operation_id: str, at: datetime, by: str | None, reason: str) -> None: ...
+
+
+class ActualFuelPresence(Protocol):
+    def has_actual(self, operation_id: str) -> bool: ...
+
+
 # Each retry means another request stored the same vehicle in the same minute
 # between our lookup and our insert. More than a few in a row is not a race.
 _CODE_ATTEMPTS = 5
@@ -176,6 +192,35 @@ class GetDailyOperation:
 
     def execute(self, reference: str) -> DailyOperation:
         return find_daily_operation(self._repository, reference)
+
+
+@dataclass(frozen=True, slots=True)
+class CancelDailyOperation:
+    """Withdraw a mistaken or duplicate plan, with the reason written down.
+
+    Only before any actual fuel is recorded: an operation with an actual
+    happened, and its record is what the model is measured against.
+    Cancelling twice is not an error; the first cancellation stands.
+    """
+
+    operations: DailyOperationCanceller
+    actuals: ActualFuelPresence
+    now: Callable[[], datetime] = lambda: datetime.now(UTC)
+
+    def can_cancel(self, operation: DailyOperation) -> bool:
+        return not operation.is_cancelled and not self.actuals.has_actual(operation.operation_id)
+
+    def execute(self, reference: str, *, actor: str | None, reason: str) -> DailyOperation:
+        reason = reason.strip()
+        if not reason:
+            raise DailyOperationValidationError("reason", "Alasan pembatalan wajib diisi.")
+        operation = find_daily_operation(self.operations, reference)
+        if operation.is_cancelled:
+            return operation
+        if self.actuals.has_actual(operation.operation_id):
+            raise OperationHasActualFuelError(operation.operation_id)
+        self.operations.cancel(operation.operation_id, self.now(), actor, reason[:256])
+        return find_daily_operation(self.operations, operation.operation_id)
 
 
 def find_daily_operation(lookup: DailyOperationLookup, reference: str) -> DailyOperation:

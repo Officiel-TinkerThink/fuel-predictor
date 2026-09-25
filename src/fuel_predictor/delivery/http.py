@@ -30,6 +30,7 @@ from fuel_predictor.application.daily_operations import (
     CreateDailyOperationCommand,
     DailyOperationNotFoundError,
     GetDailyOperation,
+    OperationCancelledError,
 )
 from fuel_predictor.application.historical_datasets import (
     DatasetVersionNotFoundError,
@@ -1080,6 +1081,20 @@ def register_error_handlers(app: FastAPI) -> None:
                 "error": {
                     "code": "baseline_model_not_found",
                     "message": "Belum ada kandidat baseline terlatih untuk membuat prediksi.",
+                }
+            },
+        )
+
+    @app.exception_handler(OperationCancelledError)
+    async def handle_operation_cancelled(
+        _request: Request, _error: OperationCancelledError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={
+                "error": {
+                    "code": "operation_cancelled",
+                    "message": "Operasi ini sudah dibatalkan; BBM aktualnya tidak dicatat.",
                 }
             },
         )

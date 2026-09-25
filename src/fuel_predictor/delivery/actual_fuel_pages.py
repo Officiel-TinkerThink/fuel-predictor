@@ -14,7 +14,10 @@ from fuel_predictor.application.actual_fuel import (
     RecordActualFuelCommand,
 )
 from fuel_predictor.application.bulk_actual_fuel import BulkActualFuel
-from fuel_predictor.application.daily_operations import DailyOperationNotFoundError
+from fuel_predictor.application.daily_operations import (
+    DailyOperationNotFoundError,
+    OperationCancelledError,
+)
 from fuel_predictor.application.historical_datasets import HistoricalDatasetImportError
 from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.delivery.http import ActualFuelRequest, translate_validation_errors
@@ -96,6 +99,20 @@ def build_actual_fuel_pages_router(
             return HTMLResponse(
                 _form(caller, submitted, [{"field": error.field, "message": error.message}]),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            )
+        except OperationCancelledError:
+            return HTMLResponse(
+                _form(
+                    caller,
+                    submitted,
+                    [
+                        {
+                            "field": "operation_id",
+                            "message": "Operasi ini sudah dibatalkan; BBM aktualnya tidak dicatat.",
+                        }
+                    ],
+                ),
+                status_code=status.HTTP_409_CONFLICT,
             )
         except ActualFuelAlreadyRecordedError:
             return HTMLResponse(

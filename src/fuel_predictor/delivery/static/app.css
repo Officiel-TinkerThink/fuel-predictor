@@ -885,6 +885,12 @@ textarea {
   background: var(--color-warning-soft);
 }
 
+/* Withdrawing an operation is rare and deliberate: kept apart, below the
+   everyday actions. */
+.cancel-operation {
+  margin: var(--space-2) 0 var(--space-5);
+}
+
 .link-row {
   display: flex;
   flex-wrap: wrap;

@@ -1,5 +1,6 @@
 from collections import defaultdict
 from collections.abc import Sequence
+from datetime import datetime
 
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
@@ -48,6 +49,14 @@ class SqlAlchemyDailyOperationRepository:
                 )
             )
             return {code for code in codes if code is not None}
+
+    def cancel(self, operation_id: str, at: datetime, by: str | None, reason: str) -> None:
+        with self._session_factory.begin() as session:
+            row = session.get(DailyOperationRow, operation_id)
+            if row is not None and row.cancelled_at is None:
+                row.cancelled_at = at
+                row.cancelled_by = by
+                row.cancel_reason = reason
 
     def get_by_code(self, operation_code: str) -> DailyOperation | None:
         with self._session_factory() as session:
@@ -161,4 +170,7 @@ def _to_domain(
         created_by=row.created_by,
         created_at=row.created_at,
         operation_code=row.operation_code,
+        cancelled_at=row.cancelled_at,
+        cancelled_by=row.cancelled_by,
+        cancel_reason=row.cancel_reason,
     )

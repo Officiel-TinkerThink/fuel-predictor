@@ -43,6 +43,7 @@ class SqlAlchemyPredictionHistoryRepository:
                     ActualFuelRecordRow.actual_fuel_liters,
                     PredictionRow.model_version_id,
                     ModelVersionRow.model_code,
+                    DailyOperationRow.cancelled_at,
                 )
                 .select_from(DailyOperationRow)
                 .join(PredictionRow, PredictionRow.prediction_id == latest_prediction_id)
@@ -74,6 +75,7 @@ class SqlAlchemyPredictionHistoryRepository:
                 actual_fuel_liters=row.actual_fuel_liters,
                 model_version_id=row.model_version_id,
                 model_code=row.model_code,
+                cancelled=row.cancelled_at is not None,
             )
             for row in rows
         )

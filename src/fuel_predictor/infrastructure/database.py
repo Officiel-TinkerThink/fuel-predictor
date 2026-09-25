@@ -46,6 +46,10 @@ class DailyOperationRow(Base):
     # Who planned it and when; null on rows from before this was recorded.
     created_by: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Set when a mistaken or duplicate plan is withdrawn; null while it stands.
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancelled_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    cancel_reason: Mapped[str | None] = mapped_column(String(256), nullable=True)
 
 
 class DailyOperationStopRow(Base):

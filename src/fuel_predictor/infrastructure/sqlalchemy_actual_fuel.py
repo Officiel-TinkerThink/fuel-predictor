@@ -29,6 +29,10 @@ class SqlAlchemyActualFuelRepository:
     def __init__(self, session_factory: SessionFactory) -> None:
         self._session_factory = session_factory
 
+    def has_actual(self, operation_id: str) -> bool:
+        with self._session_factory() as session:
+            return session.get(ActualFuelRecordRow, operation_id) is not None
+
     def add(self, record: ActualFuelRecord) -> None:
         try:
             with self._session_factory.begin() as session:
@@ -76,7 +80,11 @@ class SqlAlchemyActualFuelRepository:
                     ActualFuelRecordRow,
                     ActualFuelRecordRow.operation_id == DailyOperationRow.operation_id,
                 )
-                .where(ActualFuelRecordRow.operation_id.is_(None))
+                # A cancelled plan is not waiting for anything.
+                .where(
+                    ActualFuelRecordRow.operation_id.is_(None),
+                    DailyOperationRow.cancelled_at.is_(None),
+                )
                 .order_by(PredictionRow.created_at.desc(), PredictionRow.prediction_id.desc())
                 .limit(limit)
             ).all()

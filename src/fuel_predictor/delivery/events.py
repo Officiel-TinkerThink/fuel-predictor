@@ -35,6 +35,14 @@ class ImportantEvents:
             details["liters"] = round(prediction.recommended_allocation_liters, 1)
         self._note(actor, "operation_planned", operation.operation_id, details)
 
+    def operation_cancelled(self, actor: str | None, operation: DailyOperation) -> None:
+        self._note(
+            actor,
+            "operation_cancelled",
+            operation.operation_id,
+            {"kode": operation.operation_code, "reason": operation.cancel_reason},
+        )
+
     def actual_fuel_recorded(self, actor: str | None, record: ActualFuelRecord) -> None:
         self._note(
             actor,

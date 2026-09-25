@@ -38,7 +38,11 @@ from fuel_predictor.application.baseline_predictions import (
 )
 from fuel_predictor.application.bulk_actual_fuel import BulkActualFuel
 from fuel_predictor.application.bulk_operation_predictions import BulkOperationPrediction
-from fuel_predictor.application.daily_operations import CreateDailyOperation, GetDailyOperation
+from fuel_predictor.application.daily_operations import (
+    CancelDailyOperation,
+    CreateDailyOperation,
+    GetDailyOperation,
+)
 from fuel_predictor.application.historical_datasets import (
     GetDatasetValidOperations,
     ImportHistoricalDataset,
@@ -620,6 +624,7 @@ def create_app(
             resolved_route_preview,
             find_similar_operations,
             events=events,
+            cancel_daily_operation=CancelDailyOperation(repository, actual_fuel_repository),
         )
     )
     app.include_router(

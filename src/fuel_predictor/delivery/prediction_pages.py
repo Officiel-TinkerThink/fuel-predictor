@@ -7,7 +7,7 @@ docs/production/implementation-progress.md for the migration order and status.
 from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from pydantic import ValidationError
 
 from fuel_predictor.application.baseline_predictions import (
@@ -16,9 +16,11 @@ from fuel_predictor.application.baseline_predictions import (
 )
 from fuel_predictor.application.catalog_resolution import UnknownLocationError, resolve_location
 from fuel_predictor.application.daily_operations import (
+    CancelDailyOperation,
     CreateDailyOperation,
     DailyOperationNotFoundError,
     GetDailyOperation,
+    OperationHasActualFuelError,
 )
 from fuel_predictor.application.identity import ActiveCaller
 from fuel_predictor.application.locations import LocationCatalog, LocationOption
@@ -87,6 +89,7 @@ def build_prediction_pages_router(
     find_similar_operations: FindSimilarOperations | None = None,
     *,
     events: ImportantEvents,
+    cancel_daily_operation: CancelDailyOperation | None = None,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -308,6 +311,51 @@ def build_prediction_pages_router(
             )
         )
 
+    def _can_cancel(operation: DailyOperation) -> bool:
+        return cancel_daily_operation is not None and cancel_daily_operation.can_cancel(operation)
+
+    @router.post("/operasi-harian/{operation_id}/batalkan", response_class=HTMLResponse)
+    async def cancel_operation(operation_id: str, request: Request) -> Response:
+        """Withdraw a mistaken or duplicate plan; the reason goes to the audit."""
+        caller = guard.require_caller(request)
+        form = await request.form()
+        reason = str(form.get("reason", ""))
+
+        def refused(message: str, status_code: int) -> HTMLResponse:
+            return HTMLResponse(
+                render(
+                    "pesan.html",
+                    caller=caller,
+                    page_title="Operasi tidak dibatalkan",
+                    active_path="/riwayat-prediksi",
+                    message=message,
+                    back_href=f"/operasi-harian/{operation_id}",
+                    back_label="Kembali ke operasi",
+                ),
+                status_code=status_code,
+            )
+
+        if cancel_daily_operation is None:
+            return refused("Pembatalan tidak tersedia.", status.HTTP_404_NOT_FOUND)
+        try:
+            operation = cancel_daily_operation.execute(
+                operation_id, actor=caller.user.username, reason=reason
+            )
+        except DailyOperationNotFoundError:
+            return refused("Operasi tidak ditemukan.", status.HTTP_404_NOT_FOUND)
+        except DailyOperationValidationError as error:
+            return refused(error.message, status.HTTP_422_UNPROCESSABLE_CONTENT)
+        except OperationHasActualFuelError:
+            return refused(
+                "Operasi ini sudah punya BBM aktual, jadi benar-benar berjalan dan tidak bisa "
+                "dibatalkan.",
+                status.HTTP_409_CONFLICT,
+            )
+        events.operation_cancelled(caller.user.username, operation)
+        return RedirectResponse(
+            f"/operasi-harian/{operation.operation_id}", status_code=status.HTTP_303_SEE_OTHER
+        )
+
     @router.get("/operasi-harian/{operation_id}/slip", response_class=HTMLResponse)
     def show_slip(operation_id: str, request: Request) -> HTMLResponse:
         """The estimate as a paper slip: the code to carry to the fuel point,
@@ -363,7 +411,11 @@ def build_prediction_pages_router(
         if prediction is None:
             return HTMLResponse(
                 _render_saved_operation(
-                    caller, operation, no_active_model=False, vehicle=_vehicle(operation)
+                    caller,
+                    operation,
+                    no_active_model=False,
+                    vehicle=_vehicle(operation),
+                    can_cancel=_can_cancel(operation),
                 )
             )
         return HTMLResponse(
@@ -374,6 +426,7 @@ def build_prediction_pages_router(
                 similar=_similar(operation),
                 just_created=False,
                 vehicle=_vehicle(operation),
+                can_cancel=_can_cancel(operation),
             )
         )
 
@@ -421,6 +474,7 @@ def _render_saved_operation(
     *,
     no_active_model: bool,
     vehicle: VehicleOption | None = None,
+    can_cancel: bool = False,
 ) -> str:
     return render(
         "operasi-tersimpan.html",
@@ -432,6 +486,7 @@ def _render_saved_operation(
         source_label=_SOURCE_LABELS[operation.distance_source.value],
         no_active_model=no_active_model,
         vehicle=vehicle,
+        can_cancel=can_cancel,
     )
 
 
@@ -443,6 +498,7 @@ def _render_estimate(
     similar: tuple[SimilarOperation, ...] = (),
     just_created: bool = True,
     vehicle: VehicleOption | None = None,
+    can_cancel: bool = False,
 ) -> str:
     return render(
         "estimasi.html",
@@ -457,6 +513,7 @@ def _render_estimate(
         mode_labels=_MODE_LABELS,
         just_created=just_created,
         vehicle=vehicle,
+        can_cancel=can_cancel,
     )
 
 

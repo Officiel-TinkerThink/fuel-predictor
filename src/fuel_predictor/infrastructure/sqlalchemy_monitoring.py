@@ -112,6 +112,8 @@ class SqlAlchemyMonitoringRepository(MonitoringDataReader, MonitoringAlertStore)
                 .where(
                     ActualFuelRecordRow.operation_id.is_(None),
                     PredictionRow.created_at <= older_than,
+                    # A cancelled plan is not overdue.
+                    DailyOperationRow.cancelled_at.is_(None),
                 )
                 .order_by(PredictionRow.created_at)
             ).all()

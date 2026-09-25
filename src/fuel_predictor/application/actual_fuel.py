@@ -6,6 +6,7 @@ from typing import Protocol
 
 from fuel_predictor.application.daily_operations import (
     DailyOperationLookup,
+    OperationCancelledError,
     find_daily_operation,
 )
 from fuel_predictor.domain.actual_fuel import (
@@ -64,6 +65,8 @@ class RecordActualFuel:
 
     def execute(self, command: RecordActualFuelCommand) -> ActualFuelRecord:
         operation = find_daily_operation(self.operation_reader, command.operation_reference)
+        if operation.is_cancelled:
+            raise OperationCancelledError(operation.operation_id)
         if command.actual_fuel_liters <= 0:
             raise ValueError("Bahan bakar aktual harus lebih besar dari 0.")
         record = ActualFuelRecord(

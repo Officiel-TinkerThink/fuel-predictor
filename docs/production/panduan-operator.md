@@ -110,8 +110,11 @@ di nota atau catatan BBM. Saat BBM aktualnya dilaporkan nanti, kode inilah yang 
 besar atau kecil tidak berpengaruh.
 
 Kalau kendaraan yang sama dibuatkan operasi dua kali dalam menit yang sama — misalnya tombol
-tertekan dua kali — operasi kedua mendapat akhiran `-2` (`260924-0914-VT-P410-VT01-2`). Catat BBM
-aktual untuk salah satunya saja.
+tertekan dua kali — operasi kedua mendapat akhiran `-2` (`260924-0914-VT-P410-VT01-2`). Batalkan operasi yang
+tidak terpakai: tombol **Batalkan operasi** di halaman estimasinya meminta alasan singkat, lalu
+operasi itu keluar dari daftar menunggu BBM aktual. Datanya tetap tersimpan dan terlihat di
+**Riwayat Prediksi** dengan tanda *Dibatalkan*. Operasi yang BBM aktualnya sudah dicatat tidak
+bisa dibatalkan.
 
 Daftar lengkap kode kendaraan — grup, tipe, dan ejaan lain tiap unit — ada di menu **Armada**.
 Buka menu itu kalau ragu kode mana milik kendaraan mana.

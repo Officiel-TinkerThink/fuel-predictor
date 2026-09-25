@@ -7,7 +7,10 @@ from fuel_predictor.application.actual_fuel import (
     RecordActualFuel,
     RecordActualFuelCommand,
 )
-from fuel_predictor.application.daily_operations import DailyOperationNotFoundError
+from fuel_predictor.application.daily_operations import (
+    DailyOperationNotFoundError,
+    OperationCancelledError,
+)
 from fuel_predictor.application.historical_datasets import (
     HistoricalDatasetImportError,
     HistoricalDatasetSourceReader,
@@ -95,6 +98,13 @@ class BulkActualFuel:
                         DataQualityIssue(
                             source,
                             (CorrectionReason("operation_id", "Kode operasi tidak ditemukan."),),
+                        )
+                    )
+                except OperationCancelledError:
+                    issues.append(
+                        DataQualityIssue(
+                            source,
+                            (CorrectionReason("operation_id", "Operasi ini sudah dibatalkan."),),
                         )
                     )
                 except ActualFuelAlreadyRecordedError:

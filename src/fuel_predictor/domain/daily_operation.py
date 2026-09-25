@@ -51,6 +51,15 @@ class DailyOperation:
     # operation is planned. None on imported history, which nobody records
     # actual fuel against.
     operation_code: str | None = None
+    # A mistaken or duplicate plan, withdrawn before any actual fuel was
+    # recorded: when, by whom and why. None while the operation stands.
+    cancelled_at: datetime | None = None
+    cancelled_by: str | None = None
+    cancel_reason: str | None = None
+
+    @property
+    def is_cancelled(self) -> bool:
+        return self.cancelled_at is not None
 
     def __post_init__(self) -> None:
         if not isfinite(self.total_distance_km) or self.total_distance_km <= 0:

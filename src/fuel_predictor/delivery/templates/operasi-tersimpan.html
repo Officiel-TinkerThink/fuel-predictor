@@ -9,6 +9,10 @@
 {{ ui.banner('success', 'Operasi harian tersimpan', 'Periksa ringkasannya di bawah, lalu buat estimasi kebutuhan BBM-nya.') }}
 {% endif %}
 
+{% if operation.is_cancelled %}
+{{ ui.cancelled_banner(operation) }}
+{% endif %}
+
 {% if operation.route_distance_manual_fallback %}
 {{ ui.banner('warning', 'Jarak manual dipakai', 'Penyedia rute tidak tersedia saat perencanaan. Jarak total manual dipakai untuk estimasi ini.') }}
 {% endif %}
@@ -35,12 +39,15 @@
     <dd><ol class="stop-list">{% for stop in operation.stop_sequence %}<li>{{ stop }}</li>{% endfor %}</ol></dd>
     {% endif %}
   </dl>
+  {% if not operation.is_cancelled %}
   <form method="post" action="/operasi-harian/{{ operation.operation_id }}/prediksi" class="button-row">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <button type="submit" class="button">Buat estimasi kebutuhan BBM</button>
   </form>
+  {% endif %}
 </section>
 
 <div class="button-row"><a class="button button--secondary" href="/prediksi">Buat operasi lain</a></div>
+{% if can_cancel %}{{ ui.cancel_operation_button(operation, csrf_token) }}{% endif %}
 
 {% endblock %}
