@@ -24,7 +24,7 @@
         {# Hidden only when the chosen mode has no lifting in it, so a rejected
            submission comes back with the field the planner still has to fill. #}
         <div class="field" id="lifting-field"{% if values.get('activity_mode', 'transport') == 'transport' %} hidden{% endif %}>
-          {{ ui.number_field('lifting_hours', 'Jam lifting', 'jam', values.get('lifting_hours', ''), hint='Total jam lifting sepanjang operasi. Wajib bila aktivitas mencakup lifting.', errors=errors, min=0.01) }}
+          {{ ui.number_field('lifting_hours', 'Jam lifting', 'jam', values.get('lifting_hours', ''), hint='Total jam lifting sepanjang operasi.', errors=errors, required=true, min=0.01) }}
         </div>
       </div>
     </fieldset>
