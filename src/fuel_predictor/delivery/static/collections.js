@@ -188,8 +188,10 @@
       position.textContent = "Halaman " + page + " dari " + pages;
       previous.disabled = page <= 1;
       next.disabled = page >= pages;
-      // One page needs no page buttons, only the count.
+      // One page needs no page buttons, only the count - and with nothing
+      // searched, not even that: the caption already says how many there are.
       controls.hidden = pages <= 1;
+      pager.hidden = pages <= 1 && !needle;
       empty.hidden = matched.length !== 0;
     }
 

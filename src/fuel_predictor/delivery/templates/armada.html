@@ -19,25 +19,30 @@
   </dl>
   {% endif %}
   <p class="hint">Unit yang tipenya belum dicatat tidak punya bagian tipe, misalnya
-    <code class="operation-code">VT-VT14</code>. Kode yang sudah terbit tidak pernah berubah.</p>
+    <code class="operation-code">VT-VT14</code>. Hanya unit bertanda <em>Bisa lifting</em> yang boleh
+    direncanakan dengan lifting. Kode yang sudah terbit tidak pernah berubah.</p>
 </section>
 
 <section class="card">
   <div class="table-wrap">
-    <table data-list data-list-label="Kendaraan" data-list-per-page="50">
+    <table class="fleet-table" data-list data-list-label="Kendaraan" data-list-per-page="50">
       <caption>{{ units | length }} kendaraan</caption>
       <thead>
         <tr><th>Kode kendaraan</th><th>Kendaraan</th><th>Grup</th><th>Tipe</th><th>Lifting</th><th>Ejaan lain</th></tr>
       </thead>
+      {# Only what sets a unit apart is written: most units have no type on
+         record, cannot lift and have no other spelling, and a cell saying so
+         on every row buried the few that do. Empty cells drop out of the
+         phone cards. #}
       <tbody>
         {% for unit in units %}
         <tr>
           <td><code class="operation-code">{{ unit.vehicle_code }}</code></td>
           <td>{{ unit.name }}</td>
           <td>{{ unit.group }}</td>
-          <td>{% if unit.type != unit.group %}{{ unit.type }}{% else %}<span class="muted">Belum dicatat</span>{% endif %}</td>
-          <td>{% if unit.can_lift %}{{ ui.badge('Bisa lifting', 'success') }}{% else %}<span class="muted">Mobilisasi saja</span>{% endif %}</td>
-          <td>{{ unit.aliases | join(', ') or '—' }}</td>
+          <td>{% if unit.type != unit.group %}{{ unit.type }}{% endif %}</td>
+          <td>{% if unit.can_lift %}{{ ui.badge('Bisa lifting', 'success') }}{% endif %}</td>
+          <td>{{ unit.aliases | join(', ') }}</td>
         </tr>
         {% endfor %}
       </tbody>

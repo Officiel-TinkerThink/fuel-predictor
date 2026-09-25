@@ -1749,6 +1749,13 @@ dialog[open]:not(:modal) {
   padding-bottom: 1px;
 }
 
+/* A class that sets display outranks the browser's `[hidden]`; the script
+   hides the pager and its buttons when one page holds every row. */
+.pagination[hidden],
+.collection-pagination__buttons[hidden] {
+  display: none;
+}
+
 .pagination {
   display: flex;
   flex-wrap: wrap;
@@ -2223,6 +2230,11 @@ dialog::backdrop {
     border-bottom: 0;
   }
 
+  /* On a card an empty cell is a label with nothing after it. */
+  .table--sortable tbody td:empty {
+    display: none;
+  }
+
   /* The label hangs in the left margin so a value keeps its own line breaks
      (a time over an id, a name over a username). */
   .table--sortable tbody td,
@@ -2249,6 +2261,58 @@ dialog::backdrop {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /* The fleet reads as a list on a phone: the code, then name, group and
+     type on one line, then only what sets the unit apart. Labels would
+     repeat on all of its cards. */
+  .fleet-table tbody td,
+  .fleet-table tbody td.numeric {
+    display: inline;
+    padding: 0;
+  }
+
+  .fleet-table tbody td[data-label]::before {
+    content: none;
+  }
+
+  .fleet-table tbody td[data-label]:first-child {
+    display: block;
+    margin-bottom: 0.1rem;
+  }
+
+  .fleet-table tbody td[data-label]:nth-child(3)::before,
+  .fleet-table tbody td[data-label]:nth-child(4)::before {
+    content: " · ";
+    position: static;
+    width: auto;
+    font-size: inherit;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .fleet-table tbody td[data-label]:nth-child(5),
+  .fleet-table tbody td[data-label]:nth-child(6) {
+    display: block;
+    margin-top: 0.2rem;
+  }
+
+  .fleet-table tbody td[data-label]:nth-child(6) {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+  }
+
+  .fleet-table tbody td[data-label]:nth-child(6)::before {
+    content: "Juga ditulis: ";
+    position: static;
+    width: auto;
+    font-size: inherit;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .fleet-table tbody td[data-label]:empty {
+    display: none;
   }
 
   .table--sortable tbody td:not([data-label]) {
