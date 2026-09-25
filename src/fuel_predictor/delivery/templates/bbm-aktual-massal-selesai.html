@@ -3,7 +3,9 @@
 
 {% block content %}
 
-{{ ui.banner('success', 'Bahan bakar aktual sudah diproses', accepted_count ~ ' baris valid disimpan. ' ~ quarantined_count ~ ' baris dikarantina. ' ~ ignored_count ~ ' baris kosong diabaikan.') }}
+{% set summary = accepted_count ~ ' baris valid disimpan. ' ~ quarantined_count ~ ' baris dikarantina. ' ~ ignored_count ~ ' baris kosong diabaikan.' %}
+{% if unfilled_count %}{% set summary = summary ~ ' ' ~ unfilled_count ~ ' operasi belum diisi liternya dan dilewati; isi lalu unggah lagi kapan saja.' %}{% endif %}
+{{ ui.banner('success', 'Bahan bakar aktual sudah diproses', summary) }}
 
 <section class="card">
   {% if result.accepted_rows %}

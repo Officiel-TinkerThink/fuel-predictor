@@ -73,6 +73,7 @@ ROUTE_CAPABILITIES: tuple[tuple[str, str, Capability], ...] = (
     ("GET", "/riwayat-prediksi", Capability.CREATE_PREDICTION),
     # The fleet and its vehicle codes: whoever writes an operation code down.
     ("GET", "/armada", Capability.CREATE_PREDICTION),
+    ("GET", "/bahan-bakar-aktual/menunggu.xlsx", Capability.RECORD_ACTUAL_FUEL),
     # Training history is model work, not the daily job (IMPORT_OPERATIONS
     # stays for predicting a sheet of operations).
     ("GET", "/impor-data-historis", Capability.MANAGE_MODELS),

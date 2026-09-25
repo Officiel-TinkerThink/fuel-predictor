@@ -40,6 +40,7 @@
     {{ ui.badge(awaiting | length, 'warning' if awaiting else 'success') }}
   </div>
   {% if awaiting %}
+  <p><a class="button button--secondary button--small" href="/bahan-bakar-aktual/menunggu.xlsx">Unduh daftar ini (Excel) untuk diisi</a></p>
   <p class="hint">Operasi yang sudah diprediksi tetapi belum dilaporkan hasilnya, terbaru di atas.
     Pilih <strong>Catat</strong> untuk mengisi kodenya ke formulir.</p>
   <ul class="row-list" data-list data-list-label="Menunggu BBM aktual" data-list-sort="name:Kendaraan,time:Waktu:date,amount:Alokasi:number">

@@ -10,12 +10,14 @@
 <section class="card">
   {{ ui.steps(['Unduh template', 'Isi kode operasi dan liter aktual', 'Unggah'], 0) }}
   <div class="button-row" style="margin-top: 0">
+    <a class="button" href="/bahan-bakar-aktual/menunggu.xlsx">Unduh operasi yang menunggu (Excel)</a>
     <a class="button button--secondary" href="/api/v1/bulk-actual-fuel/template?format=xlsx">Unduh template Excel</a>
     <a class="button button--secondary" href="/api/v1/bulk-actual-fuel/template?format=csv">Unduh template CSV</a>
   </div>
-  <p class="hint">Kolom wajib: kode operasi dan bahan bakar aktual (L). Sumber pengukuran opsional.
-    Kode operasi adalah kode yang dicatat saat estimasi dibuat; kode juga ada di Riwayat Prediksi
-    dan di berkas hasil prediksi massal. ID lama OPR-… tetap diterima.</p>
+  <p class="hint">Paling mudah: <strong>unduh operasi yang menunggu</strong>. Kodenya sudah terisi,
+    tinggal isi liter yang benar-benar terpakai; baris yang belum diisi dilewati saat diunggah, jadi
+    berkas yang sama bisa diisi bertahap. Dengan template kosong: kolom wajib kode operasi dan bahan
+    bakar aktual (L); ID lama OPR-… tetap diterima.</p>
   <form method="post" action="/bahan-bakar-aktual-massal" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     {{ ui.file_field('file', 'Berkas bahan bakar aktual', '.csv,.xlsx', hint='CSV atau Excel .xlsx yang diisi dari template di atas.') }}

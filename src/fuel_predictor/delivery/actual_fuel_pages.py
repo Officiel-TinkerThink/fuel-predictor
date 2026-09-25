@@ -3,7 +3,7 @@
 from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, File, Request, UploadFile, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from pydantic import ValidationError
 
 from fuel_predictor.application.actual_fuel import (
@@ -18,9 +18,10 @@ from fuel_predictor.application.daily_operations import DailyOperationNotFoundEr
 from fuel_predictor.application.historical_datasets import HistoricalDatasetImportError
 from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.delivery.http import ActualFuelRequest, translate_validation_errors
-from fuel_predictor.delivery.rendering import render
+from fuel_predictor.delivery.rendering import render, site_time
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.daily_operation import DailyOperationValidationError
+from fuel_predictor.infrastructure.actual_fuel_template import waiting_xlsx
 
 if TYPE_CHECKING:
     from fuel_predictor.application.identity import ActiveCaller
@@ -48,6 +49,26 @@ def build_actual_fuel_pages_router(
         chosen = request.query_params.get("operation_id", "").strip()
         values = {"operation_id": chosen} if chosen else {}
         return HTMLResponse(_form(guard.require_caller(request), values, []))
+
+    @router.get("/bahan-bakar-aktual/menunggu.xlsx")
+    def download_waiting(request: Request) -> Response:
+        """The waiting operations as a sheet to fill in and upload back."""
+        guard.require_caller(request)
+        rows = [
+            (
+                item.operation_code or item.operation_id,
+                item.vehicle or item.vehicle_category.value,
+                site_time(item.predicted_at),
+                f"{item.departure} → {item.destination}" if item.departure else "",
+                item.recommended_allocation_liters,
+            )
+            for item in list_awaiting_actual.execute()
+        ]
+        return Response(
+            content=waiting_xlsx(rows),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": 'attachment; filename="bbm-aktual-menunggu.xlsx"'},
+        )
 
     @router.post("/bahan-bakar-aktual", response_class=HTMLResponse)
     async def submit_form(request: Request) -> HTMLResponse:
@@ -149,6 +170,7 @@ def build_actual_fuel_pages_router(
                 accepted_count=len(result.accepted_rows),
                 quarantined_count=len(result.correction_report),
                 ignored_count=result.ignored_blank_row_count,
+                unfilled_count=result.unfilled_row_count,
             ),
             status_code=status.HTTP_201_CREATED,
         )

@@ -36,6 +36,9 @@ class BulkActualFuelResult:
     accepted_rows: tuple[BulkActualFuelAcceptedRow, ...]
     correction_report: tuple[DataQualityIssue, ...]
     ignored_blank_row_count: int
+    # Rows naming an operation but no litres yet: a sheet of waiting operations
+    # is filled in over days, and the rows not done yet are not mistakes.
+    unfilled_row_count: int = 0
 
 
 class BulkActualFuel:
@@ -56,12 +59,22 @@ class BulkActualFuel:
         accepted_rows: list[BulkActualFuelAcceptedRow] = []
         issues: list[DataQualityIssue] = []
         ignored_blank_row_count = 0
+        unfilled_row_count = 0
+        data_sheets = 0
         for sheet in self._source_reader.read(source_filename, content):
             mapped_headers = _map_headers(sheet.headers)
+            # A sheet with none of the columns - a template's instructions -
+            # is not data; reading it quarantined every instruction line.
+            if not mapped_headers:
+                continue
+            data_sheets += 1
             for row_number, values in sheet.rows:
                 raw_values = dict(zip(sheet.headers, values, strict=True))
                 if _is_blank_row(raw_values, mapped_headers):
                     ignored_blank_row_count += 1
+                    continue
+                if _is_unfilled_row(raw_values, mapped_headers):
+                    unfilled_row_count += 1
                     continue
                 source = SourceProvenance(
                     source_filename=source_filename,
@@ -100,10 +113,16 @@ class BulkActualFuel:
                     accepted_rows.append(
                         BulkActualFuelAcceptedRow(source, record, self._operation_code(record))
                     )
+        if data_sheets == 0:
+            raise HistoricalDatasetImportError(
+                "Berkas tidak memuat satu pun kolom yang dikenali. "
+                "Gunakan template dari halaman ini."
+            )
         return BulkActualFuelResult(
             accepted_rows=tuple(accepted_rows),
             correction_report=tuple(issues),
             ignored_blank_row_count=ignored_blank_row_count,
+            unfilled_row_count=unfilled_row_count,
         )
 
     def _operation_code(self, record: ActualFuelRecord) -> str | None:
@@ -155,6 +174,15 @@ def _is_blank_row(raw_values: dict[str, RawValue], mapped_headers: dict[str, str
     if relevant_headers:
         return all(is_blank(raw_values[header]) for header in relevant_headers)
     return all(is_blank(value) for value in raw_values.values())
+
+
+def _is_unfilled_row(raw_values: dict[str, RawValue], mapped_headers: dict[str, str]) -> bool:
+    """An operation named, its litres not written yet."""
+    code_header = mapped_headers.get("operation_id")
+    litres_header = mapped_headers.get("actual_fuel_liters")
+    if code_header is None or litres_header is None:
+        return False
+    return not is_blank(raw_values[code_header]) and is_blank(raw_values[litres_header])
 
 
 def _command_for_row(

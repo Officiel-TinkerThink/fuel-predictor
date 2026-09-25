@@ -231,7 +231,18 @@ def configure_site_timezone(zone: tzinfo) -> None:
     codes are formed in the same zone, so the time in a code and the time on
     the screen next to it always agree.
     """
+    global _SITE_ZONE
+    _SITE_ZONE = zone
     _ENVIRONMENT.filters["waktu"] = partial(format_datetime, zone=zone)
+
+
+def site_time(value: datetime | None) -> str:
+    """A time as every page shows it, for text produced outside a template
+    (a downloaded sheet)."""
+    return format_datetime(value, _SITE_ZONE)
+
+
+_SITE_ZONE: tzinfo = UTC
 
 
 _ENVIRONMENT = build_environment()

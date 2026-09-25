@@ -260,6 +260,8 @@ class BulkActualFuelResponse(BaseModel):
     accepted_row_count: int
     quarantined_row_count: int
     ignored_blank_row_count: int
+    # Rows naming an operation with no litres yet: skipped, not errors.
+    unfilled_row_count: int = 0
     accepted_rows: list[BulkActualFuelAcceptedRowResponse]
     correction_report: list[BulkCorrectionReportRowResponse]
 
@@ -781,6 +783,7 @@ def _bulk_actual_fuel_response(result: BulkActualFuelResult) -> BulkActualFuelRe
         accepted_row_count=len(result.accepted_rows),
         quarantined_row_count=len(result.correction_report),
         ignored_blank_row_count=result.ignored_blank_row_count,
+        unfilled_row_count=result.unfilled_row_count,
         accepted_rows=[
             BulkActualFuelAcceptedRowResponse(
                 source=source_response(row.source),

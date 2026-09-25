@@ -90,8 +90,14 @@ class ImportHistoricalDataset:
         valid_operations: list[HistoricalDailyOperation] = []
         issues: list[DataQualityIssue] = []
         ignored_blank_row_count = 0
+        data_sheets = 0
         for sheet in self._source_reader.read(source_filename, content):
             mapped_headers = _map_headers(sheet.headers)
+            # A sheet with none of the columns - a template's instructions -
+            # is not data; reading it quarantined every instruction line.
+            if not mapped_headers:
+                continue
+            data_sheets += 1
             for row_number, values in sheet.rows:
                 raw_values = dict(zip(sheet.headers, values, strict=True))
                 if _is_blank_calendar_row(raw_values, mapped_headers):
@@ -117,6 +123,11 @@ class ImportHistoricalDataset:
                 elif operation is not None:
                     valid_operations.append(operation)
 
+        if data_sheets == 0:
+            raise HistoricalDatasetImportError(
+                "Berkas tidak memuat satu pun kolom yang dikenali. "
+                "Gunakan template dari halaman ini."
+            )
         dataset_version = self._repository.create(
             source_filename=source_filename,
             valid_operations=valid_operations,

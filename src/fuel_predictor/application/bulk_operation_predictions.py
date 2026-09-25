@@ -73,8 +73,14 @@ class BulkOperationPrediction:
         accepted_rows: list[BulkPredictionAcceptedRow] = []
         issues: list[DataQualityIssue] = []
         ignored_blank_row_count = 0
+        data_sheets = 0
         for sheet in self._source_reader.read(source_filename, content):
             mapped_headers = _map_headers(sheet.headers)
+            # A sheet with none of the columns - a template's instructions -
+            # is not data; reading it quarantined every instruction line.
+            if not mapped_headers:
+                continue
+            data_sheets += 1
             for row_number, values in sheet.rows:
                 raw_values = dict(zip(sheet.headers, values, strict=True))
                 if _is_blank_row(raw_values, mapped_headers):
@@ -109,6 +115,11 @@ class BulkOperationPrediction:
                 prediction = self._generate_fuel_prediction.execute(operation.operation_id)
                 accepted_rows.append(BulkPredictionAcceptedRow(source, operation, prediction))
 
+        if data_sheets == 0:
+            raise HistoricalDatasetImportError(
+                "Berkas tidak memuat satu pun kolom yang dikenali. "
+                "Gunakan template dari halaman ini."
+            )
         return BulkOperationPredictionResult(
             accepted_rows=tuple(accepted_rows),
             correction_report=tuple(issues),

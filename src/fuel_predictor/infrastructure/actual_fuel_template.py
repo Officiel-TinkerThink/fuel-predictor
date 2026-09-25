@@ -1,4 +1,5 @@
 import csv
+from collections.abc import Sequence
 from io import BytesIO, StringIO
 from typing import cast
 
@@ -55,6 +56,58 @@ def xlsx_template() -> bytes:
     instructions.column_dimensions["B"].width = 18
     instructions.column_dimensions["C"].width = 90
     instructions.freeze_panes = "A2"
+    output = BytesIO()
+    workbook.save(output)
+    return output.getvalue()
+
+
+# Beside the columns the import reads, what a person needs to recognise the
+# operation. "(info)" keeps them out of the importer's header matching.
+WAITING_INFO_HEADERS = (
+    "Kendaraan (info)",
+    "Diprediksi (info)",
+    "Rute (info)",
+    "Alokasi (L) (info)",
+)
+
+
+def waiting_xlsx(rows: Sequence[tuple[str, str, str, str, float]]) -> bytes:
+    """The operations still waiting for actual fuel, as a sheet to fill in.
+
+    Each row is (code, vehicle, predicted at, route, allocation). The litres
+    and measurement columns are left empty; uploaded back through the bulk
+    import, rows still empty are skipped as not yet filled.
+    """
+    workbook = Workbook()
+    worksheet = cast(Worksheet, workbook.active)
+    worksheet.title = "Bahan Bakar Aktual"
+    worksheet.append((*BULK_ACTUAL_FUEL_TEMPLATE_HEADERS, *WAITING_INFO_HEADERS))
+    _style_header(worksheet)
+    for code, vehicle, predicted_at, route, allocation in rows:
+        worksheet.append((code, None, None, vehicle, predicted_at, route, round(allocation, 2)))
+    for column, width in zip("ABCDEFG", (30, 30, 28, 22, 18, 36, 18), strict=True):
+        worksheet.column_dimensions[column].width = width
+    worksheet.freeze_panes = "B2"
+
+    instructions = workbook.create_sheet("Petunjuk")
+    instructions.append(("Langkah", "Petunjuk"))
+    _style_header(instructions)
+    instructions.append(("1", "Isi kolom Bahan Bakar Aktual (L) untuk operasi yang sudah selesai."))
+    instructions.append(
+        (
+            "2",
+            "Sumber Pengukuran: manual_entry, fuel_meter, atau receipt; kosong juga boleh.",
+        )
+    )
+    instructions.append(
+        ("3", "Baris yang belum diisi biarkan kosong: saat diunggah, baris itu dilewati.")
+    )
+    instructions.append(("4", "Unggah berkas ini di menu Impor Massal (BBM Aktual)."))
+    instructions.append(
+        ("Info", "Kolom bertanda (info) hanya untuk mengenali operasi; tidak dibaca.")
+    )
+    instructions.column_dimensions["A"].width = 10
+    instructions.column_dimensions["B"].width = 90
     output = BytesIO()
     workbook.save(output)
     return output.getvalue()
