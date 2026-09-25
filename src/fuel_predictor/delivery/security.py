@@ -289,6 +289,13 @@ def _is_public(path: str) -> bool:
     return any(path == public or path.startswith(f"{public}/") for public in _PUBLIC_PATHS)
 
 
+def may_open(caller: ActiveCaller | None, path: str) -> bool:
+    """Whether a link to `path` opens for this caller - the guard's own rule,
+    so a page never offers a link that ends in "Akses ditolak"."""
+    required = _required_capability("GET", path.split("?", 1)[0])
+    return required is None or (caller is not None and caller.allows(required))
+
+
 def _required_capability(method: str, path: str) -> Capability | None:
     path_segments = [segment for segment in path.split("/") if segment != ""]
     for route_method, pattern, capability in ROUTE_CAPABILITIES:

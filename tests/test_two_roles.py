@@ -270,3 +270,20 @@ def test_the_overview_counts_the_whole_backlog_and_says_when_nothing_waits(
     assert "9 operasi sudah diprediksi" in overview
     # Only the newest few are listed on the overview itself.
     assert overview.count('href="/bahan-bakar-aktual?operation_id=') == 4
+
+
+def test_an_operator_is_not_offered_a_link_that_would_be_refused(
+    operator_client: TestClient, tmp_path: Path
+) -> None:
+    """Catat Aktual linked every user to the model performance page, which an
+    operator may not open; the link now follows the guard's own rule."""
+    for_operator = operator_client.get("/bahan-bakar-aktual").text
+    with TestClient(
+        create_app(database_path=tmp_path / "operations.sqlite3", bootstrap_administrator=_ADMIN)
+    ) as admin:
+        _sign_in(admin, *_ADMIN)
+        for_admin = admin.get("/bahan-bakar-aktual").text
+
+    assert operator_client.get("/pemantauan/kinerja-model").status_code == 403
+    assert 'href="/pemantauan/kinerja-model"' not in for_operator
+    assert 'href="/pemantauan/kinerja-model"' in for_admin

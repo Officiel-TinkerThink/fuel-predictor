@@ -14,6 +14,7 @@ from types import SimpleNamespace
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 
 from fuel_predictor.application.identity import ActiveCaller
+from fuel_predictor.delivery.security import may_open
 from fuel_predictor.domain.identity import Capability, UserRole
 
 TEMPLATE_DIRECTORY = Path(__file__).parent / "templates"
@@ -170,6 +171,7 @@ def render(
         role_label=_ROLE_LABELS[caller.user.role] if caller else None,
         csrf_token=caller.csrf_token if caller else "",
         navigation=navigation_for(caller),
+        may_open=partial(may_open, caller),
         active_path=active_path,
         page_title=page_title,
         eyebrow=eyebrow,

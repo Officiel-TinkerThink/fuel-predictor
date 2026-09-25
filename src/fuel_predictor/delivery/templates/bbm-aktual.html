@@ -68,7 +68,7 @@
 
 <div class="button-row">
   <a class="button button--secondary" href="/bahan-bakar-aktual-massal">Impor aktual dari berkas</a>
-  <a class="button button--secondary" href="/pemantauan/kinerja-model">Lihat kinerja prediksi</a>
+  {% if may_open('/pemantauan/kinerja-model') %}<a class="button button--secondary" href="/pemantauan/kinerja-model">Lihat kinerja prediksi</a>{% endif %}
 </div>
 
 {% endblock %}
