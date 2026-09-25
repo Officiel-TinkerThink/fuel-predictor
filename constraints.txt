@@ -26,3 +26,10 @@ statsmodels>=0.14.0,<0.15
 # it, since app waits on mlflow being healthy. Lift once MLflow ships a
 # Starlette that imports the submodule.
 anyio<4.15
+
+# SQLAlchemy 2.1.0 (first resolved by CI on 2026-09-25) changed the typing of Select and of
+# scalar results: `mypy src tests` failed in CI on eight places that are
+# correct under 2.0, and nothing here has been run on 2.1 at all - the image
+# built from this file would have been the first. Lift once the codebase is
+# typed and tested against 2.1.
+sqlalchemy<2.1
