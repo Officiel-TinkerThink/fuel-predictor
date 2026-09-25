@@ -72,7 +72,7 @@
   <form method="post" action="/pengguna" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     {{ ui.text_field('username', 'Nama pengguna', form_values.get('username', ''), hint='Huruf, angka, titik, garis, dan garis bawah.', errors=errors, required=true, autocomplete='username') }}
-    {{ ui.text_field('full_name', 'Nama', form_values.get('full_name', ''), errors=errors, required=true) }}
+    {{ ui.text_field('full_name', 'Nama lengkap', form_values.get('full_name', ''), errors=errors, required=true) }}
     {{ ui.text_field('email', 'Email', form_values.get('email', ''), hint='Opsional. Bila diisi, bisa dipakai untuk masuk dan untuk tautan lupa kata sandi.', errors=errors, type='email', autocomplete='email') }}
     {{ ui.text_field('password', 'Kata sandi awal', '', hint='Minimal 12 karakter. Sampaikan secara aman kepada pengguna.', errors=errors, required=true, type='password', autocomplete='new-password') }}
     {{ ui.select_field('role', 'Peran', role_options, form_values.get('role', 'operator'), hint='Operator: prediksi dan BBM aktual. Administrator: semuanya.', errors=errors, required=true) }}

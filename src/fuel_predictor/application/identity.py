@@ -298,6 +298,14 @@ class ResolveSession:
         return ActiveCaller(user=user, csrf_token=session.csrf_token)
 
 
+def _problem_of(check: Callable[[], object]) -> IdentityValidationError | None:
+    try:
+        check()
+    except IdentityValidationError as problem:
+        return problem
+    return None
+
+
 @dataclass(frozen=True, slots=True)
 class CreateUser:
     user_repository: UserRepository
@@ -314,10 +322,24 @@ class CreateUser:
         created_by: str,
         email: str | None = None,
     ) -> User:
+        # Every field is checked before any is refused, so the form names all
+        # its problems at once rather than one per resubmission.
+        problems = [
+            problem
+            for check in (
+                lambda: normalize_username(username),
+                lambda: validate_full_name(full_name),
+                lambda: normalize_email(email),
+                lambda: validate_password(password),
+            )
+            if (problem := _problem_of(check)) is not None
+        ]
+        if problems:
+            first, *rest = problems
+            raise IdentityValidationError(first.field, first.message, also=tuple(rest))
         normalized = normalize_username(username)
         validated_name = validate_full_name(full_name)
         normalized_email = normalize_email(email)
-        validate_password(password)
         if self.user_repository.get_by_username(normalized) is not None:
             raise UsernameAlreadyExistsError(normalized)
         if normalized_email and self.user_repository.get_by_email(normalized_email) is not None:

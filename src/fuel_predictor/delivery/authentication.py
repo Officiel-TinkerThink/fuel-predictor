@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 
 from fastapi import APIRouter, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from fuel_predictor.application.identity import (
     CreateUser,
@@ -41,7 +41,7 @@ class CreateUserRequest(BaseModel):
     username: str
     full_name: str
     email: str | None = None
-    password: str = Field(min_length=1)
+    password: str  # the rules (12+ characters) are the domain's, named with the others
     role: UserRole
 
 
@@ -269,7 +269,12 @@ def register_identity_error_handlers(app: object) -> None:
     ) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            content={"errors": [{"field": error.field, "message": error.message}]},
+            content={
+                "errors": [
+                    {"field": problem.field, "message": problem.message}
+                    for problem in error.problems
+                ]
+            },
         )
 
 

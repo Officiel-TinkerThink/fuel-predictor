@@ -67,12 +67,19 @@ def role_allows(role: UserRole, capability: Capability) -> bool:
 
 
 class IdentityValidationError(ValueError):
-    """A user or credential value violated a rule the operator must correct."""
+    """A user or credential value violated a rule the operator must correct.
 
-    def __init__(self, field: str, message: str) -> None:
+    `field` and `message` name the first problem; `problems` holds every one
+    found in the same submission, so a form can name them all at once.
+    """
+
+    def __init__(
+        self, field: str, message: str, also: tuple["IdentityValidationError", ...] = ()
+    ) -> None:
         super().__init__(message)
         self.field = field
         self.message = message
+        self.problems: tuple[IdentityValidationError, ...] = (self, *also)
 
 
 MINIMUM_PASSWORD_LENGTH = 12

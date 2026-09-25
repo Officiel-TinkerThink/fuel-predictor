@@ -1201,12 +1201,12 @@ def register_error_handlers(app: FastAPI) -> None:
 _FIELD_LABELS = {
     "file": "Berkas",
     "vehicle_category": "Kategori kendaraan",
-    "activity_mode": "Mode aktivitas",
+    "activity_mode": "Aktivitas",
     "lifting_hours": "Jam lifting",
     "total_distance_km": "Jarak total",
     "distance_source": "Sumber jarak",
     "actual_fuel_liters": "Bahan bakar aktual",
-    "measurement_source": "Sumber pengukuran",
+    "measurement_source": "Diukur dengan",
 }
 
 
@@ -1222,10 +1222,15 @@ def _translate_validation_error(error: Mapping[str, Any]) -> dict[str, str]:
     label = _FIELD_LABELS.get(field, "Nilai")
     error_type = str(error.get("type", ""))
 
-    if error_type == "missing":
+    # A blank form box arrives as "", which is not a number that failed to
+    # parse but a field left empty.
+    if error_type == "missing" or error.get("input") == "":
         message = f"{label} wajib diisi."
-    elif error_type in {"greater_than", "finite_number"} and field == "total_distance_km":
-        message = "Jarak total harus lebih besar dari 0."
+    elif error_type == "greater_than":
+        bound = (error.get("ctx") or {}).get("gt", 0)
+        message = f"{label} harus lebih besar dari {bound:g}."
+    elif error_type == "finite_number":
+        message = f"{label} harus berupa angka biasa."
     elif error_type == "extra_forbidden":
         message = f"Kolom {field} tidak dikenali."
     elif error_type in {"enum", "literal_error"}:

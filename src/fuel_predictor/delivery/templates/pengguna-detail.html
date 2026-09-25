@@ -22,7 +22,7 @@
         <dt>Nama pengguna</dt><dd>{{ user.username }}</dd>
         <dt>Dibuat</dt><dd>{{ user.created_at | waktu }}</dd>
       </dl>
-      {{ ui.text_field('full_name', 'Nama', user.full_name, errors=errors, required=true) }}
+      {{ ui.text_field('full_name', 'Nama lengkap', user.full_name, errors=errors, required=true) }}
       {{ ui.text_field('email', 'Email', user.email or '', hint='Opsional. Dipakai untuk masuk dan untuk tautan lupa kata sandi.', errors=errors, type='email', autocomplete='email') }}
       {% if is_self %}
       <input type="hidden" name="role" value="{{ user.role.value }}">

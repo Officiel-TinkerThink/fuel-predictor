@@ -41,7 +41,7 @@ def test_api_rejects_missing_core_values_with_indonesian_feedback(tmp_path: Path
     assert response.json() == {
         "errors": [
             {"field": "vehicle_category", "message": "Kategori kendaraan wajib diisi."},
-            {"field": "activity_mode", "message": "Mode aktivitas wajib diisi."},
+            {"field": "activity_mode", "message": "Aktivitas wajib diisi."},
             {"field": "distance_source", "message": "Sumber jarak wajib diisi."},
         ]
     }

@@ -134,15 +134,13 @@ def build_user_pages_router(
                 created_by=caller.user.username,
             )
         except (IdentityValidationError, ValueError) as error:
-            message = error.message if isinstance(error, IdentityValidationError) else str(error)
-            field = error.field if isinstance(error, IdentityValidationError) else "role"
+            errors = (
+                [{"field": problem.field, "message": problem.message} for problem in error.problems]
+                if isinstance(error, IdentityValidationError)
+                else [{"field": "role", "message": str(error)}]
+            )
             return HTMLResponse(
-                _directory_page(
-                    caller,
-                    request,
-                    errors=[{"field": field, "message": message}],
-                    form_values=values,
-                ),
+                _directory_page(caller, request, errors=errors, form_values=values),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         return RedirectResponse(

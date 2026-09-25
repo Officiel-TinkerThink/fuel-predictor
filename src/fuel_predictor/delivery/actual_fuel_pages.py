@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from fuel_predictor.application.identity import ActiveCaller
 
 _UPLOAD_FILE = File(...)
+_NO_CODE = "Kode operasi wajib diisi."
 
 
 def build_actual_fuel_pages_router(
@@ -81,12 +82,24 @@ def build_actual_fuel_pages_router(
         # How the day was planned, to say how the figure landed: read before
         # recording, while the operation is still among those waiting.
         waiting = {item.operation_id: item for item in list_awaiting_actual.execute()}
+        reference = submitted.get("operation_id", "").strip()
+        # Every problem with the form is named at once: a blank code is not an
+        # unknown one, and it is said alongside whatever is wrong with the litres.
+        problems = [] if reference else [{"field": "operation_id", "message": _NO_CODE}]
+        payload = {key: value for key, value in submitted.items() if key != "operation_id"}
         try:
-            payload = {key: value for key, value in submitted.items() if key != "operation_id"}
             validated = ActualFuelRequest.model_validate(payload)
+        except ValidationError as error:
+            problems += translate_validation_errors(error.errors())
+        if problems:
+            return HTMLResponse(
+                _form(caller, submitted, problems),
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            )
+        try:
             record = record_actual_fuel.execute(
                 RecordActualFuelCommand(
-                    operation_reference=submitted.get("operation_id", "").strip(),
+                    operation_reference=reference,
                     actual_fuel_liters=validated.actual_fuel_liters,
                     measurement_source=validated.measurement_source,
                     recorded_by=caller.user.username,
@@ -94,11 +107,6 @@ def build_actual_fuel_pages_router(
             )
             events.actual_fuel_recorded(
                 caller.user.username, record, record_actual_fuel.code_for(record)
-            )
-        except ValidationError as error:
-            return HTMLResponse(
-                _form(caller, submitted, translate_validation_errors(error.errors())),
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
         except DailyOperationValidationError as error:
             return HTMLResponse(
