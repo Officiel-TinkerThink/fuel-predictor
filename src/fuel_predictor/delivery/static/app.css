@@ -1277,6 +1277,18 @@ tbody tr.is-selected td {
   background: var(--color-brand-soft);
 }
 
+/* Still readable - it may be on a slip already - but plainly not in use. */
+.operation-code-callout--cancelled {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+}
+
+.operation-code-callout--cancelled .operation-code {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
 .operation-code-callout__label {
   margin: 0;
   font-size: 0.82rem;

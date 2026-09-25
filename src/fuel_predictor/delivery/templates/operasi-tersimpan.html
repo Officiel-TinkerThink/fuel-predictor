@@ -3,14 +3,12 @@
 
 {% block content %}
 
-{% if no_active_model %}
+{% if operation.is_cancelled %}
+{{ ui.cancelled_banner(operation) }}
+{% elif no_active_model %}
 {{ ui.banner('warning', 'Operasi harian tersimpan, tetapi belum ada model aktif', 'Estimasi belum bisa dibuat sampai sebuah model dipromosikan di Pengelolaan Model. Operasi ini tetap tersimpan; buat estimasinya nanti dari halaman ini.', 'Buka Pengelolaan Model', '/pengelolaan-model') }}
 {% else %}
 {{ ui.banner('success', 'Operasi harian tersimpan', 'Periksa ringkasannya di bawah, lalu buat estimasi kebutuhan BBM-nya.') }}
-{% endif %}
-
-{% if operation.is_cancelled %}
-{{ ui.cancelled_banner(operation) }}
 {% endif %}
 
 {% if operation.route_distance_manual_fallback %}

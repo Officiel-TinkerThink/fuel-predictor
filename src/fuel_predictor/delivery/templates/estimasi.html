@@ -3,14 +3,14 @@
 
 {% block content %}
 
+{% if operation and operation.is_cancelled %}
+{{ ui.cancelled_banner(operation) }}
+{% endif %}
+
 {% if just_created %}
 {{ ui.banner('success', 'Estimasi berhasil dibuat', 'Estimasi ini dipelajari dari catatan bahan bakar disiapkan. Nilai ini bukan konsumsi aktual yang telah diverifikasi.') }}
 {% else %}
 {{ ui.banner('info', 'Estimasi dibuat ' ~ (prediction.created_at | waktu), 'Estimasi ini dipelajari dari catatan bahan bakar disiapkan. Nilai ini bukan konsumsi aktual yang telah diverifikasi.') }}
-{% endif %}
-
-{% if operation and operation.is_cancelled %}
-{{ ui.cancelled_banner(operation) }}
 {% endif %}
 
 {% if prediction.route_distance_manual_fallback %}
@@ -50,8 +50,10 @@
     <dt>Jarak total</dt><dd>{{ operation.total_distance_km | angka }} km</dd>
     {% endif %}
   </dl>
+  {% if not (operation and operation.is_cancelled) %}
   <p class="hint">Setelah operasi selesai, catat bahan bakar aktualnya — lewat tombol Catat BBM aktual atau
     dari menu Riwayat Prediksi — agar model bisa belajar dari hasilnya.</p>
+  {% endif %}
   {# Version identifiers matter for an audit, not for the planner reading the
      number, so they sit behind a fold. #}
   <details class="technical">

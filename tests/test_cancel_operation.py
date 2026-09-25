@@ -48,6 +48,9 @@ def test_a_cancelled_operation_leaves_the_waiting_list_and_says_why(tmp_path: Pa
     assert f'operation_id={code}"' not in waiting
     assert "Dibatalkan" in history
     assert "Operasi dibatalkan" in page and "Tertekan dua kali" in page
+    # The page stops asking for what no longer applies.
+    assert "catat kode ini" not in page and "dibatalkan, jangan dipakai" in page
+    assert "Setelah operasi selesai, catat bahan bakar aktualnya" not in page
     assert "Tertekan dua kali" in audit
 
 

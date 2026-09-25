@@ -36,12 +36,14 @@
 {# The code to write on the fuel slip, big enough to read off the screen, with
    a copy button once scripts run. With the catalog's unit, it also says what
    each part of the vehicle code stands for - but only while the catalog still
-   codes the unit the way it did when this code was issued. #}
+   codes the unit the way it did when this code was issued. A cancelled
+   operation's code is still shown - it may already be on a slip - but no
+   longer asked to be written down. #}
 {% macro operation_code_callout(operation, vehicle=none) -%}
-<section class="card operation-code-callout" aria-labelledby="operation-code-heading">
-  <p class="operation-code-callout__label" id="operation-code-heading">Kode operasi — catat kode ini</p>
+<section class="card operation-code-callout{% if operation.is_cancelled %} operation-code-callout--cancelled{% endif %}" aria-labelledby="operation-code-heading">
+  <p class="operation-code-callout__label" id="operation-code-heading">{% if operation.is_cancelled %}Kode operasi — dibatalkan, jangan dipakai{% else %}Kode operasi — catat kode ini{% endif %}</p>
   <p class="operation-code-callout__code"><code class="operation-code">{{ operation.operation_code }}</code>
-    <button type="button" class="button button--secondary button--small" data-copy="{{ operation.operation_code }}" hidden>Salin kode</button></p>
+    {% if not operation.is_cancelled %}<button type="button" class="button button--secondary button--small" data-copy="{{ operation.operation_code }}" hidden>Salin kode</button>{% endif %}</p>
   {% if vehicle and ('-' ~ vehicle.vehicle_code) in operation.operation_code %}
   <p class="operation-code-callout__legend">
     {% if vehicle.group_code %}<span><strong>{{ vehicle.group_code }}</strong> = {{ vehicle.group }}</span>{% endif %}
@@ -49,8 +51,10 @@
     <span><strong>{{ vehicle.unit_mark }}</strong> = {{ vehicle.name }}</span>
   </p>
   {% endif %}
+  {% if not operation.is_cancelled %}
   <p class="hint">Tulis di nota atau catatan BBM. Kode ini yang diketik saat mencatat BBM aktual nanti.
     <a href="/armada">Lihat semua kode kendaraan</a>.</p>
+  {% endif %}
 </section>
 {%- endmacro %}
 
