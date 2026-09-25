@@ -83,18 +83,13 @@ dulu, lalu masuk lagi dengan yang baru.
 3. Tekan **Simpan & buat estimasi**. Operasi tersimpan lebih dulu, jadi angkanya bisa
    ditelusuri kembali nanti, lalu estimasinya langsung ditampilkan.
 
-Hasilnya menampilkan:
+Hasilnya dua kotak berdampingan: **alokasi rekomendasi** — angka besar yang dipakai menyiapkan
+BBM — dan **kode operasi** yang perlu dicatat. Di bawah angka alokasi tertulis estimasi
+kebutuhannya, rentang ketidakpastiannya (rentang lebar berarti model kurang yakin), dan cadangan
+yang ditambahkan. Angka ini perkiraan dari catatan BBM yang disiapkan, **bukan konsumsi aktual**.
+Model yang menghitung ada di lipatan *Detail teknis*.
 
-| Yang ditampilkan | Artinya |
-|---|---|
-| Perkiraan kebutuhan | Estimasi bahan bakar untuk operasi ini. |
-| Rekomendasi alokasi | Perkiraan ditambah margin aman. **Angka inilah yang dipakai menyiapkan.** |
-| Rentang ketidakpastian | Batas bawah dan atas yang masuk akal. Rentang lebar = model kurang yakin. |
-| Model yang dipakai | Versi model yang menghitung. Berguna saat menelusuri angka lama. |
-
-![Hasil estimasi: tiga kotak angka — alokasi rekomendasi, estimasi kebutuhan BBM, rentang ketidakpastian — lalu kode operasi dengan tombol Salin kode, kendaraan, aktivitas, rute, jarak total, dan tombol Catat BBM aktual untuk operasi ini.](images/02-hasil-prediksi.png)
-
-Perhatikan kotak hijau di atas: nilai ini **estimasi bahan bakar disiapkan**, bukan konsumsi aktual yang telah diverifikasi. Kalimat itu selalu ikut ditampilkan.
+![Hasil estimasi: alokasi rekomendasi 33,16 L dengan estimasi kebutuhan, rentang ketidakpastian, dan cadangan 5 L di bawahnya; di sebelahnya kode operasi 260925-2229-VT-P410-VT01 dengan tombol Salin kode dan arti tiap bagiannya; lalu tombol Cetak slip, Catat BBM aktual untuk operasi ini, dan Buat operasi lain; di bawahnya kendaraan, aktivitas, rute, jarak total, dan waktu dibuat.](images/02-hasil-prediksi.png)
 
 **Catat kode operasinya.** Setiap operasi mendapat kode, misalnya `260924-0914-VT-P410-VT01`:
 
@@ -111,7 +106,7 @@ besar atau kecil tidak berpengaruh.
 
 Kalau kendaraan yang sama dibuatkan operasi dua kali dalam menit yang sama — misalnya tombol
 tertekan dua kali — operasi kedua mendapat akhiran `-2` (`260924-0914-VT-P410-VT01-2`). Batalkan operasi yang
-tidak terpakai: tombol **Batalkan operasi** di halaman estimasinya meminta alasan singkat, lalu
+tidak terpakai: tautan **Batalkan operasi** di bagian bawah halaman estimasinya meminta alasan singkat, lalu
 operasi itu keluar dari daftar menunggu BBM aktual. Datanya tetap tersimpan dan terlihat di
 **Riwayat Prediksi** dengan tanda *Dibatalkan*. Operasi yang BBM aktualnya sudah dicatat tidak
 bisa dibatalkan.
@@ -158,7 +153,7 @@ Untuk memperbaikinya, tekan **Unduh baris yang perlu diperbaiki**: berkas itu ha
 yang bermasalah, dengan masalahnya di kolom terakhir. Perbaiki, lalu unggah berkas itu saja.
 **Jangan mengunggah ulang berkas aslinya** — operasi yang sudah berhasil akan dibuat lagi.
 
-![Hasil unggah massal: 4 baris berhasil diprediksi dengan tombol Unduh hasil (CSV), dan laporan koreksi berisi 3 baris dikarantina dengan alasan masing-masing — jam lifting kosong, jarak bukan angka, dan jarak bernilai negatif.](images/03-unggah-massal.png)
+![Hasil unggah massal: 3 operasi mendapat kode dan estimasi, 2 baris perlu diperbaiki. Kotak Baris yang perlu diperbaiki di atas dengan tombol Unduh baris yang perlu diperbaiki dan masalah tiap baris — jarak bukan angka, dan lifting untuk unit yang tidak bisa lifting; lalu kotak Berhasil dengan tombol Unduh hasil (CSV) dan Cetak semua slip, berisi kode operasi, kendaraan, dan alokasi tiap baris.](images/03-unggah-massal.png)
 
 Kolom **Masalah** menyebutkan persis apa yang salah pada tiap baris.
 
@@ -260,7 +255,7 @@ melayani. Segera kembalikan: di **Pengelolaan Model**, tabel *Semua versi*, teka
 **Aktifkan kembali** pada versi sebelumnya (tersedia untuk versi yang paketnya masih
 tersimpan), lalu hubungi penanggung jawab teknis.
 
-![Pengelolaan Model: model aktif beserta MAE-nya, satu kandidat menunggu keputusan dengan tombol Bandingkan dan Promosikan, dan tabel Semua versi yang menampilkan status tiap versi.](images/05-pengelolaan-model.png)
+![Pengelolaan Model: peringatan bahwa model aktif meleset rata-rata 6,66 L, di atas batas 5 L; model aktif beserta MAE-nya; satu kandidat menunggu keputusan dengan tombol Bandingkan dan Promosikan; dan tabel Semua versi yang menampilkan status tiap versi.](images/05-pengelolaan-model.png)
 
 Tombol **Promosikan** — selalu dengan konfirmasi — adalah satu-satunya cara model berganti.
 Tidak ada promosi otomatis.
