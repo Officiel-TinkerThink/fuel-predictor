@@ -28,6 +28,13 @@ _PAGES = {
     ),
 }
 _ROUTER_MISSES = {"Not Found", "Method Not Allowed"}
+# Something failed that no page anticipated. Said without detail - the log
+# has the traceback - and with what the person can still do.
+_UNEXPECTED = (
+    "Terjadi kesalahan",
+    "Permintaan ini gagal diproses. Data yang sudah tersimpan aman. Coba lagi sebentar lagi; "
+    "bila terus terjadi, sampaikan kepada administrator beserta waktunya.",
+)
 
 
 def register_error_pages(app: FastAPI) -> None:
@@ -53,6 +60,16 @@ def register_error_pages(app: FastAPI) -> None:
             )
         return JSONResponse(
             status_code=error.status_code, content={"detail": error.detail}, headers=headers
+        )
+
+    @app.exception_handler(Exception)
+    async def handle_unexpected_error(request: Request, _error: Exception) -> Response:
+        # Starlette re-raises after this answer, so the traceback still reaches the log.
+        if _wants_a_page(request):
+            return HTMLResponse(render_error_page(*_UNEXPECTED), status_code=500)
+        return JSONResponse(
+            status_code=500,
+            content={"error": {"code": "internal_error", "message": _UNEXPECTED[1]}},
         )
 
 
