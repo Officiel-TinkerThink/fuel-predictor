@@ -153,3 +153,20 @@ def test_the_route_column_appears_only_when_a_route_was_planned(tmp_path: Path) 
     assert "<th>Rute</th>" not in by_distance
     assert "<th>Rute</th>" in with_a_route
     assert "Depo → Depo" in with_a_route
+
+
+def test_history_search_finds_rows_by_their_status(tmp_path: Path) -> None:
+    """The Aktual column shows a state; typing it finds those rows."""
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        _train_baseline(client)
+        recorded = _operation_with_prediction(client, 24)["operation"]
+        waiting = _operation_with_prediction(client, 36)["operation"]
+        client.post(
+            f"/api/v1/daily-operations/{recorded['operation_id']}/actual-fuel",
+            json={"actual_fuel_liters": 20, "measurement_source": "fuel_meter"},
+        )
+        found = client.get("/riwayat-prediksi?cari=menunggu").text
+
+    # By id: made in the same minute, one code is the other plus "-2".
+    assert waiting["operation_id"] in found
+    assert recorded["operation_id"] not in found

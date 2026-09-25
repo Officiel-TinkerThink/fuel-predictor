@@ -27,6 +27,7 @@ from fuel_predictor.application.locations import LocationCatalog, LocationOption
 from fuel_predictor.application.prediction_history import (
     GetLatestPrediction,
     ListRecentPredictions,
+    PredictionHistoryEntry,
 )
 from fuel_predictor.application.routing import RoutePreviewProvider, RoutingProviderUnavailable
 from fuel_predictor.application.similar_operations import (
@@ -293,6 +294,7 @@ def build_prediction_pages_router(
                 e.vehicle,
                 e.departure,
                 e.destination,
+                _history_status(e),
             ],
             sorts=_HISTORY_SORTS,
             default_sort="waktu",
@@ -558,3 +560,15 @@ def _render_form(
         location_options=location_options,
         route_preview_available=route_preview_available,
     )
+
+
+def _history_status(entry: PredictionHistoryEntry) -> str:
+    """The row's state in the words its Aktual column shows, so a search
+    for "dibatalkan" or "menunggu" finds those rows."""
+    if entry.cancelled:
+        return "dibatalkan"
+    if entry.actual_fuel_liters is None:
+        return "menunggu belum dicatat"
+    if entry.actual_fuel_liters > entry.recommended_allocation_liters:
+        return "tercatat melebihi alokasi"
+    return "tercatat"
