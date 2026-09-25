@@ -128,3 +128,6 @@ def test_an_operator_s_day_offers_only_links_they_may_open(tmp_path: Path) -> No
 
     dead = {name: links for name, page in pages.items() if (links := _dead_links(page))}
     assert dead == {}
+    # Every page names itself once - what a screen reader announces first.
+    headings = {name: page.count("<h1") for name, page in pages.items()}
+    assert {name: count for name, count in headings.items() if count != 1} == {}

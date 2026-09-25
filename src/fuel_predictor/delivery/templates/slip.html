@@ -14,6 +14,8 @@
 {% import "_slip.html" as slips %}
 <body class="slip-page">
 <main class="slip">
+  {# Read out as the page's name; on paper the sheet's own header says it. #}
+  <h1 class="visually-hidden">Slip BBM {{ operation.operation_code or operation.operation_id }}</h1>
   <div class="slip__actions" data-print-actions>
     <button type="button" class="button" data-print onclick="window.print()">Cetak slip</button>
     <a class="button button--secondary" href="/operasi-harian/{{ operation.operation_id }}">Kembali ke estimasi</a>
