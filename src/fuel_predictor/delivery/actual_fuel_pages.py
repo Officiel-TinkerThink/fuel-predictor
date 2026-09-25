@@ -78,6 +78,9 @@ def build_actual_fuel_pages_router(
         caller = guard.require_caller(request)
         form_data = await request.form()
         submitted = {key: str(value) for key, value in form_data.items() if key != "csrf_token"}
+        # How the day was planned, to say how the figure landed: read before
+        # recording, while the operation is still among those waiting.
+        waiting = {item.operation_id: item for item in list_awaiting_actual.execute()}
         try:
             payload = {key: value for key, value in submitted.items() if key != "operation_id"}
             validated = ActualFuelRequest.model_validate(payload)
@@ -150,7 +153,9 @@ def build_actual_fuel_pages_router(
                 page_title="Bahan Bakar Aktual Tersimpan",
                 active_path="/bahan-bakar-aktual",
                 record=record,
-                operation_code=_operation_code(record_actual_fuel, record.operation_id),
+                operation_code=record_actual_fuel.code_for(record),
+                planned=waiting.get(record.operation_id),
+                still_waiting=len(waiting) - (record.operation_id in waiting),
             ),
             status_code=status.HTTP_201_CREATED,
         )
@@ -190,11 +195,6 @@ def build_actual_fuel_pages_router(
         )
 
     return router
-
-
-def _operation_code(record_actual_fuel: RecordActualFuel, operation_id: str) -> str | None:
-    operation = record_actual_fuel.operation_reader.get(operation_id)
-    return operation.operation_code if operation is not None else None
 
 
 def _render_form(

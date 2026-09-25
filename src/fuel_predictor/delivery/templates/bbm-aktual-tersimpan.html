@@ -3,9 +3,26 @@
 
 {% block content %}
 
-{{ ui.banner('success', 'Bahan bakar aktual tersimpan', (record.actual_fuel_liters | angka) ~ ' L tercatat untuk operasi ' ~ (operation_code or record.operation_id) ~ '. Nilai prepared fuel dan prediksi tidak diubah.') }}
+{{ ui.banner('success', 'Bahan bakar aktual tersimpan', (record.actual_fuel_liters | angka) ~ ' L tercatat untuk ' ~ (operation_code or record.operation_id) ~ '.') }}
 
-<p><a class="button button--secondary" href="/bahan-bakar-aktual">Catat operasi lain</a>
-   <a class="button button--secondary" href="/pemantauan/kinerja-model">Lihat kinerja prediksi</a></p>
+{# How the day landed against its plan: the one thing worth reading here. #}
+{% if planned %}
+{% set diff = record.actual_fuel_liters - planned.estimated_fuel_requirement_liters %}
+{% set over = record.actual_fuel_liters > planned.recommended_allocation_liters %}
+<section class="card">
+  <p>Estimasinya {{ planned.estimated_fuel_requirement_liters | angka }} L dan alokasinya
+    {{ planned.recommended_allocation_liters | angka }} L: yang terpakai
+    {% if diff > 0.05 %}{{ diff | angka(1) }} L di atas estimasi{% elif diff < -0.05 %}{{ (0 - diff) | angka(1) }} L di bawah estimasi{% else %}sama dengan estimasi{% endif %},
+    {% if over %}<strong>melebihi alokasi</strong>.{% else %}masih dalam alokasi.{% endif %}</p>
+</section>
+{% endif %}
+
+<div class="button-row">
+  {% if still_waiting %}
+  <a class="button" href="/bahan-bakar-aktual">Catat operasi lain ({{ still_waiting }} menunggu)</a>
+  {% else %}
+  <p class="muted">Semua operasi yang menunggu sudah dicatat BBM aktualnya.</p>
+  {% endif %}
+</div>
 
 {% endblock %}
