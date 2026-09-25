@@ -65,7 +65,6 @@ _HISTORY_SORTS = (
     SortOption("model", "Model", lambda e: e.model_code, default_direction="asc"),
 )
 _MODE_LABELS = ACTIVITY_LABELS
-_SOURCE_LABELS = {"manual": "Input manual", "routing_provider": "Penyedia rute"}
 # Why a past operation is shown, in the planner's words: the fallback order
 # ADR 0015 fixes, same unit before same type before same group.
 _MATCH_LABELS = {
@@ -265,7 +264,11 @@ def build_prediction_pages_router(
             events.operation_planned(caller.user.username, operation, None)
             return HTMLResponse(
                 _render_saved_operation(
-                    caller, operation, no_active_model=True, vehicle=_vehicle(operation)
+                    caller,
+                    operation,
+                    no_active_model=True,
+                    vehicle=_vehicle(operation),
+                    can_cancel=_can_cancel(operation),
                 ),
                 status_code=status.HTTP_201_CREATED,
             )
@@ -277,6 +280,8 @@ def build_prediction_pages_router(
                 operation,
                 similar=_similar(operation),
                 vehicle=_vehicle(operation),
+                can_cancel=_can_cancel(operation),
+                routing_configured=route_preview is not None,
             ),
             status_code=status.HTTP_201_CREATED,
         )
@@ -313,8 +318,12 @@ def build_prediction_pages_router(
             )
         )
 
-    def _can_cancel(operation: DailyOperation) -> bool:
-        return cancel_daily_operation is not None and cancel_daily_operation.can_cancel(operation)
+    def _can_cancel(operation: DailyOperation | None) -> bool:
+        return (
+            operation is not None
+            and cancel_daily_operation is not None
+            and cancel_daily_operation.can_cancel(operation)
+        )
 
     @router.post("/operasi-harian/{operation_id}/batalkan", response_class=HTMLResponse)
     async def cancel_operation(operation_id: str, request: Request) -> Response:
@@ -429,6 +438,7 @@ def build_prediction_pages_router(
                 just_created=False,
                 vehicle=_vehicle(operation),
                 can_cancel=_can_cancel(operation),
+                routing_configured=route_preview is not None,
             )
         )
 
@@ -463,6 +473,8 @@ def build_prediction_pages_router(
                 operation,
                 similar=_similar(operation),
                 vehicle=_vehicle(operation),
+                can_cancel=_can_cancel(operation),
+                routing_configured=route_preview is not None,
             ),
             status_code=status.HTTP_201_CREATED,
         )
@@ -484,8 +496,6 @@ def _render_saved_operation(
         page_title="Operasi harian tersimpan",
         active_path="/prediksi",
         operation=operation,
-        mode_label=_MODE_LABELS[operation.activity_mode.value],
-        source_label=_SOURCE_LABELS[operation.distance_source.value],
         no_active_model=no_active_model,
         vehicle=vehicle,
         can_cancel=can_cancel,
@@ -501,6 +511,7 @@ def _render_estimate(
     just_created: bool = True,
     vehicle: VehicleOption | None = None,
     can_cancel: bool = False,
+    routing_configured: bool = False,
 ) -> str:
     return render(
         "estimasi.html",
@@ -509,13 +520,13 @@ def _render_estimate(
         active_path="/prediksi" if just_created else "/riwayat-prediksi",
         prediction=prediction,
         operation=operation,
-        mode_label=_MODE_LABELS[operation.activity_mode.value] if operation else None,
         similar=similar,
         match_labels=_MATCH_LABELS,
         mode_labels=_MODE_LABELS,
         just_created=just_created,
         vehicle=vehicle,
         can_cancel=can_cancel,
+        routing_configured=routing_configured,
     )
 
 

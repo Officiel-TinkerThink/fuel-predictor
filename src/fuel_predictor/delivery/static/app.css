@@ -887,10 +887,6 @@ textarea {
 
 /* Withdrawing an operation is rare and deliberate: kept apart, below the
    everyday actions. */
-.cancel-operation {
-  margin: var(--space-2) 0 var(--space-5);
-}
-
 .link-row {
   display: flex;
   flex-wrap: wrap;
@@ -1272,6 +1268,79 @@ tbody tr.is-selected td {
   white-space: nowrap;
 }
 
+/* The estimate: the allocation to prepare and the code to write down, side
+   by side where there is room, stacked on a phone. */
+.estimate-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.estimate-summary > .card {
+  margin-bottom: 0;
+}
+
+.allocation-hero {
+  border-color: var(--color-result-border);
+}
+
+.allocation-hero__label {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.allocation-hero__value {
+  margin: var(--space-1) 0 var(--space-2);
+  font-size: clamp(2.4rem, 9vw, 3.4rem);
+  font-weight: 750;
+  line-height: 1;
+  color: var(--color-brand-strong);
+}
+
+.allocation-hero__value span {
+  font-size: 0.45em;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.allocation-hero__explain {
+  margin: 0;
+  max-width: var(--measure);
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+/* A rare, undoable-by-nobody action: present, but not competing with the
+   page's purpose. */
+.quiet-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: var(--space-5) 0 var(--space-3);
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.text-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-brand-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.text-button--danger {
+  color: var(--color-danger);
+}
+
 .operation-code-callout {
   border-color: var(--color-brand);
   background: var(--color-brand-soft);
@@ -1322,10 +1391,16 @@ tbody tr.is-selected td {
   font-family: var(--font-mono);
 }
 
-/* Sized so a full code (about 25 characters) fits one line on a phone; a
-   code broken across lines is easy to copy wrongly. */
+/* Sized to the box so a full code (up to about 27 characters) stays on one
+   line wherever the box sits - a phone, or half a laptop screen beside the
+   allocation; a code broken across lines is easy to copy wrongly. */
+.operation-code-callout {
+  container-type: inline-size;
+}
+
 .operation-code-callout__code .operation-code {
   font-size: clamp(1rem, 5.2vw, 2rem);
+  font-size: clamp(0.95rem, 5.4cqi, 2rem);
   letter-spacing: 0.04em;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -1786,6 +1861,10 @@ details.technical {
   padding: var(--space-3) var(--space-4);
   background: var(--color-surface-raised);
   margin-bottom: var(--space-4);
+}
+
+.detail-list + details.technical {
+  margin-top: var(--space-4);
 }
 
 details.technical summary {
@@ -2448,16 +2527,6 @@ dialog::backdrop {
 
 .disclosure[open] > summary {
   margin-bottom: var(--space-5);
-}
-
-.result-metrics .metric:first-child {
-  background: var(--color-brand-soft);
-  border-color: var(--color-result-border);
-}
-
-.result-metrics .metric:first-child .metric__value {
-  font-size: 2.5rem;
-  color: var(--color-brand-strong);
 }
 
 .result-actions {

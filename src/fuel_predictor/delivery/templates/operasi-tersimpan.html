@@ -6,46 +6,34 @@
 {% if operation.is_cancelled %}
 {{ ui.cancelled_banner(operation) }}
 {% elif no_active_model %}
-{{ ui.banner('warning', 'Operasi harian tersimpan, tetapi belum ada model aktif', 'Estimasi belum bisa dibuat sampai sebuah model dipromosikan di Pengelolaan Model. Operasi ini tetap tersimpan; buat estimasinya nanti dari halaman ini.', 'Buka Pengelolaan Model', '/pengelolaan-model') }}
+{% if may_open('/pengelolaan-model') %}
+{{ ui.banner('warning', 'Belum ada model aktif', 'Operasi ini tersimpan dengan kodenya, tetapi estimasinya baru bisa dibuat setelah sebuah model diaktifkan.', 'Buka Pengelolaan Model', '/pengelolaan-model') }}
 {% else %}
-{{ ui.banner('success', 'Operasi harian tersimpan', 'Periksa ringkasannya di bawah, lalu buat estimasi kebutuhan BBM-nya.') }}
+{{ ui.banner('warning', 'Belum ada model aktif', 'Operasi ini tersimpan dengan kodenya, tetapi estimasinya baru bisa dibuat setelah administrator mengaktifkan sebuah model.') }}
 {% endif %}
-
-{% if operation.route_distance_manual_fallback %}
-{{ ui.banner('warning', 'Jarak manual dipakai', 'Penyedia rute tidak tersedia saat perencanaan. Jarak total manual dipakai untuk estimasi ini.') }}
 {% endif %}
 
 {% if operation.operation_code %}
 {{ ui.operation_code_callout(operation, vehicle) }}
 {% endif %}
 
-<section class="card">
-  <dl class="detail-list">
-    <dt>ID operasi</dt><dd><strong>{{ operation.operation_id }}</strong></dd>
-    <dt>Kategori kendaraan</dt><dd>{{ operation.vehicle_category.value }}</dd>
-    {% if operation.vehicle %}
-    <dt>Kendaraan</dt><dd>{{ operation.vehicle }}</dd>
-    {% endif %}
-    <dt>Mode aktivitas</dt><dd>{{ mode_label }}</dd>
-    {% if operation.lifting_hours is not none %}
-    <dt>Jam lifting</dt><dd>{{ operation.lifting_hours | angka }} jam</dd>
-    {% endif %}
-    <dt>Jarak total</dt><dd>{{ operation.total_distance_km | angka }} km</dd>
-    <dt>Sumber jarak</dt><dd>{{ source_label }}</dd>
-    {% if operation.stop_sequence %}
-    <dt>Urutan pemberhentian</dt>
-    <dd><ol class="stop-list">{% for stop in operation.stop_sequence %}<li>{{ stop }}</li>{% endfor %}</ol></dd>
-    {% endif %}
-  </dl>
-  {% if not operation.is_cancelled %}
-  <form method="post" action="/operasi-harian/{{ operation.operation_id }}/prediksi" class="button-row">
+<div class="button-row result-actions">
+  {# Without an active model the estimate can only fail; the button waits. #}
+  {% if not operation.is_cancelled and not no_active_model %}
+  <form method="post" action="/operasi-harian/{{ operation.operation_id }}/prediksi">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <button type="submit" class="button">Buat estimasi kebutuhan BBM</button>
   </form>
   {% endif %}
+  <a class="button button--secondary" href="/prediksi">Buat operasi lain</a>
+</div>
+
+<section class="card">
+  <dl class="detail-list">
+    {{ ui.operation_facts(operation, vehicle.type if vehicle else none, vehicle.group if vehicle else none) }}
+  </dl>
 </section>
 
-<div class="button-row"><a class="button button--secondary" href="/prediksi">Buat operasi lain</a></div>
 {% if can_cancel %}{{ ui.cancel_operation_button(operation, csrf_token) }}{% endif %}
 
 {% endblock %}

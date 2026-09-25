@@ -52,5 +52,5 @@ def test_prediction_keeps_actions_visible_before_optional_comparisons(tmp_path: 
     assert "open" not in fold_tag
     assert "Operasi serupa sebelumnya" in html[fold_start:]
     assert html.index("Catat BBM aktual untuk operasi ini") < fold_start
-    assert "Rentang ketidakpastian" in html[:fold_start]
+    assert "rentang ketidakpastian" in html[:fold_start].lower()
     assert "bukan konsumsi aktual" in html[:fold_start]

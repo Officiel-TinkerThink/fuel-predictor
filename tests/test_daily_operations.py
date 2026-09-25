@@ -92,7 +92,8 @@ def test_indonesian_form_creates_daily_operation_with_same_behavior(tmp_path: Pa
     assert "ANGBER" in response.text
     assert "Mobilisasi + lifting" in response.text
     assert "43,2 km" in response.text
-    assert re.search(r"OPR-[0-9A-F]{32}", response.text)
+    # Named by the code people write down, not the internal OPR- id.
+    assert re.search(r'class="operation-code">\d{6}-\d{4}', response.text)
 
 
 def test_form_rejects_invalid_operation_and_preserves_useful_input(tmp_path: Path) -> None:

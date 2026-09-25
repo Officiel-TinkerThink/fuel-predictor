@@ -8,33 +8,42 @@
 {% endif %}
 
 {% if just_created %}
-{{ ui.banner('success', 'Estimasi berhasil dibuat', 'Estimasi ini dipelajari dari catatan bahan bakar disiapkan. Nilai ini bukan konsumsi aktual yang telah diverifikasi.') }}
-{% else %}
-{{ ui.banner('info', 'Estimasi dibuat ' ~ (prediction.created_at | waktu), 'Estimasi ini dipelajari dari catatan bahan bakar disiapkan. Nilai ini bukan konsumsi aktual yang telah diverifikasi.') }}
+{{ ui.banner('success', 'Estimasi berhasil dibuat', 'Tulis kode operasinya di slip atau nota BBM.') }}
 {% endif %}
 
-{% if prediction.route_distance_manual_fallback %}
+{# Only worth saying when a route service exists and failed: without one,
+   the planner typed the distance on purpose. #}
+{% if prediction.route_distance_manual_fallback and routing_configured %}
 {{ ui.banner('warning', 'Jarak manual dipakai', 'Penyedia rute tidak tersedia saat perencanaan; prediksi ini memakai jarak total manual.') }}
 {% endif %}
 
-<div class="grid grid--metrics result-metrics">
-  {{ ui.metric('Alokasi rekomendasi', prediction.recommended_allocation_liters | angka, unit='L', context='Jumlah yang disarankan untuk disiapkan.') }}
-  {{ ui.metric('Estimasi kebutuhan BBM', prediction.estimated_fuel_requirement_liters | angka, unit='L', context='Perkiraan BBM yang perlu disiapkan.') }}
-  {{ ui.metric('Rentang ketidakpastian', (prediction.uncertainty_lower_liters | angka) ~ '–' ~ (prediction.uncertainty_upper_liters | angka), unit='L', context='Estimasi ± ' ~ (prediction.model.uncertainty_liters | angka) ~ ' L, selisih rata-rata model ini saat diuji.') }}
-</div>
-
-{% if operation and operation.operation_code %}
-{{ ui.operation_code_callout(operation, vehicle) }}
-{% endif %}
-
-<div class="button-row result-actions">
-  <a class="button" href="/prediksi">Buat operasi lain</a>
-  {% if not (operation and operation.is_cancelled) %}
-  <a class="button button--secondary" href="/bahan-bakar-aktual?operation_id={{ (operation and operation.operation_code) or prediction.operation_id }}">Catat BBM aktual untuk operasi ini</a>
-  <a class="button button--secondary" href="/operasi-harian/{{ prediction.operation_id }}/slip" target="_blank" rel="noopener">Cetak slip</a>
+{# The one number to act on, and the code to write down, side by side; the
+   estimate behind the number is one sentence, not two more tiles. #}
+{% set margin = prediction.recommended_allocation_liters - prediction.estimated_fuel_requirement_liters %}
+<div class="estimate-summary">
+  <section class="card allocation-hero" aria-labelledby="alokasi-rekomendasi">
+    <p class="allocation-hero__label" id="alokasi-rekomendasi">Alokasi rekomendasi</p>
+    <p class="allocation-hero__value">{{ prediction.recommended_allocation_liters | angka }}<span> L</span></p>
+    <p class="allocation-hero__explain">Estimasi kebutuhan <strong>{{ prediction.estimated_fuel_requirement_liters | angka }} L</strong>
+      (rentang ketidakpastian {{ prediction.uncertainty_lower_liters | angka }}–{{ prediction.uncertainty_upper_liters | angka }} L){% if margin > 0.005 %}
+      ditambah cadangan {{ margin | angka }} L{% endif %}. Perkiraan dari catatan BBM yang disiapkan, bukan konsumsi aktual.</p>
+  </section>
+  {% if operation and operation.operation_code %}
+  {{ ui.operation_code_callout(operation, vehicle) }}
   {% endif %}
 </div>
-{% if can_cancel %}{{ ui.cancel_operation_button(operation, csrf_token) }}{% endif %}
+
+{% if not (operation and operation.is_cancelled) %}
+<div class="button-row result-actions">
+  <a class="button" href="/operasi-harian/{{ prediction.operation_id }}/slip" target="_blank" rel="noopener">Cetak slip</a>
+  <a class="button button--secondary" href="/bahan-bakar-aktual?operation_id={{ (operation and operation.operation_code) or prediction.operation_id }}">Catat BBM aktual untuk operasi ini</a>
+  <a class="button button--secondary" href="/prediksi">Buat operasi lain</a>
+</div>
+{% else %}
+<div class="button-row result-actions">
+  <a class="button button--secondary" href="/prediksi">Buat operasi lain</a>
+</div>
+{% endif %}
 
 <section class="card">
   <dl class="detail-list">
@@ -42,18 +51,10 @@
     <dt>ID operasi</dt><dd><strong>{{ prediction.operation_id }}</strong> <button type="button" class="button button--secondary button--small" data-copy="{{ prediction.operation_id }}" hidden>Salin ID</button></dd>
     {% endif %}
     {% if operation %}
-    {% if operation.vehicle %}<dt>Kendaraan</dt><dd>{{ operation.vehicle }}{% if prediction.input_snapshot.vehicle_group and prediction.input_snapshot.vehicle_group != 'tidak diketahui' %} <span class="muted">· {{ prediction.input_snapshot.vehicle_type }} · {{ prediction.input_snapshot.vehicle_group }}</span>{% endif %}</dd>{% endif %}
-    <dt>Aktivitas</dt><dd>{{ mode_label }}{% if operation.lifting_hours is not none %} · {{ operation.lifting_hours | angka }} jam lifting{% endif %}</dd>
-    {% if operation.stop_sequence %}
-    <dt>Rute</dt><dd>{{ operation.stop_sequence | join(' → ') }}</dd>
+    {{ ui.operation_facts(operation, prediction.input_snapshot.vehicle_type, prediction.input_snapshot.vehicle_group) }}
     {% endif %}
-    <dt>Jarak total</dt><dd>{{ operation.total_distance_km | angka }} km</dd>
-    {% endif %}
+    <dt>Dibuat</dt><dd>{{ prediction.created_at | waktu }}</dd>
   </dl>
-  {% if not (operation and operation.is_cancelled) %}
-  <p class="hint">Setelah operasi selesai, catat bahan bakar aktualnya — lewat tombol Catat BBM aktual atau
-    dari menu Riwayat Prediksi — agar model bisa belajar dari hasilnya.</p>
-  {% endif %}
   {# Version identifiers matter for an audit, not for the planner reading the
      number, so they sit behind a fold. #}
   <details class="technical">
@@ -112,5 +113,7 @@
   {% endif %}
 </details>
 {% endif %}
+
+{% if can_cancel %}{{ ui.cancel_operation_button(operation, csrf_token) }}{% endif %}
 
 {% endblock %}

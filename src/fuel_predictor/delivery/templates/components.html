@@ -25,8 +25,9 @@
 {# Withdrawing a mistaken or duplicate plan; offered only while no actual fuel
    is recorded (the server checks again). #}
 {% macro cancel_operation_button(operation, csrf_token) -%}
-<div class="cancel-operation">
-  {{ confirm_button('batalkan-operasi', 'Batalkan operasi', 'Batalkan operasi ini?', 'Untuk operasi yang salah input atau tercatat dua kali. Operasi yang dibatalkan keluar dari daftar menunggu BBM aktual dan tidak bisa dicatat BBM aktualnya; datanya tetap tersimpan.', '/operasi-harian/' ~ operation.operation_id ~ '/batalkan', csrf_token, reason_field=true) }}
+<div class="quiet-action">
+  <span>Salah input atau tercatat dua kali?</span>
+  {{ confirm_button('batalkan-operasi', 'Batalkan operasi', 'Batalkan operasi ini?', 'Operasi yang dibatalkan keluar dari daftar menunggu BBM aktual dan tidak bisa dicatat BBM aktualnya; datanya tetap tersimpan.', '/operasi-harian/' ~ operation.operation_id ~ '/batalkan', csrf_token, reason_field=true, trigger_class='text-button text-button--danger') }}
 </div>
 {%- endmacro %}
 
@@ -41,6 +42,16 @@
     <li><a class="button button--secondary button--small" href="/bahan-bakar-aktual-massal">Impor hasil isiannya</a></li>
   </ol>
 </div>
+{%- endmacro %}
+
+{# What was planned, the same on every page that shows an operation. The
+   type and group are passed in: an estimate shows those it was made with,
+   a plan without one shows the catalog's. #}
+{% macro operation_facts(operation, vehicle_type=none, vehicle_group=none) -%}
+<dt>Kendaraan</dt><dd>{{ operation.vehicle or operation.vehicle_category.value }}{% if operation.vehicle and vehicle_group and vehicle_group != 'tidak diketahui' %} <span class="muted">·{% if vehicle_type and vehicle_type != vehicle_group %} {{ vehicle_type }} ·{% endif %} {{ vehicle_group }}</span>{% endif %}</dd>
+<dt>Aktivitas</dt><dd>{{ operation.activity_mode.value | aktivitas }}{% if operation.lifting_hours is not none %} · {{ operation.lifting_hours | angka }} jam{% endif %}</dd>
+{% if operation.stop_sequence %}<dt>Rute</dt><dd>{{ operation.stop_sequence | join(' → ') }}</dd>{% endif %}
+<dt>Jarak total</dt><dd>{{ operation.total_distance_km | angka }} km</dd>
 {%- endmacro %}
 
 {# The same, spelled plainly for links and form values. #}
@@ -288,8 +299,8 @@
 </div>
 {%- endmacro %}
 
-{% macro confirm_button(dialog_id, label, title, body, form_action, csrf_token, tone='danger', reason_field=false, hidden_fields=none) -%}
-<button type="button" class="button button--{{ tone }}" data-dialog="{{ dialog_id }}">{{ label }}</button>
+{% macro confirm_button(dialog_id, label, title, body, form_action, csrf_token, tone='danger', reason_field=false, hidden_fields=none, trigger_class=none) -%}
+<button type="button" class="{{ trigger_class or ('button button--' ~ tone) }}" data-dialog="{{ dialog_id }}">{{ label }}</button>
 <dialog id="{{ dialog_id }}" aria-labelledby="{{ dialog_id }}-title">
   <form method="dialog"><button class="visually-hidden" value="batal">Tutup</button></form>
   <h2 id="{{ dialog_id }}-title">{{ title }}</h2>
@@ -309,7 +320,7 @@
     {% endif %}
     <div class="button-row">
       <button type="submit" class="button button--{{ tone }}">{{ label }}</button>
-      <button type="button" class="button button--secondary" data-dialog-close="{{ dialog_id }}">Batal</button>
+      <button type="button" class="button button--secondary" data-dialog-close="{{ dialog_id }}">Kembali</button>
     </div>
   </form>
 </dialog>

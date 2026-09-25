@@ -17,7 +17,7 @@
 
   <dl class="slip__facts">
     <dt>Kendaraan</dt><dd>{{ operation.vehicle or operation.vehicle_category.value }}{% if vehicle %} · {{ vehicle.type }}{% endif %}</dd>
-    <dt>Aktivitas</dt><dd>{{ operation.activity_mode.value | aktivitas }}{% if operation.lifting_hours %} · {{ operation.lifting_hours | angka }} jam lifting{% endif %}</dd>
+    <dt>Aktivitas</dt><dd>{{ operation.activity_mode.value | aktivitas }}{% if operation.lifting_hours %} · {{ operation.lifting_hours | angka }} jam{% endif %}</dd>
     {% if operation.stop_sequence %}<dt>Rute</dt><dd>{{ operation.stop_sequence | join(' → ') }}</dd>{% endif %}
     <dt>Jarak total</dt><dd>{{ operation.total_distance_km | angka }} km</dd>
     <dt>Diprediksi</dt><dd>{{ prediction.created_at | waktu }} · model {{ prediction.model.model_code or prediction.model.model_version_id }}</dd>
