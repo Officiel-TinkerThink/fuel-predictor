@@ -129,7 +129,8 @@ untuk kendaraan yang bisa lifting (kolom *Lifting* di menu **Armada**).
 
 Estimasi yang sudah dibuat bisa dibuka lagi kapan saja dari menu **Riwayat Prediksi**:
 daftarnya terbaru di atas, ada kotak pencarian, dan tiap baris menunjukkan apakah BBM aktualnya
-sudah dicatat.
+sudah dicatat. Ketik *menunggu* di kotak pencarian untuk melihat operasi yang BBM aktualnya belum
+dicatat, atau *dibatalkan* untuk operasi yang dibatalkan.
 
 **Kalau muncul "Belum ada kandidat baseline terlatih":** belum ada model yang aktif.
 Hubungi penanggung jawab model — lihat [bagian 6](#6-mengganti-model).
