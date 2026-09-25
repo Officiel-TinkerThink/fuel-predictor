@@ -141,9 +141,17 @@ class SqlAlchemyMonitoringRepository(MonitoringDataReader, MonitoringAlertStore)
 
     def get_current_feature_rows(self, model_version_id: str) -> tuple[dict[str, str | float], ...]:
         with self._session_factory() as session:
+            # A withdrawn plan never ran, so it says nothing about how
+            # operations are changing.
             rows = session.scalars(
                 select(PredictionRow)
-                .where(PredictionRow.model_version_id == model_version_id)
+                .join(
+                    DailyOperationRow, DailyOperationRow.operation_id == PredictionRow.operation_id
+                )
+                .where(
+                    PredictionRow.model_version_id == model_version_id,
+                    DailyOperationRow.cancelled_at.is_(None),
+                )
                 .order_by(PredictionRow.created_at)
             )
             return tuple(cast(dict[str, str | float], row.feature_values) for row in rows)

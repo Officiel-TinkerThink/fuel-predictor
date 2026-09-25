@@ -228,3 +228,26 @@ def test_a_withdrawn_plan_is_not_offered_as_a_similar_day(tmp_path: Path) -> Non
     similar = page.split("Operasi serupa sebelumnya", 1)[1]
     assert "41 km" in similar
     assert "77 km" not in similar
+
+
+def test_a_withdrawn_plan_does_not_count_as_recent_operations_for_drift(tmp_path: Path) -> None:
+    from fuel_predictor.infrastructure.database import build_engine, build_session_factory
+    from fuel_predictor.infrastructure.sqlalchemy_monitoring import SqlAlchemyMonitoringRepository
+
+    database = tmp_path / "operations.sqlite3"
+    with TestClient(create_app(database_path=database)) as client:
+        _train_baseline(client)
+        kept = _operation_with_prediction(client, 24)
+        withdrawn = _operation_with_prediction(client, 36)
+        client.post(
+            f"/api/v1/daily-operations/{withdrawn['operation']['operation_id']}/cancel",
+            json={"reason": "salah input"},
+        )
+    model = kept["prediction"]["model"]["model_version_id"]
+
+    repository = SqlAlchemyMonitoringRepository(
+        build_session_factory(build_engine(f"sqlite+pysqlite:///{database.as_posix()}"))
+    )
+    rows = repository.get_current_feature_rows(model)
+
+    assert [row["total_distance_km"] for row in rows] == [24]
