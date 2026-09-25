@@ -128,3 +128,28 @@ def test_a_recorded_actual_says_how_far_it_landed_from_the_estimate(tmp_path: Pa
     expected = "+" + format_decimal(allocation + 10 - estimate, 1)
     assert f"{expected} L dari estimasi" in page
     assert "melebihi alokasi" in page
+
+
+def test_the_route_column_appears_only_when_a_route_was_planned(tmp_path: Path) -> None:
+    """Most operations are planned by distance alone; a column of dashes is a
+    dead line in every phone card."""
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        _train_baseline(client)
+        _operation_with_prediction(client, 24)
+        by_distance = client.get("/riwayat-prediksi").text
+        routed = client.post(
+            "/api/v1/daily-operations",
+            json={
+                "vehicle_category": "ANGBER",
+                "activity_mode": "transport",
+                "total_distance_km": 40,
+                "distance_source": "manual",
+                "stops": ["Depo", "Tambang", "Depo"],
+            },
+        ).json()
+        client.post(f"/api/v1/daily-operations/{routed['operation_id']}/predictions")
+        with_a_route = client.get("/riwayat-prediksi").text
+
+    assert "<th>Rute</th>" not in by_distance
+    assert "<th>Rute</th>" in with_a_route
+    assert "Depo → Depo" in with_a_route
