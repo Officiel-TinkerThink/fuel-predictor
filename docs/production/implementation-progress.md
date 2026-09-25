@@ -758,10 +758,17 @@ Built with the operators' day in mind; each item has tests, and the ADRs hold th
   hours); uploads are bounded at 10 MB / 20.000 rows; an unexpected failure gets the app's own
   error page; the active model loads at startup, so the first request after a deploy is not the
   one that waits; every page passes an axe-core scan in both themes.
+- **Forms that name every problem at once** — Catat Aktual and adding a user report each
+  missing or wrong field in one answer, in the form's own words ("wajib diisi", "harus lebih
+  besar dari 0"); with a route provider configured the distance can still simply be typed.
+- **One rollback** — `RollbackModelVersion`, the Phase 2 use case, was never wired: rollback
+  runs through `ActivateRetainedModelPackage.rollback`, which recorded a rollback to a version
+  that did not exist before finding it missing. That rule now holds there, its tests moved with
+  it, and the unused copy is gone.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (770 tests as of 26 September 2026, about 20 minutes serially) passes; `ruff
+- Full test suite (about 790 tests as of 26 September 2026, about 20 minutes serially) passes; `ruff
   check` and `mypy --strict` are clean. CI runs the linters and only *collects* the tests, so run
   the suite yourself before pushing - keep all three clean.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes

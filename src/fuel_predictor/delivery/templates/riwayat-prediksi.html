@@ -4,10 +4,12 @@
 {% block content %}
 
 <section class="card">
-  {{ ui.listing_toolbar(listing, placeholder='Kode, kendaraan, lokasi, atau status') }}
+  {{ ui.listing_toolbar(listing, placeholder='Kode, kendaraan, lokasi, status') }}
   {% if listing.items %}
   {# A route exists only for operations planned stop by stop; a column of
-     dashes (a dead line in every phone card) says nothing. #}
+     dashes (a dead line in every phone card) says nothing. The column shows
+     only when a row has a route, and a row without one leaves its cell
+     empty, which a phone card drops. #}
   {% set show_route = listing.items | selectattr('departure') | list | length > 0 %}
   <div class="table-wrap">
     <table class="table--sortable">
@@ -27,7 +29,7 @@
         <tr>
           <td data-label="Diprediksi">{{ item.predicted_at | waktu }}<br>{{ ui.operation_code(item) }}</td>
           <td data-label="Kendaraan"><a href="/operasi-harian/{{ item.operation_id }}">{{ item.vehicle or item.vehicle_category.value }}</a></td>
-          {% if show_route %}<td data-label="Rute">{% if item.departure %}{{ item.departure }} → {{ item.destination }}{% if item.stop_count > 2 %} <span class="hint">(+{{ item.stop_count - 2 }})</span>{% endif %}{% else %}—{% endif %}</td>{% endif %}
+          {% if show_route %}<td data-label="Rute">{% if item.departure %}{{ item.departure }} → {{ item.destination }}{% if item.stop_count > 2 %} <span class="hint">(+{{ item.stop_count - 2 }})</span>{% endif %}{% endif %}</td>{% endif %}
           <td class="numeric" data-label="Jarak">{{ item.total_distance_km | angka }} km</td>
           <td class="numeric" data-label="Alokasi">{{ item.recommended_allocation_liters | angka }} L</td>
           <td data-label="Model">{% if item.model_version_id %}{{ ui.model_name(item) }}{% else %}—{% endif %}</td>

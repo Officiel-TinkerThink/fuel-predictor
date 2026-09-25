@@ -153,6 +153,10 @@ def test_the_route_column_appears_only_when_a_route_was_planned(tmp_path: Path) 
     assert "<th>Rute</th>" not in by_distance
     assert "<th>Rute</th>" in with_a_route
     assert "Depo → Depo" in with_a_route
+    # Once the column shows, the row planned by distance leaves its cell
+    # empty, which a phone card drops, rather than a dash on a line of its own.
+    assert '<td data-label="Rute"></td>' in with_a_route
+    assert '<td data-label="Rute">—</td>' not in with_a_route
 
 
 def test_history_search_finds_rows_by_their_status(tmp_path: Path) -> None:

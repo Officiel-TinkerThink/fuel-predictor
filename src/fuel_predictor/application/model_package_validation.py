@@ -14,7 +14,7 @@ a manual act (ADR 0004).
 """
 
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -119,7 +119,3 @@ def json_member(members: Mapping[str, bytes], name: str) -> Mapping[str, Any]:
     if not isinstance(parsed, dict):
         raise ModelPackageValidationError([(name, "Isi berkas harus berupa objek JSON.")])
     return parsed
-
-
-def required_members() -> Sequence[str]:
-    return ("manifest.json", "reference-statistics.json", "smoke-tests.json")

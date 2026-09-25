@@ -164,15 +164,15 @@ class ActivateRetainedModelPackage:
     ) -> ActivationResult:
         """Return to a retained known-good version (ADR 0010).
 
-        Not `RollbackModelVersion`, which takes a prebuilt `ActivateModelVersion`
-        as a collaborator. For a package the loader and smoke-test runner are
-        package-specific and must be rebuilt from the retained bytes, which is
-        exactly what this class does — so the audit-before-attempt rule is
-        applied here over the same sequence rather than duplicating the rebuild
-        into that class.
+        A rollback names an administrator and a reason, recorded before the
+        change is attempted; the attempt is the same sequence as `execute`.
         """
         if not reason.strip():
             raise ValueError("Alasan rollback wajib diisi.")
+        # A version that does not exist is refused before anything is
+        # recorded: there is no decision to keep about a model never uploaded.
+        if self.models.get(target_version_id) is None:
+            raise ModelVersionNotFoundError(target_version_id)
         # Recorded before the attempt: an operator's decision to roll back is
         # worth keeping even when the attempt then loses a concurrency race,
         # because that is exactly the situation someone reconstructs later.

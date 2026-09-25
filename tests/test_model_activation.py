@@ -10,10 +10,13 @@ import pytest
 
 from fuel_predictor.application.model_activation import (
     ActivateModelVersion,
+    ActivationResult,
     ActivationTransition,
     ActiveModelHolder,
     LoadedModel,
-    RollbackModelVersion,
+)
+from fuel_predictor.application.retained_package_activation import (
+    ActivateRetainedModelPackage,
 )
 from fuel_predictor.domain.model_activation import (
     ModelActivationConflictError,
@@ -294,41 +297,72 @@ class _RecordingAudit:
         )
 
 
-class _RetainedReader:
-    def __init__(self, known: dict[str, ModelVersion]) -> None:
+class _Models:
+    """The model table as the retained activation reads it."""
+
+    def __init__(self, known: dict[str, ModelVersion], active: str | None = None) -> None:
         self.known = known
+        self.active = active
 
     def get(self, model_version_id: str) -> ModelVersion | None:
         return self.known.get(model_version_id)
 
+    def get_active(self) -> ModelVersion | None:
+        return _version(self.active) if self.active else None
 
-def _rollback(**overrides: Any) -> RollbackModelVersion:
-    defaults: dict[str, Any] = {
-        "activate": _activator(),
-        "retained_reader": _RetainedReader({"MDL-GOOD": _version("MDL-GOOD")}),
-        "audit": _RecordingAudit(),
+
+class _RetainedWithoutBytes(ActivateRetainedModelPackage):
+    """The production rollback, with the one step that needs a package's
+    bytes - rebuilding its loader and smoke tests - replaced by the stubs
+    above. What is under test is `rollback`'s own rules."""
+
+    def execute(self, model_version_id: str) -> ActivationResult:
+        candidate = self.models.get(model_version_id)
+        if candidate is None:
+            raise ModelVersionNotFoundError(model_version_id)
+        active = self.models.get_active()
+        return _activator(holder=self.holder, repository=self.repository).execute(
+            candidate=candidate,
+            expected_active_version_id=active.model_version_id if active else None,
+            required_memory_bytes=1000,
+        )
+
+
+def _rollback(
+    audit: _RecordingAudit,
+    *,
+    active: str | None = None,
+    repository: _FakeRepository | None = None,
+    holder: ActiveModelHolder | None = None,
+) -> ActivateRetainedModelPackage:
+    collaborators: dict[str, Any] = {
+        "store": None,
+        "models": _Models({"MDL-GOOD": _version("MDL-GOOD")}, active=active),
+        "parse_manifest": None,
+        "parse_smoke_tests": None,
+        "build_artifact_loader": None,
+        "holder": holder or ActiveModelHolder(),
+        "repository": repository or _FakeRepository(active_version_id=active),
+        "memory_probe": _StubMemory(),
+        "health_check": lambda loaded: None,
+        "record_rollback": audit.record_rollback,
     }
-    defaults.update(overrides)
-    return RollbackModelVersion(**defaults)
+    return _RetainedWithoutBytes(**collaborators)
 
 
 def test_rollback_reactivates_the_retained_version_and_records_who_and_why() -> None:
-    holder = ActiveModelHolder()
     audit = _RecordingAudit()
-    rollback = _rollback(
-        activate=_activator(holder=holder, repository=_FakeRepository(active_version_id="MDL-BAD")),
-        audit=audit,
-    )
+    rollback = _rollback(audit, active="MDL-BAD")
 
-    result = rollback.execute(
+    result = rollback.rollback(
         target_version_id="MDL-GOOD",
         expected_active_version_id="MDL-BAD",
         actor="admin",
         reason="MAE naik tajam setelah aktivasi",
-        required_memory_bytes=1000,
     )
 
     assert result.activated.model_version_id == "MDL-GOOD"
+    assert result.previous_version_id == "MDL-BAD"
     assert audit.entries == [
         {
             "target": "MDL-GOOD",
@@ -341,31 +375,30 @@ def test_rollback_reactivates_the_retained_version_and_records_who_and_why() -> 
 
 def test_rollback_without_a_reason_is_refused() -> None:
     audit = _RecordingAudit()
-    rollback = _rollback(audit=audit)
 
     with pytest.raises(ValueError, match="Alasan"):
-        rollback.execute(
+        _rollback(audit).rollback(
             target_version_id="MDL-GOOD",
             expected_active_version_id=None,
             actor="admin",
             reason="   ",
-            required_memory_bytes=1000,
         )
 
     assert audit.entries == [], "nothing should be recorded for a refused rollback"
 
 
 def test_rollback_to_an_unknown_version_is_refused_before_anything_is_recorded() -> None:
+    """The production rollback recorded the request first and only then found
+    the version missing, leaving an audit entry for a version that never
+    existed; the rule was held only by a copy of the use case nothing ran."""
     audit = _RecordingAudit()
-    rollback = _rollback(audit=audit)
 
     with pytest.raises(ModelVersionNotFoundError):
-        rollback.execute(
+        _rollback(audit).rollback(
             target_version_id="MDL-NEVER-EXISTED",
             expected_active_version_id=None,
             actor="admin",
             reason="mencoba memulihkan",
-            required_memory_bytes=1000,
         )
 
     assert audit.entries == []
@@ -378,18 +411,19 @@ def test_the_rollback_intent_is_recorded_even_when_the_activation_then_loses() -
     attempted and why, not just that the active model never changed.
     """
     audit = _RecordingAudit()
+    # Read as MDL-STALE, but someone else activated in between.
     rollback = _rollback(
-        activate=_activator(repository=_FakeRepository(active_version_id="MDL-SOMEONE-ELSE")),
-        audit=audit,
+        audit,
+        active="MDL-STALE",
+        repository=_FakeRepository(active_version_id="MDL-SOMEONE-ELSE"),
     )
 
     with pytest.raises(ModelActivationConflictError):
-        rollback.execute(
+        rollback.rollback(
             target_version_id="MDL-GOOD",
             expected_active_version_id="MDL-STALE",
             actor="admin",
             reason="kembali ke versi stabil",
-            required_memory_bytes=1000,
         )
 
     assert len(audit.entries) == 1
