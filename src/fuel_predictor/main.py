@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -214,6 +215,8 @@ from fuel_predictor.infrastructure.stored_model_scorer import StoredModelScorer
 from fuel_predictor.infrastructure.system_memory_probe import SystemMemoryProbe
 from fuel_predictor.infrastructure.zip_model_package_archive import ZipModelPackageArchiveReader
 
+_logger = logging.getLogger(__name__)
+
 # One representative operation the post-activation health check asks the
 # newly-swapped model to answer. Mid-range values on purpose: a case at the
 # edge of the training distribution would fail for reasons that say nothing
@@ -252,6 +255,16 @@ def _rollback_recorder(record_audit: RecordAuditEvent) -> Any:
         )
 
     return record
+
+
+def _warm_active_model(models: SqlAlchemyPredictionRepository, scorer: StoredModelScorer) -> None:
+    active = models.get_active()
+    if active is None:
+        return
+    try:
+        scorer.warm(active.artifact_uri)
+    except Exception:  # noqa: BLE001 - a model that fails to load now still fails loudly when used
+        _logger.warning("Model aktif gagal dimuat saat aplikasi mulai.", exc_info=True)
 
 
 def create_app(
@@ -553,6 +566,10 @@ def create_app(
 
     @asynccontextmanager
     async def application_lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        # Load the active model before the first request. Loading it takes
+        # seconds, so otherwise the first estimate - or the first overview an
+        # administrator opened - after every deploy waited for it.
+        _warm_active_model(prediction_repository, model_scorer)
         try:
             yield
         finally:

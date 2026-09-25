@@ -39,6 +39,8 @@ class _TrainingStore(Protocol):
 
     def predict(self, artifact_uri: str, features: dict[str, str | float]) -> float: ...
 
+    def load(self, artifact_uri: str) -> Callable[[dict[str, str | float]], float]: ...
+
 
 class _RetainedPackages(Protocol):
     def exists(self, model_version: str) -> bool: ...
@@ -80,19 +82,23 @@ class StoredModelScorer:
     def predict(self, artifact_uri: str, features: dict[str, str | float]) -> float:
         return self._predictor(artifact_uri)(features)
 
+    def warm(self, artifact_uri: str) -> None:
+        """Load a model now rather than on its first prediction. Loading
+        imports the model format's library, which takes seconds."""
+        self._predictor(artifact_uri)
+
     def _predictor(self, artifact_uri: str) -> _Predict:
         with self._lock:
             cached = self._loaded.get(artifact_uri)
         if cached is not None:
             return cached
         package = self._retained_package(artifact_uri)
-        predictor: _Predict
-        if package is None:
-
-            def predictor(features: dict[str, str | float]) -> float:
-                return self._training_store.predict(artifact_uri, features)
-        else:
-            predictor = self._load_package(package)
+        # Loaded here, not on first use, so warming a model really loads it.
+        predictor: _Predict = (
+            self._training_store.load(artifact_uri)
+            if package is None
+            else self._load_package(package)
+        )
         with self._lock:
             self._loaded.setdefault(artifact_uri, predictor)
             return self._loaded[artifact_uri]

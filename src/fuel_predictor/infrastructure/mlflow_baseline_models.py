@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 import mlflow
@@ -86,9 +86,17 @@ class MlflowBaselineModelStore(BaselineModelStore):
             return f"runs:/{run.info.run_id}/model", uncertainty
 
     def predict(self, artifact_uri: str, features: dict[str, str | float]) -> float:
+        return self.load(artifact_uri)(features)
+
+    def load(self, artifact_uri: str) -> Callable[[dict[str, str | float]], float]:
+        """The model at `artifact_uri`, loaded once and kept, as a function."""
         pipeline = self._loaded.get(artifact_uri)
         if pipeline is None:
             mlflow.set_tracking_uri(self._tracking_uri)
             pipeline = mlflow.sklearn.load_model(artifact_uri)
             self._loaded[artifact_uri] = pipeline
-        return float(pipeline.predict([features])[0])
+
+        def predict(features: dict[str, str | float]) -> float:
+            return float(pipeline.predict([features])[0])
+
+        return predict
