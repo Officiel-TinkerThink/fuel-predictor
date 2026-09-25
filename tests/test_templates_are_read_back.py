@@ -58,14 +58,14 @@ def test_a_filled_prediction_template_quarantines_nothing(tmp_path: Path) -> Non
     with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
         _train_baseline(client)
         template = client.get("/api/v1/bulk-operation-predictions/template?format=xlsx").content
-        sheet = _filled(template, ("ANGBER", None, "transport", None, 20, "manual", None))
+        sheet = _filled(template, (None, "Mobilisasi", 20, None, None))
 
         page = client.post(
             "/prediksi-operasi-massal",
             files={"file": ("rencana.xlsx", sheet, "application/octet-stream")},
         ).text
 
-    assert "1 baris valid" in page
+    assert "1 operasi mendapat kode dan estimasi." in page
     assert "dikarantina" not in page
 
 

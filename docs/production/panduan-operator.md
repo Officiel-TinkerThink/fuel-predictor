@@ -140,9 +140,9 @@ Hubungi penanggung jawab model — lihat [bagian 6](#6-mengganti-model).
 ## 3. Membuat banyak prediksi sekaligus
 
 1. Menu **Prediksi Massal**.
-2. Unduh templat yang disediakan di halaman itu. **Selalu pakai templat itu**, jangan membuat
-   kolom sendiri — urutan dan nama kolom harus persis.
-3. Isi satu baris per operasi.
+2. Unduh templatnya. Kolom **Kendaraan** dan **Aktivitas** berupa pilihan: nama unit sama dengan
+   di menu **Armada**, aktivitasnya *Mobilisasi* atau *Mobilisasi + lifting*.
+3. Isi satu baris per operasi: kendaraan, aktivitas, jarak total, dan jam lifting bila ada.
 4. Unggah berkasnya.
 
 Aplikasi memproses baris yang benar dan **menahan** baris yang bermasalah. Baris bermasalah
@@ -154,12 +154,13 @@ Setiap baris yang berhasil mendapat kode operasinya sendiri. Unduh hasilnya (CSV
 Tombol **Cetak semua slip** mencetak slip BBM untuk setiap operasi dalam unggahan itu, satu slip
 per halaman.
 
-Perbaiki baris tersebut di berkas asli, lalu unggah ulang. Baris yang sudah berhasil tidak
-terhitung dua kali.
+Untuk memperbaikinya, tekan **Unduh baris yang perlu diperbaiki**: berkas itu hanya berisi baris
+yang bermasalah, dengan masalahnya di kolom terakhir. Perbaiki, lalu unggah berkas itu saja.
+**Jangan mengunggah ulang berkas aslinya** — operasi yang sudah berhasil akan dibuat lagi.
 
 ![Hasil unggah massal: 4 baris berhasil diprediksi dengan tombol Unduh hasil (CSV), dan laporan koreksi berisi 3 baris dikarantina dengan alasan masing-masing — jam lifting kosong, jarak bukan angka, dan jarak bernilai negatif.](images/03-unggah-massal.png)
 
-Kolom **Alasan** pada Laporan koreksi menyebutkan persis apa yang salah pada tiap baris, sehingga Anda tahu apa yang perlu diperbaiki di berkas sumber.
+Kolom **Masalah** menyebutkan persis apa yang salah pada tiap baris.
 
 ---
 

@@ -48,6 +48,7 @@ from fuel_predictor.application.model_lifecycle import (
     PromoteCandidateModel,
 )
 from fuel_predictor.application.monitoring import GetMonitoringDashboard, MonitoringDashboard
+from fuel_predictor.application.vehicles import VehicleCatalog
 from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.domain.actual_fuel import ActualFuelMeasurementSource, ActualFuelRecord
 from fuel_predictor.domain.daily_operation import (
@@ -412,6 +413,7 @@ def build_router(
     get_model_governance_dashboard: GetModelGovernanceDashboard,
     get_monitoring_dashboard: GetMonitoringDashboard,
     events: ImportantEvents,
+    vehicle_catalog: VehicleCatalog | None = None,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -466,8 +468,14 @@ def build_router(
                     "Content-Disposition": 'attachment; filename="template-prediksi-operasi.csv"'
                 },
             )
+        # The fleet as it is today, so the unit column is a dropdown of real names.
+        fleet = (
+            tuple((unit.name, unit.can_lift) for unit in vehicle_catalog.options())
+            if vehicle_catalog is not None
+            else ()
+        )
         return Response(
-            content=xlsx_template(),
+            content=xlsx_template(fleet),
             media_type=("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
             headers={
                 "Content-Disposition": 'attachment; filename="template-prediksi-operasi.xlsx"'

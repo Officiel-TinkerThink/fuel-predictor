@@ -348,6 +348,11 @@ def parse_activity_mode(
         issues.append(CorrectionReason("activity_mode", "Mode aktivitas wajib diisi."))
         return None
     aliases = {
+        # The words the form and the template offer, then the older codes.
+        "mobilisasi": ActivityMode.TRANSPORT,
+        "mobilisasi + lifting": ActivityMode.TRANSPORT_AND_LIFTING,
+        "mobilisasi dan lifting": ActivityMode.TRANSPORT_AND_LIFTING,
+        "mobilisasi lifting": ActivityMode.TRANSPORT_AND_LIFTING,
         "transport": ActivityMode.TRANSPORT,
         "angkut": ActivityMode.TRANSPORT,
         "lifting": ActivityMode.LIFTING,
@@ -357,7 +362,12 @@ def parse_activity_mode(
     }
     mode = aliases.get(normalized_value(raw_value).replace("_", " "))
     if mode is None:
-        issues.append(CorrectionReason("activity_mode", "Mode aktivitas tidak valid."))
+        issues.append(
+            CorrectionReason(
+                "activity_mode",
+                'Aktivitas tidak dikenali; gunakan "Mobilisasi" atau "Mobilisasi + lifting".',
+            )
+        )
     return mode
 
 

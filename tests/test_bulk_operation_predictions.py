@@ -48,12 +48,20 @@ def test_bulk_prediction_templates_are_localized_and_explain_the_columns(tmp_pat
     assert "attachment" in excel.headers["content-disposition"]
     workbook = load_workbook(BytesIO(excel.content), data_only=True)
     assert workbook.sheetnames == ["Operasi Harian", "Petunjuk"]
-    assert workbook["Operasi Harian"]["A1"].value == "Kategori ANGBER (wajib)"
-    assert "Kolom wajib" in str(workbook["Petunjuk"]["A1"].value)
+    # The form's questions, in the form's words; no category, no distance source.
+    assert [cell.value for cell in workbook["Operasi Harian"][1]] == [
+        "Kendaraan",
+        "Aktivitas (wajib)",
+        "Jarak Total (km) (wajib)",
+        "Jam Lifting (opsional)",
+        "Urutan Pemberhentian (opsional)",
+    ]
+    assert "satu baris per operasi" in str(workbook["Petunjuk"]["A1"].value)
 
     assert csv.status_code == 200
-    assert "Kategori ANGBER (wajib)" in csv.text
+    assert "Aktivitas (wajib)" in csv.text
     assert "Urutan Pemberhentian (opsional)" in csv.text
+    assert "Kategori ANGBER" not in csv.text and "Sumber Jarak" not in csv.text
 
 
 def test_bulk_prediction_keeps_valid_rows_and_reports_invalid_rows_with_provenance(

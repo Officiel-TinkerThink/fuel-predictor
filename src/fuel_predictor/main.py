@@ -661,6 +661,7 @@ def create_app(
             get_model_governance_dashboard,
             get_monitoring_dashboard,
             events=events,
+            vehicle_catalog=resolved_vehicle_catalog,
         )
     )
     app.include_router(

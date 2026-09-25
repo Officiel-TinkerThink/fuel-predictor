@@ -19,7 +19,12 @@ from fuel_predictor.application.historical_datasets import (
     parse_vehicle_category,
 )
 from fuel_predictor.application.vehicles import VehicleCatalog
-from fuel_predictor.domain.daily_operation import DailyOperation, DailyOperationValidationError
+from fuel_predictor.domain.daily_operation import (
+    DailyOperation,
+    DailyOperationValidationError,
+    DistanceSource,
+    VehicleCategory,
+)
 from fuel_predictor.domain.historical_dataset import (
     CorrectionReason,
     DataQualityIssue,
@@ -129,7 +134,7 @@ class BulkOperationPrediction:
 
 _HEADER_ALIASES = {
     "vehicle_category": {"kategori angber", "kategori angber wajib", "angber"},
-    "activity_mode": {"mode aktivitas", "mode aktivitas wajib", "aktivitas"},
+    "activity_mode": {"mode aktivitas", "mode aktivitas wajib", "aktivitas", "aktivitas wajib"},
     "lifting_hours": {"jam lifting", "jam lifting opsional", "jam operasi lifting"},
     "total_distance_km": {
         "jarak total km",
@@ -150,16 +155,14 @@ _HEADER_ALIASES = {
     "distance_source": {"sumber jarak", "sumber jarak wajib"},
     "stop_sequence": {"urutan pemberhentian", "urutan pemberhentian opsional"},
 }
-_REQUIRED_FIELDS = {
-    "vehicle_category",
-    "activity_mode",
-    "total_distance_km",
-    "distance_source",
-}
+_REQUIRED_FIELDS = {"activity_mode", "total_distance_km"}
+# Asked by older templates only: every unit is ANGBER, and a distance typed
+# into the sheet is a manual one. When present they are still read.
+_DEFAULTED_FIELDS = {"vehicle_category", "distance_source"}
 _FIELD_LABELS = {
     "vehicle_category": "Kategori kendaraan",
     "vehicle": "Kendaraan",
-    "activity_mode": "Mode aktivitas",
+    "activity_mode": "Aktivitas",
     "lifting_hours": "Jam lifting",
     "total_distance_km": "Jarak total",
     "distance_source": "Sumber jarak",
@@ -191,7 +194,9 @@ def _command_for_row(
 ) -> tuple[CreateDailyOperationCommand | None, list[CorrectionReason]]:
     issues: list[CorrectionReason] = []
     raw_by_field: dict[str, RawValue] = {}
-    for field in _REQUIRED_FIELDS | {"lifting_hours", "stop_sequence", "vehicle"}:
+    for field in (
+        _REQUIRED_FIELDS | _DEFAULTED_FIELDS | {"lifting_hours", "stop_sequence", "vehicle"}
+    ):
         header = mapped_headers.get(field)
         if header is None:
             if field in _REQUIRED_FIELDS:
@@ -203,8 +208,8 @@ def _command_for_row(
 
     vehicle_category = (
         parse_vehicle_category(raw_by_field["vehicle_category"], issues)
-        if "vehicle_category" in raw_by_field
-        else None
+        if not is_blank(raw_by_field.get("vehicle_category"))
+        else VehicleCategory.ANGBER
     )
     vehicle = parse_vehicle(raw_by_field.get("vehicle"), issues, vehicle_catalog)
     activity_mode = (
@@ -220,8 +225,8 @@ def _command_for_row(
     )
     distance_source = (
         parse_distance_source(raw_by_field["distance_source"], issues)
-        if "distance_source" in raw_by_field
-        else None
+        if not is_blank(raw_by_field.get("distance_source"))
+        else DistanceSource.MANUAL
     )
     stop_sequence = _parse_stop_sequence(raw_by_field.get("stop_sequence"), issues)
 

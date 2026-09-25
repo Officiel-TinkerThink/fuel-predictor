@@ -4,56 +4,28 @@
 
 {% block content %}
 
-{% set summary = accepted_count ~ ' baris valid memperoleh kode operasi dan prediksi. Catat kode tiap operasi, atau unduh hasilnya.' %}
-{% if quarantined_count %}{% set summary = summary ~ ' ' ~ quarantined_count ~ ' baris dikarantina — lihat laporan koreksi di bawah.' %}{% endif %}
-{% if ignored_count %}{% set summary = summary ~ ' ' ~ ignored_count ~ ' baris kosong diabaikan.' %}{% endif %}
-{{ ui.banner('success' if accepted_count else 'warning', 'Rencana operasi sudah diproses', summary) }}
-
-<section class="card">
-  {% if result.accepted_rows %}
-  <div class="card__title">
-    <h2>Baris berhasil diprediksi</h2>
-    {# A data: link needs no script and no server-side copy of the result. #}
-    <div class="button-row">
-      <a class="button" download="{{ results_filename }}"
-         href="data:text/csv;charset=utf-8,{{ results_csv | urlencode }}">Unduh hasil (CSV)</a>
-      {# Printing needs the script that shows only the slips; hidden without it. #}
-      <button type="button" class="button button--secondary" data-print-slips hidden>Cetak semua slip ({{ accepted_count }})</button>
-    </div>
-  </div>
-  <div class="table-wrap">
-    <table data-list data-list-label="Baris berhasil diprediksi">
-      <thead>
-        <tr><th>Baris sumber</th><th>Kode operasi</th><th class="numeric">Estimasi kebutuhan BBM</th><th class="numeric">Alokasi rekomendasi</th></tr>
-      </thead>
-      <tbody>
-        {% for row in result.accepted_rows %}
-        <tr>
-          <td>{{ row.source.sheet_name }} {{ row.source.row_number }}</td>
-          <td><a href="/operasi-harian/{{ row.operation.operation_id }}">{{ ui.operation_code(row.operation) }}</a></td>
-          <td class="numeric">{{ row.prediction.estimated_fuel_requirement_liters | angka }} L</td>
-          <td class="numeric">{{ row.prediction.recommended_allocation_liters | angka }} L</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  {{ ui.empty_state('Tidak ada baris yang berhasil diprediksi.') }}
-  {% endif %}
-</section>
+{% set parts = [] %}
+{% if accepted_count %}{% set _ = parts.append(accepted_count ~ ' operasi mendapat kode dan estimasi.') %}{% endif %}
+{% if quarantined_count %}{% set _ = parts.append(quarantined_count ~ ' baris perlu diperbaiki, lihat di bawah.') %}{% endif %}
+{% if not parts %}{% set _ = parts.append('Tidak ada baris berisi rencana di berkas ini.') %}{% endif %}
+{{ ui.banner('warning' if quarantined_count else 'success', 'Rencana operasi sudah diproses', parts | join(' ')) }}
 
 {% if result.correction_report %}
 <section class="card">
-  <h2>Laporan koreksi</h2>
+  <h2>Baris yang perlu diperbaiki</h2>
+  {# Uploading the original again would plan every accepted row a second
+     time; the rows to fix come back on their own instead. #}
+  <p class="hint">Unduh baris-baris ini, perbaiki, lalu unggah berkas itu saja. Jangan mengunggah
+    ulang berkas aslinya: operasi yang sudah berhasil akan dibuat lagi.</p>
+  <p><a class="button" download="{{ corrections_filename }}"
+        href="data:text/csv;charset=utf-8,{{ corrections_csv | urlencode }}">Unduh baris yang perlu diperbaiki</a></p>
   <div class="table-wrap">
-    <table data-list data-list-label="Laporan koreksi">
-      <caption>{{ result.correction_report | length }} baris dikarantina</caption>
-      <thead><tr><th>Baris sumber</th><th>Alasan</th></tr></thead>
+    <table data-list data-list-label="Baris yang perlu diperbaiki">
+      <thead><tr><th>Baris</th><th>Masalah</th></tr></thead>
       <tbody>
         {% for issue in result.correction_report %}
         <tr>
-          <td>{{ issue.source.sheet_name }} {{ issue.source.row_number }}</td>
+          <td data-sort-value="{{ issue.source.row_number }}">{{ issue.source.row_number }}</td>
           <td>{{ issue.reasons | map(attribute='message') | join('; ') }}</td>
         </tr>
         {% endfor %}
@@ -63,10 +35,37 @@
 </section>
 {% endif %}
 
-<div class="button-row">
-  <a class="button button--secondary" href="/prediksi-operasi-massal">Prediksi berkas lain</a>
-  <a class="button button--secondary" href="/riwayat-prediksi">Lihat di riwayat prediksi</a>
-</div>
+{% if result.accepted_rows %}
+<section class="card">
+  <div class="card__title">
+    <h2>Berhasil</h2>
+    {# A data: link needs no script and no server-side copy of the result. #}
+    <div class="button-row">
+      <a class="button{% if result.correction_report %} button--secondary{% endif %}" download="{{ results_filename }}"
+         href="data:text/csv;charset=utf-8,{{ results_csv | urlencode }}">Unduh hasil (CSV)</a>
+      {# Printing needs the script that shows only the slips; hidden without it. #}
+      <button type="button" class="button button--secondary" data-print-slips hidden>Cetak semua slip ({{ accepted_count }})</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table data-list data-list-label="Berhasil">
+      <thead>
+        <tr><th>Baris</th><th>Kode operasi</th><th>Kendaraan</th><th class="numeric">Alokasi</th></tr>
+      </thead>
+      <tbody>
+        {% for row in result.accepted_rows %}
+        <tr>
+          <td data-sort-value="{{ row.source.row_number }}">{{ row.source.row_number }}</td>
+          <td><a href="/operasi-harian/{{ row.operation.operation_id }}">{{ ui.operation_code(row.operation) }}</a></td>
+          <td>{{ row.operation.vehicle or '' }}</td>
+          <td class="numeric">{{ row.prediction.recommended_allocation_liters | angka }} L</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
 
 {% if result.accepted_rows %}
 {# Printed only: one slip per accepted operation, one per page. #}

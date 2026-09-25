@@ -1,20 +1,33 @@
+"""The sheet for planning many operations at once.
+
+It asks what the single form asks, in the form's words: the unit, the
+activity, the distance, the lifting hours, the stops. The category (every
+unit is ANGBER) and the distance source (a typed distance is a manual one)
+are not asked; sheets that still carry those columns are read as before.
+With the fleet passed in, the unit and activity columns are dropdowns, so a
+name cannot be misspelled.
+"""
+
 import csv
+from collections.abc import Sequence
 from io import BytesIO, StringIO
 from typing import cast
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
+from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.worksheet import Worksheet
 
 BULK_PREDICTION_TEMPLATE_HEADERS = (
-    "Kategori ANGBER (wajib)",
-    "Kendaraan (opsional)",
-    "Mode Aktivitas (wajib)",
-    "Jam Lifting (opsional)",
+    "Kendaraan",
+    "Aktivitas (wajib)",
     "Jarak Total (km) (wajib)",
-    "Sumber Jarak (wajib)",
+    "Jam Lifting (opsional)",
     "Urutan Pemberhentian (opsional)",
 )
+ACTIVITY_CHOICES = ("Mobilisasi", "Mobilisasi + lifting")
+# Rows the dropdowns cover; far more than a day's plan.
+_ROWS = 500
 
 
 def csv_template() -> bytes:
@@ -24,63 +37,96 @@ def csv_template() -> bytes:
     return output.getvalue().encode("utf-8-sig")
 
 
-def xlsx_template() -> bytes:
+def xlsx_template(vehicles: Sequence[tuple[str, bool]] = ()) -> bytes:
+    """`vehicles` is the fleet as (name, can lift), in the catalog's order."""
     workbook = Workbook()
     worksheet = cast(Worksheet, workbook.active)
     worksheet.title = "Operasi Harian"
     worksheet.append(BULK_PREDICTION_TEMPLATE_HEADERS)
     _style_header(worksheet)
-    for column, width in zip("ABCDEFG", (26, 24, 30, 25, 28, 24, 48), strict=True):
+    for column, width in zip("ABCDE", (26, 24, 24, 22, 48), strict=True):
         worksheet.column_dimensions[column].width = width
     worksheet.freeze_panes = "A2"
 
-    instructions = workbook.create_sheet("Petunjuk")
-    instructions["A1"] = "Kolom wajib dan cara pengisian"
+    activity = DataValidation(
+        type="list", formula1='"' + ",".join(ACTIVITY_CHOICES) + '"', allow_blank=True
+    )
+    activity.error = 'Pilih "Mobilisasi" atau "Mobilisasi + lifting".'
+    worksheet.add_data_validation(activity)
+    activity.add(f"B2:B{_ROWS}")
+
+    if vehicles:
+        # The names live on a hidden sheet: a dropdown written inline is cut
+        # off at 255 characters, which the fleet already exceeds. Its header
+        # matches no column of the plan, so the import does not read it.
+        names = workbook.create_sheet("Daftar unit")
+        names.append(("Nama unit (daftar pilihan)",))
+        for name, _can_lift in vehicles:
+            names.append((name,))
+        names.sheet_state = "hidden"
+        unit = DataValidation(
+            type="list", formula1=f"='Daftar unit'!$A$2:$A${len(vehicles) + 1}", allow_blank=True
+        )
+        unit.error = "Pilih unit dari daftar; namanya sama dengan di menu Armada."
+        worksheet.add_data_validation(unit)
+        unit.add(f"A2:A{_ROWS}")
+
+    lifting = [name for name, can_lift in vehicles if can_lift]
+    instructions = workbook.create_sheet("Petunjuk", 1)
+    instructions["A1"] = "Cara mengisi: satu baris per operasi"
     instructions["A1"].font = Font(bold=True, color="FFFFFF")
     instructions["A1"].fill = PatternFill("solid", fgColor="185C43")
     instructions.append(("Kolom", "Status", "Petunjuk"))
     for cell in instructions[2]:
         cell.font = Font(bold=True)
-    instructions.append(("Kategori ANGBER", "Wajib", "Gunakan ANGBER atau Angkutan Berat."))
     instructions.append(
         (
             "Kendaraan",
-            "Opsional",
-            "Unit yang menjalankan operasi: Prime Mover, Truck Crane 01, Truck Crane 02, "
-            "Whellcrane, OFT Tronton, atau OFT Winch Truck. Diisi agar model dapat "
-            "membedakan konsumsi tiap kendaraan; baris tanpa kolom ini tetap terbaca.",
+            "Disarankan",
+            "Pilih unit dari daftar; namanya sama dengan di menu Armada. Tanpa kendaraan, "
+            "estimasi memakai rata-rata semua unit dan kode operasinya tanpa kode kendaraan.",
         )
     )
     instructions.append(
         (
-            "Mode Aktivitas",
+            "Aktivitas",
             "Wajib",
-            "Gunakan transport (mobilisasi) atau transport_and_lifting (mobilisasi + lifting, "
-            "hanya untuk kendaraan yang bisa lifting: Truck Crane 01, Truck Crane 02, "
-            "Wheel Crane — lihat menu Armada).",
+            "Mobilisasi, atau Mobilisasi + lifting"
+            + (f" (hanya untuk unit yang bisa lifting: {', '.join(lifting)})." if lifting else "."),
         )
     )
-    instructions.append(("Jam Lifting", "Opsional", "Wajib dan lebih dari 0 untuk mode lifting."))
-    instructions.append(("Jarak Total (km)", "Wajib", "Masukkan angka lebih besar dari 0."))
-    instructions.append(("Sumber Jarak", "Wajib", "Gunakan manual atau routing_provider."))
+    instructions.append(
+        (
+            "Jarak Total (km)",
+            "Wajib",
+            "Jarak seluruh perjalanan, termasuk kembali. Lebih besar dari 0.",
+        )
+    )
+    instructions.append(
+        (
+            "Jam Lifting",
+            "Untuk lifting",
+            "Total jam lifting sepanjang operasi. Kosongkan untuk Mobilisasi.",
+        )
+    )
     instructions.append(
         (
             "Urutan Pemberhentian",
             "Opsional",
-            "Pisahkan lokasi sesuai urutan planner dengan >, misalnya Depo > Site A > Depo.",
+            "Lokasi berurutan dipisah >, misalnya Depo > Site A > Depo.",
         )
     )
     instructions.append(
         (
             "Hasil",
             "Informasi",
-            "Setiap baris valid menghasilkan kode operasi, estimasi kebutuhan BBM, "
-            "dan alokasi rekomendasi.",
+            "Setiap baris yang valid mendapat kode operasi, estimasi kebutuhan BBM, "
+            "dan alokasi rekomendasi. Baris yang bermasalah disisihkan beserta alasannya.",
         )
     )
-    instructions.column_dimensions["A"].width = 28
+    instructions.column_dimensions["A"].width = 24
     instructions.column_dimensions["B"].width = 16
-    instructions.column_dimensions["C"].width = 92
+    instructions.column_dimensions["C"].width = 96
     instructions.freeze_panes = "A3"
 
     output = BytesIO()

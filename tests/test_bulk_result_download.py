@@ -35,8 +35,9 @@ def test_result_page_offers_the_accepted_rows_as_csv(tmp_path: Path) -> None:
 
     assert page.status_code == 201, page.text
     marker = 'href="data:text/csv;charset=utf-8,'
-    assert marker in page.text
-    start = page.text.index(marker) + len(marker)
+    # The results link, not the one for the rows to fix.
+    results = page.text.index('download="hasil-prediksi-rencana.csv"')
+    start = page.text.index(marker, results) + len(marker)
     csv_text = unquote(unescape(page.text[start : page.text.index('"', start)]))
     lines = csv_text.splitlines()
     # The code the planner writes down sits right next to the row it came from.
