@@ -363,6 +363,9 @@
    resulting address can be bookmarked. Hidden fields carry the current sort
    and the page's own filters. #}
 {% macro listing_toolbar(listing, placeholder='Cari…', extra_fields=none) -%}
+{# Nothing to search in an empty list; once a search or filter is applied
+   the toolbar stays, so it can be changed or cleared. #}
+{% if listing.total or listing.q or listing.extra %}
 <form method="get" class="listing-toolbar" role="search">
   <input type="hidden" name="urut" value="{{ listing.sort }}">
   <input type="hidden" name="arah" value="{{ listing.direction }}">
@@ -379,6 +382,7 @@
     <button type="submit" class="button button--secondary">Terapkan</button>
   </div>
 </form>
+{% endif %}
 {%- endmacro %}
 
 {# A sortable column header: the whole label is the link, the arrow shows

@@ -12,6 +12,7 @@ from fuel_predictor.application.actual_fuel import (
 from fuel_predictor.application.baseline_predictions import BaselineModelStore
 from fuel_predictor.application.prediction_features import feature_values
 from fuel_predictor.application.vehicles import LineageIndex, VehicleCatalog
+from fuel_predictor.application.wording import liters
 from fuel_predictor.domain.daily_operation import VehicleCategory
 from fuel_predictor.domain.prediction import ModelLifecycleStatus, ModelVersion
 
@@ -179,12 +180,10 @@ class GetModelGovernanceDashboard:
                 "secara manual setelah ditinjau."
             )
         elif active_mae is not None and retraining_recommended:
-            mae = f"{active_mae:.1f}".replace(".", ",")
-            limit = f"{self.max_active_model_mae_liters:.1f}".replace(".", ",")
             recommendation = (
-                f"Model aktif meleset rata-rata {mae} L dari BBM aktual yang tercatat, di atas "
-                f"batas {limit} L. Latih kandidat baru secara manual dan bandingkan metriknya "
-                "sebelum promosi."
+                f"Model aktif meleset rata-rata {liters(active_mae)} dari BBM aktual yang "
+                f"tercatat, di atas batas {liters(self.max_active_model_mae_liters)}. Latih "
+                "kandidat baru secara manual dan bandingkan metriknya sebelum promosi."
             )
         elif candidates:
             recommendation = (

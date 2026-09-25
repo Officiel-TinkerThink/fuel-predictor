@@ -89,7 +89,9 @@ def build_actual_fuel_pages_router(
                     recorded_by=caller.user.username,
                 )
             )
-            events.actual_fuel_recorded(caller.user.username, record)
+            events.actual_fuel_recorded(
+                caller.user.username, record, record_actual_fuel.code_for(record)
+            )
         except ValidationError as error:
             return HTMLResponse(
                 _form(caller, submitted, translate_validation_errors(error.errors())),

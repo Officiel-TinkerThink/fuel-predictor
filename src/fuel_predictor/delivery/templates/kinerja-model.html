@@ -6,7 +6,8 @@
 {% if performance.overall.matched_record_count == 0 %}
 {{ ui.banner('info', 'Belum ada BBM aktual yang tercocokkan', 'Angka kinerja, tren, dan degradasi muncul di sini setelah BBM aktual pertama dicatat untuk sebuah prediksi.', 'Catat BBM aktual', '/bahan-bakar-aktual') }}
 {% else %}
-{{ ui.banner('info', performance.overall.matched_record_count ~ ' catatan aktual tercocokkan', 'Metrik memakai estimasi kebutuhan BBM, bukan alokasi rekomendasi.') }}
+<p class="hint">Dari {{ performance.overall.matched_record_count }} BBM aktual yang tercatat. Selisih
+  dihitung terhadap estimasi kebutuhan BBM, bukan alokasi rekomendasi.</p>
 {% endif %}
 
 {% if performance.by_model %}
@@ -48,6 +49,8 @@
 {# With nothing matched, every section below would only repeat "no data"; the
    banner above already says what to do. #}
 {% if performance.overall.matched_record_count %}
+{# With one model the combined numbers are that model's numbers again. #}
+{% if performance.by_model | length > 1 %}
 <section class="card">
   <h2>Semua prediksi, semua model</h2>
   <p class="hint">Gabungan seluruh model yang pernah melayani. Untuk menilai satu model, pakai tabel
@@ -63,6 +66,7 @@
     {% endif %}
   </div>
 </section>
+{% endif %}
 
 {% if performance.by_vehicle_category | length > 1 %}
 <section class="card">
@@ -93,12 +97,16 @@
 
 <section class="card">
   <h2>Tren kesalahan bergulir</h2>
-  <p class="hint">Jendela bergulir {{ rolling_error_window }} catatan terakhir, berbeda dari metrik
-    keseluruhan di atas yang memakai seluruh riwayat. Garis putus-putus adalah batas perhatian.</p>
+  <p class="hint">Selisih rata-rata dari {{ rolling_error_window }} BBM aktual terakhir pada tiap
+    titik. Garis putus-putus adalah ambang perhatian.</p>
   {% if trend_chart %}
   {{ ui.trend_chart(trend_chart, 'Selisih rata-rata bergulir dari waktu ke waktu, dengan ambang ' ~ (degradation_mae_threshold_liters | angka) ~ ' L') }}
   {% endif %}
   {% if rolling_error_trend %}
+  {# The chart's points as numbers, for anyone who cannot or does not want to
+     read them off the line. #}
+  <details class="technical">
+  <summary>Lihat angkanya</summary>
   <div class="table-wrap">
     <table data-list data-list-label="Tren kesalahan bergulir">
       <thead><tr><th>Tanggal aktual</th><th class="numeric">Data cocok</th><th class="numeric">MAE</th></tr></thead>
@@ -113,11 +121,15 @@
       </tbody>
     </table>
   </div>
+  </details>
   {% else %}
   {{ ui.empty_state('Belum ada aktual yang cocok.') }}
   {% endif %}
 </section>
 
+{# One category is the trend above again; the table earns its place once
+   there are categories to compare. #}
+{% if category_degradation | length > 1 %}
 <section class="card">
   <h2>Degradasi per kategori</h2>
   <p class="hint">Ambang MAE: {{ degradation_mae_threshold_liters | angka }} L.</p>
@@ -142,7 +154,6 @@
   {% endif %}
 </section>
 {% endif %}
-
-<div class="button-row"><a class="button button--secondary" href="/bahan-bakar-aktual">Catat bahan bakar aktual</a><a class="button button--secondary" href="/pengelolaan-model">Kelola model</a></div>
+{% endif %}
 
 {% endblock %}

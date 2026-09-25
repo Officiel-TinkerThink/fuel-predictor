@@ -617,7 +617,9 @@ def build_router(
                 recorded_by=actor_of(http_request),
             )
         )
-        events.actual_fuel_recorded(actor_of(http_request), record)
+        events.actual_fuel_recorded(
+            actor_of(http_request), record, record_actual_fuel.code_for(record)
+        )
         return _actual_fuel_response(record)
 
     @router.get("/api/v1/prediction-performance", response_model=PredictionPerformanceResponse)

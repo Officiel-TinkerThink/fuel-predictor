@@ -6,6 +6,7 @@ from typing import Protocol
 from fuel_predictor.application.baseline_predictions import ActiveModelVersionReader
 from fuel_predictor.application.prediction_features import LINEAGE_AWARE_FEATURE_VERSIONS
 from fuel_predictor.application.vehicles import VehicleCatalog, catalog_fingerprint
+from fuel_predictor.application.wording import liters, percent
 from fuel_predictor.domain.monitoring import (
     CategoryDegradation,
     DatasetValidationSummary,
@@ -271,8 +272,8 @@ def _alerts_for(
                 "feature_drift:active_model",
                 MonitoringAlertKind.FEATURE_DRIFT,
                 MonitoringAlertSeverity.WARNING,
-                f"{_percent(drift.drift_share)} fitur prediksi bergeser dari data latih "
-                f"(ambang {_percent(drift.threshold)}).",
+                f"{percent(drift.drift_share)} fitur prediksi bergeser dari data latih "
+                f"(ambang {percent(drift.threshold)}).",
                 {"drift_share": drift.drift_share, "threshold": drift.threshold},
                 observed_at,
             )
@@ -285,8 +286,8 @@ def _alerts_for(
                     MonitoringAlertKind.MODEL_DEGRADATION,
                     MonitoringAlertSeverity.CRITICAL,
                     f"Estimasi {category.vehicle_category.value} meleset rata-rata "
-                    f"{_liters(category.rolling_mae_liters or 0.0)} dari BBM aktual, "
-                    f"di atas ambang {_liters(category.threshold_liters)}.",
+                    f"{liters(category.rolling_mae_liters or 0.0)} dari BBM aktual, "
+                    f"di atas ambang {liters(category.threshold_liters)}.",
                     {
                         "vehicle_category": category.vehicle_category.value,
                         "mae_liters": category.rolling_mae_liters or 0.0,
@@ -296,15 +297,6 @@ def _alerts_for(
                 )
             )
     return tuple(alerts)
-
-
-def _liters(value: float) -> str:
-    """1 decimal, Indonesian comma: alerts are read on screen and in a chat."""
-    return f"{value:.1f}".replace(".", ",") + " L"
-
-
-def _percent(share: float) -> str:
-    return f"{share * 100:.0f}%"
 
 
 def _alert(

@@ -143,9 +143,9 @@ def test_monitoring_dashboard_shows_rolling_error_and_category_degradation(
     )
     # The alert says by how much, not only that a threshold was crossed.
     assert degradation["message"] == (
-        "Estimasi ANGBER meleset rata-rata 5,0 L dari BBM aktual, di atas ambang 1,0 L."
+        "Estimasi ANGBER meleset rata-rata 5 L dari BBM aktual, di atas ambang 1 L."
     )
-    assert "meleset rata-rata 5,0 L dari BBM aktual yang tercatat, di atas batas 1,0 L" in (
+    assert "meleset rata-rata 5 L dari BBM aktual yang tercatat, di atas batas 1 L" in (
         management.text
     )
     # The overview states the alert rather than only counting it, and the

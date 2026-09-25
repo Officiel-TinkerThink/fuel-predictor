@@ -33,10 +33,8 @@
   {% elif listing.q %}
   {{ ui.empty_state('Tidak ada unggahan yang cocok.', 'Tampilkan semua', '/model/riwayat') }}
   {% else %}
-  {{ ui.empty_state('Belum ada paket model yang diunggah.') }}
+  {{ ui.empty_state('Belum ada paket model yang diunggah.', 'Unggah kandidat', '/model/unggah') }}
   {% endif %}
 </section>
-
-<div class="button-row"><a class="button button--secondary" href="/model/unggah">Unggah kandidat</a></div>
 
 {% endblock %}

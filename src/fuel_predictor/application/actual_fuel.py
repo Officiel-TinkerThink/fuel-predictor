@@ -101,6 +101,11 @@ class RecordActualFuel:
         self.actual_fuel_writer.add(record)
         return record
 
+    def code_for(self, record: ActualFuelRecord) -> str | None:
+        """The code people know the recorded operation by."""
+        operation = self.operation_reader.get(record.operation_id)
+        return operation.operation_code if operation is not None else None
+
 
 @dataclass(frozen=True, slots=True)
 class OperationAwaitingActualFuel:

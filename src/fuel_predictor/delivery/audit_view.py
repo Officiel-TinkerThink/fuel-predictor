@@ -1,5 +1,6 @@
 """Audit records as a page shows them: actions in words, details listed."""
 
+from fuel_predictor.delivery.rendering import format_decimal
 from fuel_predictor.domain.identity import AuditRecord
 
 # What each recorded action means, in words. The code itself stays on the
@@ -32,7 +33,8 @@ _ACTION_LABELS = {
     "agent_grant_deleted": "Sambungan agen dihapus dari daftar",
     "mcp_rate_limited": "Agen melebihi batas laju",
 }
-_ACTOR_KIND_LABELS = {"user": "Pengguna", "agent": "Agen", "system": "Sistem"}
+# A person is the usual actor; only the others are worth a caption.
+_ACTOR_KIND_LABELS = {"agent": "Agen", "system": "Sistem"}
 _DETAIL_LABELS = {
     "reason": "alasan",
     "role": "peran",
@@ -46,7 +48,8 @@ _DETAIL_LABELS = {
     "liters": "liter",
     "jarak_km": "jarak (km)",
     "accepted": "diterima",
-    "quarantined": "dikarantina",
+    "quarantined": "perlu diperbaiki",
+    "source": "diukur dengan",
     "dataset": "dataset",
     "model": "model",
     "file": "berkas",
@@ -61,6 +64,23 @@ _DETAIL_LABELS = {
 }
 
 
+# Stored values that are codes, in the words the pages use for them.
+_VALUE_LABELS = {
+    "fuel_meter": "Meter BBM",
+    "receipt": "Nota",
+    "manual_entry": "Catatan manual",
+    "spreadsheet_import": "Impor berkas",
+}
+
+
+def _detail_value(value: object) -> object:
+    if isinstance(value, float):
+        return format_decimal(value)
+    if isinstance(value, str):
+        return _VALUE_LABELS.get(value, value)
+    return value
+
+
 def action_label(action: str) -> str:
     if action in _ACTION_LABELS:
         return _ACTION_LABELS[action]
@@ -70,17 +90,21 @@ def action_label(action: str) -> str:
 
 
 def audit_row(record: AuditRecord) -> dict[str, object]:
+    # An operation is named by its code where the record has it; the code is
+    # then the subject, not repeated among the details.
+    code = record.details.get("kode") if (record.subject or "").startswith("OPR-") else None
     return {
         "occurred_at": record.occurred_at,
         "actor": record.actor,
-        "actor_kind": _ACTOR_KIND_LABELS.get(record.actor_kind, record.actor_kind),
+        "actor_kind": _ACTOR_KIND_LABELS.get(record.actor_kind),
         "action": record.action,
         "action_label": action_label(record.action),
         "subject": record.subject,
+        "subject_code": code or None,
         "outcome": record.outcome.value,
         "details": [
-            (_DETAIL_LABELS.get(key, key), value)
+            (_DETAIL_LABELS.get(key, key), _detail_value(value))
             for key, value in record.details.items()
-            if value not in (None, "")
+            if value not in (None, "") and not (code and key == "kode")
         ],
     }

@@ -23,7 +23,7 @@
         {% for record in listing.items %}
         <tr data-outcome="{{ record.outcome }}">
           <td data-label="Waktu">{{ record.occurred_at | waktu }}</td>
-          <td data-label="Pelaku">{{ record.actor }}<br><span class="hint">{{ record.actor_kind }}</span></td>
+          <td data-label="Pelaku">{{ record.actor }}{% if record.actor_kind %}<br><span class="hint">{{ record.actor_kind }}</span>{% endif %}</td>
           <td data-label="Tindakan">{{ record.action_label }}<br><code class="mono-id">{{ record.action }}</code>
             {% if record.details %}
             <ul class="detail-inline">
@@ -32,7 +32,7 @@
             {% endif %}
           </td>
           {# An operation's subject opens that operation; any other stays text. #}
-          <td data-label="Subjek">{% if record.subject and record.subject.startswith('OPR-') %}<a href="/operasi-harian/{{ record.subject }}"><code class="mono-id">{{ record.subject }}</code></a>{% else %}{{ record.subject or '-' }}{% endif %}</td>
+          <td data-label="Subjek">{% if record.subject and record.subject.startswith('OPR-') %}<a href="/operasi-harian/{{ record.subject }}">{% if record.subject_code %}<code class="operation-code">{{ record.subject_code }}</code>{% else %}<code class="mono-id">{{ record.subject }}</code>{% endif %}</a>{% else %}{{ record.subject or '-' }}{% endif %}</td>
           <td data-label="Hasil">
             {% if record.outcome == 'succeeded' %}{{ ui.badge('Berhasil', 'success') }}
             {% elif record.outcome == 'denied' %}{{ ui.badge('Ditolak', 'warning') }}

@@ -6,6 +6,7 @@ a verdict nobody had computed. The audit trail named operations by their
 OPR- id alone, not linked and without the code people use.
 """
 
+import re
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -43,5 +44,8 @@ def test_the_audit_trail_names_a_planned_operation_by_code_and_links_it(tmp_path
         )
         audit = client.get("/audit").text
 
-    assert "kode operasi" in audit
-    assert 'href="/operasi-harian/OPR-' in audit
+    # Linked to the operation and named by its code, once.
+    assert re.search(
+        r'href="/operasi-harian/OPR-[0-9A-F]+"><code class="operation-code">\d{6}-\d{4}', audit
+    )
+    assert "kode operasi:" not in audit

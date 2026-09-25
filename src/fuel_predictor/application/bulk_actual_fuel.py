@@ -17,6 +17,7 @@ from fuel_predictor.application.historical_datasets import (
     is_blank,
     normalize_header,
 )
+from fuel_predictor.application.wording import liters
 from fuel_predictor.domain.actual_fuel import ActualFuelMeasurementSource, ActualFuelRecord
 from fuel_predictor.domain.historical_dataset import (
     CorrectionReason,
@@ -123,7 +124,9 @@ class BulkActualFuel:
                     )
                 else:
                     accepted_rows.append(
-                        BulkActualFuelAcceptedRow(source, record, self._operation_code(record))
+                        BulkActualFuelAcceptedRow(
+                            source, record, self._record_actual_fuel.code_for(record)
+                        )
                     )
         if data_sheets == 0:
             raise HistoricalDatasetImportError(
@@ -138,24 +141,15 @@ class BulkActualFuel:
             already_recorded_row_count=already_recorded_row_count,
         )
 
-    def _operation_code(self, record: ActualFuelRecord) -> str | None:
-        operation = self._record_actual_fuel.operation_reader.get(record.operation_id)
-        return operation.operation_code if operation is not None else None
-
 
 def _conflict(error: ActualFuelAlreadyRecordedError, command: RecordActualFuelCommand) -> str:
     if error.recorded_liters is None:
         return "Bahan bakar aktual untuk operasi ini sudah tercatat."
     return (
-        f"Sudah tercatat {_liters(error.recorded_liters)} L, berbeda dengan "
-        f"{_liters(command.actual_fuel_liters)} L di berkas. Angka yang sudah tercatat "
+        f"Sudah tercatat {liters(error.recorded_liters)}, berbeda dengan "
+        f"{liters(command.actual_fuel_liters)} di berkas. Angka yang sudah tercatat "
         "tidak diubah lewat impor."
     )
-
-
-def _liters(value: float) -> str:
-    """As the page shows numbers: comma decimal, no trailing zeros."""
-    return f"{value:.2f}".rstrip("0").rstrip(".").replace(".", ",")
 
 
 _HEADER_ALIASES = {

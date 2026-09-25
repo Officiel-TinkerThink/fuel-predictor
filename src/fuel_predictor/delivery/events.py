@@ -43,12 +43,18 @@ class ImportantEvents:
             {"kode": operation.operation_code, "reason": operation.cancel_reason},
         )
 
-    def actual_fuel_recorded(self, actor: str | None, record: ActualFuelRecord) -> None:
+    def actual_fuel_recorded(
+        self, actor: str | None, record: ActualFuelRecord, code: str | None = None
+    ) -> None:
         self._note(
             actor,
             "actual_fuel_recorded",
             record.operation_id,
-            {"liters": record.actual_fuel_liters, "source": record.measurement_source.value},
+            {
+                "kode": code,
+                "liters": record.actual_fuel_liters,
+                "source": record.measurement_source.value,
+            },
         )
 
     def bulk_prediction_imported(
