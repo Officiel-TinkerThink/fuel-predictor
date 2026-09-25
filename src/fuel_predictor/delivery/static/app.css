@@ -885,6 +885,12 @@ textarea {
   background: var(--color-warning-soft);
 }
 
+/* A submitted form's button while the request is on its way. */
+.button[aria-busy="true"] {
+  cursor: progress;
+  opacity: 0.75;
+}
+
 /* ---------- File drop zone ----------
    Only with the script (html.js): it is what names the chosen file. Without
    it, the browser's own picker stays as it is. */

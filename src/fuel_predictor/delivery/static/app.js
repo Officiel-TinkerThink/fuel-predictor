@@ -170,6 +170,38 @@
     });
   });
 
+  // One submission per click. A second click while the first is on its way
+  // sent the form twice - two operations for one job, the second coded -2.
+  // The button says it is working; going back to the page (the browser's
+  // back-forward cache) makes it usable again.
+  document.querySelectorAll('form[method="post"], form[method="POST"]').forEach(function (form) {
+    form.addEventListener("submit", function (event) {
+      if (form.hasAttribute("data-submitting")) {
+        event.preventDefault();
+        return;
+      }
+      form.setAttribute("data-submitting", "");
+      var button = event.submitter || form.querySelector('button[type="submit"], button:not([type])');
+      if (button) {
+        button.setAttribute("aria-busy", "true");
+        button.setAttribute("data-label", button.textContent);
+        button.textContent = "Memproses…";
+      }
+    });
+  });
+  window.addEventListener("pageshow", function (event) {
+    if (!event.persisted) {
+      return;
+    }
+    document.querySelectorAll("form[data-submitting]").forEach(function (form) {
+      form.removeAttribute("data-submitting");
+      form.querySelectorAll('[aria-busy="true"]').forEach(function (button) {
+        button.removeAttribute("aria-busy");
+        button.textContent = button.getAttribute("data-label") || button.textContent;
+      });
+    });
+  });
+
   // File pickers become a drop zone that names the chosen file. The real
   // input stays underneath and covers the zone, so clicking, the keyboard
   // and screen readers all work on it; without this script the browser's
