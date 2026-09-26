@@ -47,11 +47,21 @@
 {# What was planned, the same on every page that shows an operation. The
    type and group are passed in: an estimate shows those it was made with,
    a plan without one shows the catalog's. #}
-{% macro operation_facts(operation, vehicle_type=none, vehicle_group=none) -%}
-<dt>Kendaraan</dt><dd>{{ operation.vehicle or operation.vehicle_category.value }}{% if operation.vehicle and vehicle_group and vehicle_group != 'tidak diketahui' %} <span class="muted">·{% if vehicle_type and vehicle_type != vehicle_group %} {{ vehicle_type }} ·{% endif %} {{ vehicle_group }}</span>{% endif %}</dd>
+{# The unit's type and group follow its name - unless the code's legend on
+   the same page (`coded_vehicle`, as given to operation_code_callout) is
+   already saying them. #}
+{% macro operation_facts(operation, vehicle_type=none, vehicle_group=none, coded_vehicle=none) -%}
+{% set explained = _legend_applies(operation, coded_vehicle) | trim %}
+<dt>Kendaraan</dt><dd>{{ operation.vehicle or operation.vehicle_category.value }}{% if operation.vehicle and vehicle_group and vehicle_group != 'tidak diketahui' and not explained %} <span class="muted">·{% if vehicle_type and vehicle_type != vehicle_group %} {{ vehicle_type }} ·{% endif %} {{ vehicle_group }}</span>{% endif %}</dd>
 <dt>Aktivitas</dt><dd>{{ operation.activity_mode.value | aktivitas }}{% if operation.lifting_hours is not none %} · {{ operation.lifting_hours | angka }} jam{% endif %}</dd>
 {% if operation.stop_sequence %}<dt>Rute</dt><dd>{{ operation.stop_sequence | join(' → ') }}</dd>{% endif %}
 <dt>Jarak total</dt><dd>{{ operation.total_distance_km | angka }} km</dd>
+{%- endmacro %}
+
+{# "1" when the catalog's unit still codes the way this operation's code was
+   issued, so the code's legend can explain it. #}
+{% macro _legend_applies(operation, vehicle) -%}
+{% if vehicle and operation.operation_code and ('-' ~ vehicle.vehicle_code) in operation.operation_code %}1{% endif %}
 {%- endmacro %}
 
 {# The same, spelled plainly for links and form values. #}
@@ -68,7 +78,7 @@
   <p class="operation-code-callout__label" id="operation-code-heading">{% if operation.is_cancelled %}Kode operasi — dibatalkan, jangan dipakai{% else %}Kode operasi — catat kode ini{% endif %}</p>
   <p class="operation-code-callout__code"><code class="operation-code">{{ operation.operation_code }}</code>
     {% if not operation.is_cancelled %}<button type="button" class="button button--secondary button--small" data-copy="{{ operation.operation_code }}" hidden>Salin kode</button>{% endif %}</p>
-  {% if vehicle and ('-' ~ vehicle.vehicle_code) in operation.operation_code %}
+  {% if _legend_applies(operation, vehicle) | trim %}
   <p class="operation-code-callout__legend">
     {% if vehicle.group_code %}<span><strong>{{ vehicle.group_code }}</strong> = {{ vehicle.group }}</span>{% endif %}
     {% if vehicle.type_code %}<span><strong>{{ vehicle.type_code }}</strong> = {{ vehicle.type }}</span>{% endif %}

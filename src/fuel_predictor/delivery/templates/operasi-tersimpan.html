@@ -30,7 +30,7 @@
 
 <section class="card">
   <dl class="detail-list">
-    {{ ui.operation_facts(operation, vehicle.type if vehicle else none, vehicle.group if vehicle else none) }}
+    {{ ui.operation_facts(operation, vehicle.type if vehicle else none, vehicle.group if vehicle else none, coded_vehicle=vehicle) }}
   </dl>
 </section>
 

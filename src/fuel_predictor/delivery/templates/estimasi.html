@@ -51,7 +51,7 @@
     <dt>ID operasi</dt><dd><strong>{{ prediction.operation_id }}</strong> <button type="button" class="button button--secondary button--small" data-copy="{{ prediction.operation_id }}" hidden>Salin ID</button></dd>
     {% endif %}
     {% if operation %}
-    {{ ui.operation_facts(operation, prediction.input_snapshot.vehicle_type, prediction.input_snapshot.vehicle_group) }}
+    {{ ui.operation_facts(operation, prediction.input_snapshot.vehicle_type, prediction.input_snapshot.vehicle_group, coded_vehicle=vehicle) }}
     {% endif %}
     <dt>Dibuat</dt><dd>{{ prediction.created_at | waktu }}</dd>
   </dl>
@@ -95,7 +95,8 @@
         <tr>
           <td data-sort-value="{{ record.operation_date or record.recorded_at or '' }}">{% if record.operation_date %}{{ record.operation_date | tanggal }}{% elif record.recorded_at %}{{ record.recorded_at | waktu }}{% else %}—{% endif %}
             <span class="muted">· {% if record.source.value == 'dataset' %}riwayat{% else %}dicatat{% endif %}</span></td>
-          <td>{{ record.vehicle or '—' }}{% if item.vehicle_group %} <span class="muted">· {{ item.vehicle_type }} · {{ item.vehicle_group }}</span>{% endif %}</td>
+          {# The unit alone: how it relates to the planned one is the last column. #}
+          <td>{{ record.vehicle or '—' }}</td>
           <td>{{ mode_labels[record.activity_mode.value] }}{% if record.lifting_hours %} · {{ record.lifting_hours | angka }} jam{% endif %}</td>
           <td>{{ record.total_distance_km | angka }} km</td>
           <td>{% if record.prepared_fuel_liters is not none %}{{ record.prepared_fuel_liters | angka }} L{% elif record.estimated_fuel_requirement_liters is not none %}{{ record.recommended_allocation_liters | angka }} L <span class="muted">(estimasi)</span>{% else %}—{% endif %}</td>
