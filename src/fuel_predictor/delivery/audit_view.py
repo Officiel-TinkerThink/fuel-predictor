@@ -61,6 +61,9 @@ _DETAIL_LABELS = {
     "to": "menjadi",
     "registration_id": "klien",
     "user_id": "id pengguna",
+    "rows": "baris data latih",
+    "previous_version_id": "model sebelumnya",
+    "redirect_uris": "alamat kembali",
 }
 
 
