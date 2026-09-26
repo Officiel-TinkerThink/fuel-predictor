@@ -46,6 +46,8 @@ def test_the_slip_carries_the_code_the_allocation_and_room_for_the_actual(
     text = slip.text
     assert operation["operation_code"] in text
     assert "VT 01" in text and "Scania P410 6X6" in text
+    # Said once, in the code's legend, not again after the unit's name.
+    assert text.count("Scania P410 6X6") == 1
     assert prediction["model"]["model_code"] in text
     assert "BBM aktual terpakai" in text
     assert "window.print" in text or "data-print" in text

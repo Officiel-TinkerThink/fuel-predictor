@@ -1,12 +1,14 @@
 {# One fuel slip: the single-slip page and the bulk result's "print all" both
    render it, so a slip reads the same however it was printed. #}
+{% from "components.html" import legend_applies %}
 {% macro slip_sheet(operation, prediction, vehicle) -%}
+{% set explained = legend_applies(operation, vehicle) | trim %}
 <article class="slip__sheet">
   <header class="slip__header">
     <p class="slip__brand">Fuel Matrix Calculation · Slip BBM operasi</p>
     <p class="slip__label">Kode operasi</p>
     <p class="slip__code">{{ operation.operation_code or operation.operation_id }}</p>
-    {% if vehicle and operation.operation_code and ('-' ~ vehicle.vehicle_code) in operation.operation_code %}
+    {% if explained %}
     <p class="slip__legend">
       {% if vehicle.group_code %}<span><strong>{{ vehicle.group_code }}</strong> {{ vehicle.group }}</span>{% endif %}
       {% if vehicle.type_code %}<span><strong>{{ vehicle.type_code }}</strong> {{ vehicle.type }}</span>{% endif %}
@@ -16,7 +18,8 @@
   </header>
 
   <dl class="slip__facts">
-    <dt>Kendaraan</dt><dd>{{ operation.vehicle or operation.vehicle_category.value }}{% if vehicle %} · {{ vehicle.type }}{% endif %}</dd>
+    {# The legend above already says the type; without it, the name carries it. #}
+    <dt>Kendaraan</dt><dd>{{ operation.vehicle or operation.vehicle_category.value }}{% if vehicle and not explained %} · {{ vehicle.type }}{% endif %}</dd>
     <dt>Aktivitas</dt><dd>{{ operation.activity_mode.value | aktivitas }}{% if operation.lifting_hours %} · {{ operation.lifting_hours | angka }} jam{% endif %}</dd>
     {% if operation.stop_sequence %}<dt>Rute</dt><dd>{{ operation.stop_sequence | join(' → ') }}</dd>{% endif %}
     <dt>Jarak total</dt><dd>{{ operation.total_distance_km | angka }} km</dd>
