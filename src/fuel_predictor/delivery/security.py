@@ -34,6 +34,11 @@ _PUBLIC_PATHS = frozenset(
         "/atur-ulang-kata-sandi",
         "/sehat",
         "/statis",
+        # What a browser, a phone or a crawler asks any site for by name.
+        "/favicon.ico",
+        "/apple-touch-icon.png",
+        "/apple-touch-icon-precomposed.png",
+        "/robots.txt",
         "/docs",
         "/redoc",
         "/openapi.json",

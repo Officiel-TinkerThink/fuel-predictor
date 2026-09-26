@@ -1,0 +1,16 @@
+{
+  "name": "Fuel Matrix Calculation",
+  "short_name": "Fuel Matrix",
+  "description": "Prediksi kebutuhan BBM operasi harian, kode operasi, dan pencatatan BBM aktual.",
+  "lang": "id",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f7f8",
+  "theme_color": "#087e75",
+  "icons": [
+    {"src": "/statis/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/statis/icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "/statis/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

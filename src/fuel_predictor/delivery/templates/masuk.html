@@ -1,14 +1,10 @@
+{% import "_head.html" as heads %}
 {% import "components.html" as ui %}
 <!DOCTYPE html>
 {# Signed out means one appearance: the switch belongs behind the door. #}
 <html lang="id" data-theme="light" data-theme-locked>
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Masuk · Fuel Matrix Calculation</title>
-  <script src="/statis/theme.js?v={{ static_version('theme.js') }}"></script>
-  <link rel="stylesheet" href="/statis/app.css?v={{ static_version('app.css') }}">
-  <link rel="icon" href="/statis/favicon.svg?v={{ static_version('favicon.svg') }}" type="image/svg+xml">
+  {{ heads.head('Masuk') }}
 </head>
 <body>
 <div class="signin">

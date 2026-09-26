@@ -6,7 +6,6 @@ from secrets import token_bytes
 from typing import Any
 
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 
 from fuel_predictor.application.actual_fuel import (
     GetPredictionPerformance,
@@ -142,6 +141,7 @@ from fuel_predictor.delivery.security import (
     register_security_error_handlers,
 )
 from fuel_predictor.delivery.security_headers import SecurityHeadersMiddleware
+from fuel_predictor.delivery.site_files import VersionedStaticFiles, build_site_files_router
 from fuel_predictor.delivery.user_pages import build_user_pages_router
 from fuel_predictor.domain.daily_operation import (
     ActivityMode,
@@ -584,7 +584,8 @@ def create_app(
     install_session_middleware(app, resolve_session)
     # Added last, so it wraps everything: every response gets the headers.
     app.add_middleware(SecurityHeadersMiddleware)
-    app.mount("/statis", StaticFiles(directory=STATIC_DIRECTORY), name="statis")
+    app.mount("/statis", VersionedStaticFiles(directory=STATIC_DIRECTORY), name="statis")
+    app.include_router(build_site_files_router())
     app.include_router(
         build_authentication_router(
             sign_in,

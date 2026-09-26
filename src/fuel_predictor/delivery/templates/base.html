@@ -1,13 +1,9 @@
+{% import "_head.html" as heads %}
 {% import "components.html" as ui %}
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{{ page_title }}{% endblock %} · Fuel Matrix Calculation</title>
-  <script src="/statis/theme.js?v={{ static_version('theme.js') }}"></script>
-  <link rel="stylesheet" href="/statis/app.css?v={{ static_version('app.css') }}">
-  <link rel="icon" href="/statis/favicon.svg?v={{ static_version('favicon.svg') }}" type="image/svg+xml">
+  {{ heads.head(page_title) }}
   {# The phone-width menu folds away only when the script that unfolds it is
      running; without JavaScript every link stays in view. #}
   <script nonce="{{ csp_nonce() }}">document.documentElement.classList.add("js");</script>

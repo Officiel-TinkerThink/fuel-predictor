@@ -1,0 +1,17 @@
+{# What every page's <head> holds, once: the title, the theme script that
+   must run before the first paint, the stylesheet, and the icons a browser
+   tab, a bookmark and a phone's home screen use. #}
+{% macro head(title) -%}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} · Fuel Matrix Calculation</title>
+  <meta name="description" content="Prediksi kebutuhan BBM operasi harian, kode operasi, dan pencatatan BBM aktual.">
+  <meta name="theme-color" content="#f5f7f8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#101c21" media="(prefers-color-scheme: dark)">
+  <script src="/statis/theme.js?v={{ static_version('theme.js') }}"></script>
+  <link rel="stylesheet" href="/statis/app.css?v={{ static_version('app.css') }}">
+  <link rel="icon" href="/statis/favicon.svg?v={{ static_version('favicon.svg') }}" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="apple-touch-icon" href="/statis/apple-touch-icon.png?v={{ static_version('apple-touch-icon.png') }}">
+  <link rel="manifest" href="/statis/manifest.webmanifest?v={{ static_version('manifest.webmanifest') }}">
+{%- endmacro %}
