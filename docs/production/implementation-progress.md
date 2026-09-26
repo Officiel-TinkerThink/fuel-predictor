@@ -779,9 +779,29 @@ Built with the operators' day in mind; each item has tests, and the ADRs hold th
 - **No copied blocks** — the plan, actual-fuel and history uploads read rows through one
   `SheetRows`; a duplicate-code scan of `src` finds no copied block of eight lines or more.
 
+## Hardening for production use (26 September 2026)
+
+- **Security headers** on every response: a Content-Security-Policy (own scripts and styles, the
+  two inline scripts by a per-request nonce, the Google Maps embed as the only frame; /docs and
+  /redoc exempt), X-Frame-Options, nosniff, a referrer and a permissions policy, HSTS over HTTPS.
+  The CSRF cookie is HttpOnly.
+- **Nothing done twice by a refresh**: a saved plan answers with a redirect to its page; an upload
+  (bulk plan, bulk actual fuel, history) with a redirect to its result, kept an hour for the
+  uploader; the same file from the same person within 15 minutes leads to that result; training a
+  candidate lands on Pengelolaan Model.
+- **A session that ended** while a form was open leads to sign-in with a note, then back to the
+  form's page - not "Akses ditolak".
+- **Backups**: a `backup` service dumps the database daily into the `db_backups` volume, keeps
+  seven days and records each run (runbook §8a restores one). The encrypted off-site backup
+  (deploy/backup.sh) still needs an age key and an rclone remote.
+- **Deploys** wait for every service to be running and healthy and fail otherwise; Kesehatan
+  Sistem names the running release.
+- **Site files**: favicon.ico, apple-touch and manifest icons, robots.txt; content-hashed static
+  files are cached for a year; uploads are read no further than their limit.
+
 ## Notes for whoever picks this up next
 
-- Full test suite (815 tests as of 26 September 2026, about 20 minutes serially) passes; `ruff
+- Full test suite (847 tests as of 26 September 2026, about 20 minutes serially) passes; `ruff
   check` and `mypy --strict` are clean. CI runs the linters and only *collects* the tests, so run
   the suite yourself before pushing - keep all three clean.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
