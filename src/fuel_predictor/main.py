@@ -762,6 +762,7 @@ def create_app(
             # Same source of truth the monitoring job uses, so the page cannot
             # claim alerts are delivered when the job would say otherwise.
             alert_channel_configured=build_notifier(settings).is_configured,
+            release=settings.release,
         )
     )
     return app

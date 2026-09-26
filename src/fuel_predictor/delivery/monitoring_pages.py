@@ -41,6 +41,7 @@ def build_monitoring_pages_router(
     backup_runs: BackupRunRepository,
     monitoring_stale_after_hours: int = 26,
     alert_channel_configured: bool = False,
+    release: str = "",
 ) -> APIRouter:
     router = APIRouter()
 
@@ -78,6 +79,7 @@ def build_monitoring_pages_router(
                 # alerts fired" and "nobody is listening" must not read the
                 # same on the page any more than they do in the log.
                 alert_channel_configured=alert_channel_configured,
+                release=release[:7],
             )
         )
 

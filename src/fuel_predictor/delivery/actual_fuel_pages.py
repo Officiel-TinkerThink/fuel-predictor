@@ -160,7 +160,7 @@ def build_actual_fuel_pages_router(
             render(
                 "bbm-aktual-tersimpan.html",
                 caller=caller,
-                page_title="Bahan Bakar Aktual Tersimpan",
+                page_title="Bahan bakar aktual tersimpan",
                 active_path="/bahan-bakar-aktual",
                 record=record,
                 operation_code=record_actual_fuel.code_for(record),
@@ -215,7 +215,7 @@ def build_actual_fuel_pages_router(
             render(
                 "bbm-aktual-massal-selesai.html",
                 caller=caller,
-                page_title="Impor Bahan Bakar Aktual Selesai",
+                page_title="Impor bahan bakar aktual selesai",
                 active_path="/bahan-bakar-aktual-massal",
                 result=result,
                 repeated_at=kept.kept_at if request.query_params.get("ulang") == "1" else None,

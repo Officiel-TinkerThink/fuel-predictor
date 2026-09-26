@@ -99,7 +99,7 @@ def build_bulk_prediction_pages_router(
             render(
                 "prediksi-massal-selesai.html",
                 caller=caller,
-                page_title="Prediksi Operasi Massal Selesai",
+                page_title="Prediksi operasi massal selesai",
                 active_path="/prediksi-operasi-massal",
                 result=result,
                 repeated_at=kept.kept_at if request.query_params.get("ulang") == "1" else None,

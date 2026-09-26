@@ -17,11 +17,15 @@ def test_record_tables_declare_how_they_are_paged_and_sorted() -> None:
 
 
 def test_every_document_loads_theme_before_styles_and_offers_a_switch() -> None:
+    # One <head> for every document (_head.html): the theme script runs before
+    # the stylesheet paints, so a dark-mode reader never sees a white flash.
+    head = (TEMPLATE_DIRECTORY / "_head.html").read_text()
+    assert head.index("/statis/theme.js") < head.index("/statis/app.css")
     for path in TEMPLATE_DIRECTORY.glob("*.html"):
         source = path.read_text()
         if "<!DOCTYPE html>" not in source:
             continue
-        assert source.index("/statis/theme.js") < source.index("/statis/app.css"), path.name
+        assert "heads.head(" in source, path.name
         # A page either offers the switch or pins its own appearance, never
         # both and never neither.
         offers = '{% include "theme-toggle.html" %}' in source

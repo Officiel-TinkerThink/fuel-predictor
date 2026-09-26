@@ -10,6 +10,7 @@ says which service does it.
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from fuel_predictor.application.monitoring_runs import BackupRun, RunOutcome
@@ -62,3 +63,12 @@ def test_the_backup_service_ships_with_the_deployment() -> None:
     # Seven days kept, each run recorded where Kesehatan Sistem reads it.
     assert 'KEEP_DAYS="${LOCAL_BACKUP_KEEP_DAYS:-7}"' in script
     assert "INSERT INTO backup_runs" in script
+
+
+def test_the_running_release_is_named(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FUEL_PREDICTOR_RELEASE", "adfc2fba8287a623e379a0cc81afd7987d535e83")
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        page = client.get("/pemantauan/kesehatan-sistem").text
+
+    assert "<dt>Versi aplikasi</dt>" in page and "<code>adfc2fb</code>" in page
+    assert "FUEL_PREDICTOR_RELEASE: ${IMAGE_TAG:-latest}" in _COMPOSE.read_text()

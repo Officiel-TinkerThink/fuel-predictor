@@ -103,6 +103,8 @@
     <dt>Pemberitahuan</dt>
     <dd>{% if alert_channel_configured %}Peringatan baru dikirim ke saluran pemberitahuan yang dikonfigurasi.
       {%- else %}Saluran pemberitahuan belum dikonfigurasi, jadi peringatan hanya terlihat di halaman ini.{% endif %}</dd>
+    <dt>Versi aplikasi</dt>
+    <dd>{% if release %}<code>{{ release }}</code>{% else %}Tidak diketahui{% endif %}</dd>
   </dl>
   <p class="hint">Promosi model tidak pernah otomatis: model baru aktif hanya setelah dipilih di Pengelolaan Model.</p>
 </section>

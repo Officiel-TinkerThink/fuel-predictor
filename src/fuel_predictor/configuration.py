@@ -44,6 +44,9 @@ class ApplicationSettings(BaseSettings):
     # is only right when every proxy in front forwards the original scheme;
     # a CDN talking plain HTTP to the gateway silently turns it into http://.
     public_url: str | None = None
+    # The release running, as the deploy names it (the image's commit), shown
+    # on Kesehatan Sistem so a question about the site can start from it.
+    release: str = ""
     # Bounds on an uploaded model package (ADR 0009). Defaults are generous
     # for a small ONNX/skops pipeline and deliberately far below the plan's
     # 1-2 GB VM envelope, so a hostile upload cannot exhaust it.

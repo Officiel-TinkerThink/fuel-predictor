@@ -79,6 +79,8 @@ services:
       # the CDN in front of the shared Caddy talks plain HTTP to it, so the
       # scheme that reaches app is http and cannot be trusted for discovery.
       FUEL_PREDICTOR_PUBLIC_URL: ${FUEL_PREDICTOR_PUBLIC_URL:-}
+      # Shown on Kesehatan Sistem: the commit the deploy pinned this image to.
+      FUEL_PREDICTOR_RELEASE: ${IMAGE_TAG:-latest}
       FUEL_PREDICTOR_BOOTSTRAP_ADMIN_USERNAME: ${FUEL_PREDICTOR_BOOTSTRAP_ADMIN_USERNAME:-}
       FUEL_PREDICTOR_BOOTSTRAP_ADMIN_PASSWORD: ${FUEL_PREDICTOR_BOOTSTRAP_ADMIN_PASSWORD:-}
       # Without this the deployment has no routing provider at all: every

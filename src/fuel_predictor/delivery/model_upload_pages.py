@@ -138,7 +138,7 @@ def build_model_upload_pages_router(
             render(
                 "model-unggah-selesai.html",
                 caller=caller,
-                page_title="Paket Model Diterima",
+                page_title="Paket model diterima",
                 active_path="/model/unggah",
                 eyebrow="VALIDASI SELESAI",
                 page_lead="Paket lolos pemeriksaan. Aktivasi tetap merupakan tindakan manual.",
