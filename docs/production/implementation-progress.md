@@ -771,10 +771,14 @@ Built with the operators' day in mind; each item has tests, and the ADRs hold th
   as written. History refusing an unknown unit now names the nearest ones. The sheets share one
   set of column readers, the repositories one "latest prediction" subquery, and the web app and
   the scheduled `monitor` command one monitoring builder.
+- **Said once, and said fully** — the estimate and the fuel slip name a unit's type and group in
+  the code's legend only; Pergeseran Data and Kesehatan Sistem say how much data drift needs and
+  which side is short; the error chart's threshold is a gutter tick and its end labels stay clear
+  of the line.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (about 790 tests as of 26 September 2026, about 20 minutes serially) passes; `ruff
+- Full test suite (810 tests as of 26 September 2026, about 20 minutes serially) passes; `ruff
   check` and `mypy --strict` are clean. CI runs the linters and only *collects* the tests, so run
   the suite yourself before pushing - keep all three clean.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
