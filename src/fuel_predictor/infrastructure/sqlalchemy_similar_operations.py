@@ -27,6 +27,7 @@ from fuel_predictor.infrastructure.database import (
     PredictionRow,
     SessionFactory,
 )
+from fuel_predictor.infrastructure.sqlalchemy_queries import latest_prediction_id
 
 # An installation that has run for years has more recorded operations than a
 # planner will ever page through; the newest few thousand are what "recent
@@ -68,19 +69,12 @@ class SqlAlchemyHistoricalOperationSource:
         operation with neither is a plan that never went anywhere; it tells a
         planner nothing about fuel and is left out - as is a withdrawn plan,
         which never happened."""
-        latest_prediction_id = (
-            select(PredictionRow.prediction_id)
-            .where(PredictionRow.operation_id == DailyOperationRow.operation_id)
-            .order_by(PredictionRow.created_at.desc(), PredictionRow.prediction_id.desc())
-            .limit(1)
-            .correlate(DailyOperationRow)
-            .scalar_subquery()
-        )
+        latest = latest_prediction_id()
         with self._session_factory() as session:
             rows = session.execute(
                 select(DailyOperationRow, PredictionRow, ActualFuelRecordRow)
                 .select_from(DailyOperationRow)
-                .outerjoin(PredictionRow, PredictionRow.prediction_id == latest_prediction_id)
+                .outerjoin(PredictionRow, PredictionRow.prediction_id == latest)
                 .outerjoin(
                     ActualFuelRecordRow,
                     ActualFuelRecordRow.operation_id == DailyOperationRow.operation_id,

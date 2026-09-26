@@ -32,6 +32,7 @@ from fuel_predictor.infrastructure.database import (
     PredictionRow,
     SessionFactory,
 )
+from fuel_predictor.infrastructure.sqlalchemy_queries import latest_prediction_id
 
 
 class SqlAlchemyMonitoringRepository(MonitoringDataReader, MonitoringAlertStore):
@@ -86,14 +87,7 @@ class SqlAlchemyMonitoringRepository(MonitoringDataReader, MonitoringAlertStore)
     def get_predictions_missing_actual(
         self, older_than: datetime
     ) -> tuple[MissingActualPrediction, ...]:
-        latest_prediction_id = (
-            select(PredictionRow.prediction_id)
-            .where(PredictionRow.operation_id == DailyOperationRow.operation_id)
-            .order_by(PredictionRow.created_at.desc(), PredictionRow.prediction_id.desc())
-            .limit(1)
-            .correlate(DailyOperationRow)
-            .scalar_subquery()
-        )
+        latest = latest_prediction_id()
         with self._session_factory() as session:
             rows = session.execute(
                 select(
@@ -104,7 +98,7 @@ class SqlAlchemyMonitoringRepository(MonitoringDataReader, MonitoringAlertStore)
                     DailyOperationRow.operation_code,
                 )
                 .select_from(DailyOperationRow)
-                .join(PredictionRow, PredictionRow.prediction_id == latest_prediction_id)
+                .join(PredictionRow, PredictionRow.prediction_id == latest)
                 .outerjoin(
                     ActualFuelRecordRow,
                     ActualFuelRecordRow.operation_id == DailyOperationRow.operation_id,
@@ -157,14 +151,7 @@ class SqlAlchemyMonitoringRepository(MonitoringDataReader, MonitoringAlertStore)
             return tuple(cast(dict[str, str | float], row.feature_values) for row in rows)
 
     def get_timed_prediction_outcomes(self) -> tuple[TimedPredictionOutcome, ...]:
-        latest_prediction_id = (
-            select(PredictionRow.prediction_id)
-            .where(PredictionRow.operation_id == ActualFuelRecordRow.operation_id)
-            .order_by(PredictionRow.created_at.desc(), PredictionRow.prediction_id.desc())
-            .limit(1)
-            .correlate(ActualFuelRecordRow)
-            .scalar_subquery()
-        )
+        latest = latest_prediction_id(ActualFuelRecordRow.operation_id)
         with self._session_factory() as session:
             rows = session.execute(
                 select(
@@ -179,7 +166,7 @@ class SqlAlchemyMonitoringRepository(MonitoringDataReader, MonitoringAlertStore)
                     DailyOperationRow,
                     DailyOperationRow.operation_id == ActualFuelRecordRow.operation_id,
                 )
-                .join(PredictionRow, PredictionRow.prediction_id == latest_prediction_id)
+                .join(PredictionRow, PredictionRow.prediction_id == latest)
             ).all()
         return tuple(
             TimedPredictionOutcome(

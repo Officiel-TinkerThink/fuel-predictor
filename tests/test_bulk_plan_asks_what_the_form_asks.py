@@ -116,3 +116,33 @@ def test_a_sheet_from_the_old_template_still_imports(tmp_path: Path) -> None:
 
     assert response.status_code == 201, response.text
     assert response.json()["accepted_row_count"] == 1
+
+
+def test_a_unit_written_as_people_write_it_is_planned_under_its_fleet_name(
+    tmp_path: Path,
+) -> None:
+    """Plan rows took the unit as written: "t crane 01" was stored as a unit
+    of its own, which the model had never seen, while the history import
+    already read it as Truck Crane 01."""
+    with _client(tmp_path) as client:
+        _train_baseline(client)
+        body = _plan(
+            client,
+            ("t crane 01", "Mobilisasi + lifting", 28, 3, None),
+            ("PM 01", "Mobilisasi", 30, None, None),
+        )
+
+    accepted = body["accepted_rows"]
+    assert isinstance(accepted, list)
+    assert [row["operation"]["vehicle"] for row in accepted] == ["Truck Crane 01", "Prime Mover"]
+
+
+def test_a_unit_the_fleet_does_not_know_is_planned_as_written(tmp_path: Path) -> None:
+    """A rented crane is planned before it is ever catalogued, as on the API."""
+    with _client(tmp_path) as client:
+        _train_baseline(client)
+        body = _plan(client, ("Crane Sewa 01", "Mobilisasi", 30, None, None))
+
+    accepted = body["accepted_rows"]
+    assert isinstance(accepted, list)
+    assert [row["operation"]["vehicle"] for row in accepted] == ["Crane Sewa 01"]

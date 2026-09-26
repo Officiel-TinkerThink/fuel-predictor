@@ -15,6 +15,8 @@ from fuel_predictor.application.historical_datasets import (
     HistoricalDatasetImportError,
     HistoricalDatasetSourceReader,
     is_blank,
+    is_blank_row,
+    map_headers,
     normalize_header,
 )
 from fuel_predictor.application.wording import liters
@@ -70,7 +72,7 @@ class BulkActualFuel:
         already_recorded_row_count = 0
         data_sheets = 0
         for sheet in self._source_reader.read(source_filename, content):
-            mapped_headers = _map_headers(sheet.headers)
+            mapped_headers = map_headers(sheet.headers, _HEADER_ALIASES)
             # A sheet with none of the columns - a template's instructions -
             # is not data; reading it quarantined every instruction line.
             if not mapped_headers:
@@ -78,7 +80,7 @@ class BulkActualFuel:
             data_sheets += 1
             for row_number, values in sheet.rows:
                 raw_values = dict(zip(sheet.headers, values, strict=True))
-                if _is_blank_row(raw_values, mapped_headers):
+                if is_blank_row(raw_values, mapped_headers):
                     ignored_blank_row_count += 1
                     continue
                 if _is_unfilled_row(raw_values, mapped_headers):
@@ -181,23 +183,6 @@ _HEADER_ALIASES = {
         "sumber aktual",
     },
 }
-
-
-def _map_headers(headers: tuple[str, ...]) -> dict[str, str]:
-    mapped: dict[str, str] = {}
-    for header in headers:
-        normalized = normalize_header(header)
-        for field, aliases in _HEADER_ALIASES.items():
-            if normalized in aliases:
-                mapped.setdefault(field, header)
-    return mapped
-
-
-def _is_blank_row(raw_values: dict[str, RawValue], mapped_headers: dict[str, str]) -> bool:
-    relevant_headers = tuple(mapped_headers.values())
-    if relevant_headers:
-        return all(is_blank(raw_values[header]) for header in relevant_headers)
-    return all(is_blank(value) for value in raw_values.values())
 
 
 def _is_unfilled_row(raw_values: dict[str, RawValue], mapped_headers: dict[str, str]) -> bool:

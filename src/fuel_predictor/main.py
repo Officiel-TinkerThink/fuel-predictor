@@ -85,7 +85,6 @@ from fuel_predictor.application.model_promotion_policy import (
     EvaluateCandidateAgainstPolicy,
     PromotionPolicy,
 )
-from fuel_predictor.application.monitoring import GetMonitoringDashboard
 from fuel_predictor.application.prediction_features import feature_values
 from fuel_predictor.application.prediction_history import (
     GetLatestPrediction,
@@ -159,7 +158,6 @@ from fuel_predictor.infrastructure.database import (
     build_session_factory,
     create_schema_for_tests,
 )
-from fuel_predictor.infrastructure.evidently_drift import EvidentlyFeatureDriftAnalyzer
 from fuel_predictor.infrastructure.google_maps_routing import GoogleMapsRoutesProvider
 from fuel_predictor.infrastructure.historical_source_reader import (
     SpreadsheetHistoricalDatasetSourceReader,
@@ -214,6 +212,7 @@ from fuel_predictor.infrastructure.sqlalchemy_vehicles import SqlAlchemyVehicleR
 from fuel_predictor.infrastructure.stored_model_scorer import StoredModelScorer
 from fuel_predictor.infrastructure.system_memory_probe import SystemMemoryProbe
 from fuel_predictor.infrastructure.zip_model_package_archive import ZipModelPackageArchiveReader
+from fuel_predictor.monitoring_wiring import build_monitoring_dashboard
 
 _logger = logging.getLogger(__name__)
 
@@ -400,16 +399,11 @@ def create_app(
         settings.max_active_model_mae_liters,
         resolved_vehicle_catalog,
     )
-    get_monitoring_dashboard = GetMonitoringDashboard(
+    get_monitoring_dashboard = build_monitoring_dashboard(
+        settings,
         monitoring_repository,
         prediction_repository,
         monitoring_repository,
-        EvidentlyFeatureDriftAnalyzer(),
-        settings.missing_actual_after_days,
-        settings.monitoring_drift_share_threshold,
-        settings.monitoring_rolling_error_window,
-        settings.max_active_model_mae_liters,
-        settings.monitoring_min_matched_outcomes,
         resolved_vehicle_catalog,
     )
     password_hasher = ScryptPasswordHasher()

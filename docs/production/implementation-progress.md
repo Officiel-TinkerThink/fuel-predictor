@@ -765,6 +765,12 @@ Built with the operators' day in mind; each item has tests, and the ADRs hold th
   runs through `ActivateRetainedModelPackage.rollback`, which recorded a rollback to a version
   that did not exist before finding it missing. That rule now holds there, its tests moved with
   it, and the unused copy is gone.
+- **One unit name, however an operation arrives** — the REST API and the plan sheet stored a unit
+  as written ("t crane 01", "PM 01"), a unit the model had never seen. `CreateDailyOperation` now
+  resolves it as ADR 0015 says; a unit the fleet does not know (a rented crane) is still planned
+  as written. History refusing an unknown unit now names the nearest ones. The sheets share one
+  set of column readers, the repositories one "latest prediction" subquery, and the web app and
+  the scheduled `monitor` command one monitoring builder.
 
 ## Notes for whoever picks this up next
 

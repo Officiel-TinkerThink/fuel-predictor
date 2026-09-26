@@ -224,8 +224,9 @@ def test_a_planner_names_only_the_unit_and_the_stored_prediction_carries_its_lin
         )
 
         # The request names the unit and nothing else about it — here by an
-        # alias, as the sheets write it. The API keeps the name as written;
-        # the lineage still resolves through the alias.
+        # alias, as the sheets write it. The operation records the canonical
+        # name (ADR 0015), as the form's select and an agent's words already
+        # did; the lineage resolves from it.
         operation = client.post(
             "/api/v1/daily-operations",
             json={
@@ -243,7 +244,7 @@ def test_a_planner_names_only_the_unit_and_the_stored_prediction_carries_its_lin
 
     assert prediction.status_code == 201, prediction.text
     body = prediction.json()
-    assert body["input_snapshot"]["vehicle"] == "t crane 01"
+    assert body["input_snapshot"]["vehicle"] == "Truck Crane 01"
     assert body["input_snapshot"]["vehicle_type"] == "Scania P410B 8x4"
     assert body["input_snapshot"]["vehicle_group"] == "Crane"
     assert "vehicle_type" not in body["feature_values"]

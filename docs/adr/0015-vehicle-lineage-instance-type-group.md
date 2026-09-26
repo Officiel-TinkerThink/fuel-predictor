@@ -44,10 +44,14 @@ tree: the fleet is 23 units, and the value is in one fallback step, not in hiera
 
 ### The operation stores the fact; the lineage is derived, never snapshotted
 
-A `DailyOperation` records the canonical unit name and nothing more. Type and group are looked
-up from the catalog **at the moment they are needed** — when a candidate is trained, when a
-prediction is scored, when a candidate is evaluated, when similar history is ranked — through
-one resolver, `VehicleCatalog.lineage_of(name)`, that both catalog implementations provide.
+A `DailyOperation` records the canonical unit name and nothing more. `CreateDailyOperation`
+resolves the name as written - an alias, "t crane 01" - through `resolve_vehicle`, whichever way
+the operation arrives (form, REST API, plan sheet, agent). A name the fleet does not know - a
+rented crane - is kept as written; history, which the model learns from, refuses it. Type and
+group are looked up from the catalog **at the moment they are needed** — when a candidate is
+trained, when a prediction is scored, when a candidate is evaluated, when similar history is
+ranked — through one resolver, `VehicleCatalog.lineage_of(name)`, that both catalog
+implementations provide.
 
 The taxonomy is a lens the owner may refine, not a fact about the day. When the owner re-types
 the vacuum trucks, every reading of history must see the new lens; a lineage stored on the

@@ -4,6 +4,7 @@ from datetime import UTC, datetime, tzinfo
 from typing import Protocol
 from uuid import uuid4
 
+from fuel_predictor.application.catalog_resolution import UnknownVehicleError, resolve_vehicle
 from fuel_predictor.application.routing import (
     RoutingProvider,
     RoutingProviderUnavailable,
@@ -109,6 +110,7 @@ class CreateDailyOperation:
 
     def execute(self, command: CreateDailyOperationCommand) -> DailyOperation:
         validate_stop_sequence(command.stop_sequence)
+        command = replace(command, vehicle=self._catalogued(command.vehicle))
         self._refuse_lifting_without_capacity(command)
         total_distance_km = command.total_distance_km
         distance_source = command.distance_source
@@ -167,6 +169,18 @@ class CreateDailyOperation:
                 continue
             return coded
         raise OperationCodeTakenError(base)
+
+    def _catalogued(self, vehicle: str | None) -> str | None:
+        """The unit under the fleet's name, however it was written - "t crane
+        01" is Truck Crane 01, not a unit of its own the model never saw. A
+        name the fleet does not know - a rented crane - is kept as written,
+        as the lifting check and the operation code already treat it."""
+        if not vehicle or self._vehicle_catalog is None:
+            return vehicle
+        try:
+            return resolve_vehicle(self._vehicle_catalog, vehicle).name
+        except UnknownVehicleError:
+            return vehicle
 
     def _refuse_lifting_without_capacity(self, command: CreateDailyOperationCommand) -> None:
         """A unit the catalog says cannot lift is mobilisation only. A unit the

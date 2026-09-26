@@ -14,6 +14,7 @@ from fuel_predictor.infrastructure.database import (
 )
 from fuel_predictor.infrastructure.sqlalchemy_daily_operations import stops_for
 from fuel_predictor.infrastructure.sqlalchemy_predictions import _to_model
+from fuel_predictor.infrastructure.sqlalchemy_queries import latest_prediction_id
 
 
 class SqlAlchemyPredictionHistoryRepository:
@@ -21,14 +22,7 @@ class SqlAlchemyPredictionHistoryRepository:
         self._session_factory = session_factory
 
     def get_recent_predictions(self, limit: int) -> tuple[PredictionHistoryEntry, ...]:
-        latest_prediction_id = (
-            select(PredictionRow.prediction_id)
-            .where(PredictionRow.operation_id == DailyOperationRow.operation_id)
-            .order_by(PredictionRow.created_at.desc(), PredictionRow.prediction_id.desc())
-            .limit(1)
-            .correlate(DailyOperationRow)
-            .scalar_subquery()
-        )
+        latest = latest_prediction_id()
         with self._session_factory() as session:
             rows = session.execute(
                 select(
@@ -46,7 +40,7 @@ class SqlAlchemyPredictionHistoryRepository:
                     DailyOperationRow.cancelled_at,
                 )
                 .select_from(DailyOperationRow)
-                .join(PredictionRow, PredictionRow.prediction_id == latest_prediction_id)
+                .join(PredictionRow, PredictionRow.prediction_id == latest)
                 .join(
                     ModelVersionRow,
                     ModelVersionRow.model_version_id == PredictionRow.model_version_id,

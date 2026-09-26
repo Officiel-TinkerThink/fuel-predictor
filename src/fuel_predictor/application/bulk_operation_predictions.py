@@ -1,4 +1,3 @@
-from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from typing import Protocol
 
@@ -11,19 +10,14 @@ from fuel_predictor.application.historical_datasets import (
     HistoricalDatasetImportError,
     HistoricalDatasetSourceReader,
     is_blank,
-    normalize_header,
-    parse_activity_mode,
-    parse_distance_source,
-    parse_number,
-    parse_vehicle,
-    parse_vehicle_category,
+    is_blank_row,
+    map_headers,
+    pick_columns,
+    read_operation_columns,
 )
-from fuel_predictor.application.vehicles import VehicleCatalog
 from fuel_predictor.domain.daily_operation import (
     DailyOperation,
     DailyOperationValidationError,
-    DistanceSource,
-    VehicleCategory,
 )
 from fuel_predictor.domain.historical_dataset import (
     CorrectionReason,
@@ -80,7 +74,7 @@ class BulkOperationPrediction:
         ignored_blank_row_count = 0
         data_sheets = 0
         for sheet in self._source_reader.read(source_filename, content):
-            mapped_headers = _map_headers(sheet.headers)
+            mapped_headers = map_headers(sheet.headers, _HEADER_ALIASES)
             # A sheet with none of the columns - a template's instructions -
             # is not data; reading it quarantined every instruction line.
             if not mapped_headers:
@@ -88,7 +82,7 @@ class BulkOperationPrediction:
             data_sheets += 1
             for row_number, values in sheet.rows:
                 raw_values = dict(zip(sheet.headers, values, strict=True))
-                if _is_blank_row(raw_values, mapped_headers):
+                if is_blank_row(raw_values, mapped_headers):
                     ignored_blank_row_count += 1
                     continue
                 source = SourceProvenance(
@@ -98,6 +92,8 @@ class BulkOperationPrediction:
                     original_headers=dict(mapped_headers),
                     raw_values=raw_values,
                 )
+                # The unit is resolved to its fleet name by CreateDailyOperation, as
+                # for every plan; a unit the fleet does not know is planned as written.
                 command, row_issues = _command_for_row(mapped_headers, raw_values)
                 if row_issues:
                     issues.append(DataQualityIssue(source=source, reasons=tuple(row_issues)))
@@ -170,98 +166,46 @@ _FIELD_LABELS = {
 }
 
 
-def _map_headers(headers: Sequence[str]) -> dict[str, str]:
-    mapped: dict[str, str] = {}
-    for header in headers:
-        normalized = normalize_header(header)
-        for field, aliases in _HEADER_ALIASES.items():
-            if normalized in aliases:
-                mapped.setdefault(field, header)
-    return mapped
-
-
-def _is_blank_row(raw_values: dict[str, RawValue], mapped_headers: dict[str, str]) -> bool:
-    operation_headers = tuple(mapped_headers.values())
-    if operation_headers:
-        return all(is_blank(raw_values[header]) for header in operation_headers)
-    return all(is_blank(value) for value in raw_values.values())
-
-
 def _command_for_row(
     mapped_headers: dict[str, str],
     raw_values: dict[str, RawValue],
-    vehicle_catalog: VehicleCatalog | None = None,
 ) -> tuple[CreateDailyOperationCommand | None, list[CorrectionReason]]:
     issues: list[CorrectionReason] = []
-    raw_by_field: dict[str, RawValue] = {}
-    for field in (
-        _REQUIRED_FIELDS | _DEFAULTED_FIELDS | {"lifting_hours", "stop_sequence", "vehicle"}
-    ):
-        header = mapped_headers.get(field)
-        if header is None:
-            if field in _REQUIRED_FIELDS:
-                issues.append(
-                    CorrectionReason(field, f"Kolom {_FIELD_LABELS[field]} tidak ditemukan.")
-                )
-        else:
-            raw_by_field[field] = raw_values[header]
-
-    vehicle_category = (
-        parse_vehicle_category(raw_by_field["vehicle_category"], issues)
-        if not is_blank(raw_by_field.get("vehicle_category"))
-        else VehicleCategory.ANGBER
+    raw_by_field = pick_columns(
+        mapped_headers,
+        raw_values,
+        _REQUIRED_FIELDS | _DEFAULTED_FIELDS | {"lifting_hours", "stop_sequence", "vehicle"},
+        _REQUIRED_FIELDS,
+        _FIELD_LABELS,
+        issues,
     )
-    vehicle = parse_vehicle(raw_by_field.get("vehicle"), issues, vehicle_catalog)
-    activity_mode = (
-        parse_activity_mode(raw_by_field["activity_mode"], issues)
-        if "activity_mode" in raw_by_field
-        else None
-    )
-    lifting_hours = parse_number(raw_by_field.get("lifting_hours"), "lifting_hours", issues)
-    total_distance_km = (
-        parse_number(raw_by_field["total_distance_km"], "total_distance_km", issues, required=True)
-        if "total_distance_km" in raw_by_field
-        else None
-    )
-    distance_source = (
-        parse_distance_source(raw_by_field["distance_source"], issues)
-        if not is_blank(raw_by_field.get("distance_source"))
-        else DistanceSource.MANUAL
-    )
+    columns = read_operation_columns(raw_by_field, issues)
     stop_sequence = _parse_stop_sequence(raw_by_field.get("stop_sequence"), issues)
-
-    if total_distance_km is not None and total_distance_km <= 0:
-        issues.append(
-            CorrectionReason("total_distance_km", "Jarak total harus lebih besar dari 0.")
-        )
-    if issues:
+    if issues or columns is None:
         return None, issues
-
-    assert vehicle_category is not None
-    assert activity_mode is not None
-    assert total_distance_km is not None
-    assert distance_source is not None
     try:
+        # Built only to be checked the way a planned operation is; the
+        # command is what creates it.
         DailyOperation(
             operation_id="BULK-ROW-VALIDATION",
-            vehicle_category=vehicle_category,
-            vehicle=vehicle,
-            activity_mode=activity_mode,
-            lifting_hours=lifting_hours,
-            total_distance_km=total_distance_km,
-            distance_source=distance_source,
+            vehicle_category=columns.vehicle_category,
+            vehicle=columns.vehicle,
+            activity_mode=columns.activity_mode,
+            lifting_hours=columns.lifting_hours,
+            total_distance_km=columns.total_distance_km,
+            distance_source=columns.distance_source,
             stop_sequence=stop_sequence,
         )
     except DailyOperationValidationError as error:
         return None, [CorrectionReason(error.field, error.message)]
     return (
         CreateDailyOperationCommand(
-            vehicle_category=vehicle_category,
-            vehicle=vehicle,
-            activity_mode=activity_mode,
-            lifting_hours=lifting_hours,
-            total_distance_km=total_distance_km,
-            distance_source=distance_source,
+            vehicle_category=columns.vehicle_category,
+            vehicle=columns.vehicle,
+            activity_mode=columns.activity_mode,
+            lifting_hours=columns.lifting_hours,
+            total_distance_km=columns.total_distance_km,
+            distance_source=columns.distance_source,
             stop_sequence=stop_sequence,
         ),
         [],

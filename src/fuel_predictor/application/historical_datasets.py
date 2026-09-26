@@ -1,11 +1,12 @@
 import re
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from math import isfinite
 from typing import Protocol
 from uuid import uuid4
 
-from fuel_predictor.application.vehicles import VehicleCatalog
+from fuel_predictor.application.catalog_resolution import UnknownVehicleError, resolve_vehicle
+from fuel_predictor.application.vehicles import VehicleCatalog, VehicleOption
 from fuel_predictor.domain.daily_operation import (
     ActivityMode,
     DailyOperation,
@@ -92,7 +93,7 @@ class ImportHistoricalDataset:
         ignored_blank_row_count = 0
         data_sheets = 0
         for sheet in self._source_reader.read(source_filename, content):
-            mapped_headers = _map_headers(sheet.headers)
+            mapped_headers = map_headers(sheet.headers, _HEADER_ALIASES)
             # A sheet with none of the columns - a template's instructions -
             # is not data; reading it quarantined every instruction line.
             if not mapped_headers:
@@ -100,7 +101,7 @@ class ImportHistoricalDataset:
             data_sheets += 1
             for row_number, values in sheet.rows:
                 raw_values = dict(zip(sheet.headers, values, strict=True))
-                if _is_blank_calendar_row(raw_values, mapped_headers):
+                if is_blank_row(raw_values, mapped_headers):
                     ignored_blank_row_count += 1
                     continue
 
@@ -181,12 +182,16 @@ _FIELD_LABELS = {
 }
 
 
-def _map_headers(headers: tuple[str, ...]) -> dict[str, str]:
+def map_headers(headers: Sequence[str], aliases: Mapping[str, set[str]]) -> dict[str, str]:
+    """Which column holds each field: the first header that is one of its names.
+
+    Shared by every sheet the app reads - history, plans, actual fuel - each
+    with its own names for its own fields."""
     mapped: dict[str, str] = {}
     for header in headers:
         normalized = normalize_header(header)
-        for field, aliases in _HEADER_ALIASES.items():
-            if normalized in aliases:
+        for field, names in aliases.items():
+            if normalized in names:
                 mapped.setdefault(field, header)
     return mapped
 
@@ -200,36 +205,59 @@ def _lifting_header_provenance(mapped_headers: dict[str, str]) -> dict[str, str]
     return {"lifting_hours": header} if header is not None else {}
 
 
-def _is_blank_calendar_row(raw_values: dict[str, RawValue], mapped_headers: dict[str, str]) -> bool:
-    operation_headers = tuple(mapped_headers.values())
-    if operation_headers:
-        return all(is_blank(raw_values[header]) for header in operation_headers)
+def is_blank_row(raw_values: Mapping[str, RawValue], mapped_headers: Mapping[str, str]) -> bool:
+    """Nothing in the columns the sheet is read for: a calendar day with no
+    operation, or formatting below the data. With no known column, nothing
+    anywhere."""
+    relevant_headers = tuple(mapped_headers.values())
+    if relevant_headers:
+        return all(is_blank(raw_values[header]) for header in relevant_headers)
     return all(is_blank(value) for value in raw_values.values())
 
 
-def is_blank(value: RawValue) -> bool:
-    return value is None or (isinstance(value, str) and not value.strip())
-
-
-def _validate_row(
-    mapped_headers: dict[str, str],
-    raw_values: dict[str, RawValue],
-    provenance: SourceProvenance,
-    operation_id_factory: Callable[[], str],
-    vehicle_catalog: VehicleCatalog | None = None,
-) -> tuple[HistoricalDailyOperation | None, list[CorrectionReason]]:
-    issues: list[CorrectionReason] = []
-    raw_by_field: dict[str, RawValue] = {}
-    for field in _REQUIRED_FIELDS | _DEFAULTED_FIELDS | {"lifting_hours", "vehicle"}:
+def pick_columns(
+    mapped_headers: Mapping[str, str],
+    raw_values: Mapping[str, RawValue],
+    fields: Iterable[str],
+    required: Collection[str],
+    labels: Mapping[str, str],
+    issues: list[CorrectionReason],
+) -> dict[str, RawValue]:
+    """The row's value for each field its sheet has a column for; a required
+    column the sheet lacks is a reason the row cannot be read."""
+    picked: dict[str, RawValue] = {}
+    for field in fields:
         header = mapped_headers.get(field)
         if header is None:
-            if field in _REQUIRED_FIELDS:
-                issues.append(
-                    CorrectionReason(field, f"Kolom {_FIELD_LABELS[field]} tidak ditemukan.")
-                )
+            if field in required:
+                issues.append(CorrectionReason(field, f"Kolom {labels[field]} tidak ditemukan."))
         else:
-            raw_by_field[field] = raw_values[header]
+            picked[field] = raw_values[header]
+    return picked
 
+
+@dataclass(frozen=True, slots=True)
+class OperationColumns:
+    """What a plan sheet and a history sheet both say about one operation."""
+
+    vehicle_category: VehicleCategory
+    vehicle: str | None
+    activity_mode: ActivityMode
+    lifting_hours: float | None
+    total_distance_km: float
+    distance_source: DistanceSource
+
+
+def read_operation_columns(
+    raw_by_field: Mapping[str, RawValue],
+    issues: list[CorrectionReason],
+    vehicle_catalog: VehicleCatalog | None = None,
+) -> OperationColumns | None:
+    """Read the columns every operation sheet shares, adding a reason for each
+    problem; None when a value the operation needs is missing or wrong.
+
+    The category and distance source default to ANGBER and a manual distance:
+    newer sheets no longer ask for them, older ones still say them."""
     vehicle_category = (
         parse_vehicle_category(raw_by_field["vehicle_category"], issues)
         if not is_blank(raw_by_field.get("vehicle_category"))
@@ -247,6 +275,54 @@ def _validate_row(
         if "total_distance_km" in raw_by_field
         else None
     )
+    distance_source = (
+        parse_distance_source(raw_by_field["distance_source"], issues)
+        if not is_blank(raw_by_field.get("distance_source"))
+        else DistanceSource.MANUAL
+    )
+    if total_distance_km is not None and total_distance_km <= 0:
+        issues.append(
+            CorrectionReason("total_distance_km", "Jarak total harus lebih besar dari 0.")
+        )
+        return None
+    if (
+        vehicle_category is None
+        or activity_mode is None
+        or total_distance_km is None
+        or distance_source is None
+    ):
+        return None
+    return OperationColumns(
+        vehicle_category=vehicle_category,
+        vehicle=vehicle,
+        activity_mode=activity_mode,
+        lifting_hours=lifting_hours,
+        total_distance_km=total_distance_km,
+        distance_source=distance_source,
+    )
+
+
+def is_blank(value: RawValue) -> bool:
+    return value is None or (isinstance(value, str) and not value.strip())
+
+
+def _validate_row(
+    mapped_headers: dict[str, str],
+    raw_values: dict[str, RawValue],
+    provenance: SourceProvenance,
+    operation_id_factory: Callable[[], str],
+    vehicle_catalog: VehicleCatalog | None = None,
+) -> tuple[HistoricalDailyOperation | None, list[CorrectionReason]]:
+    issues: list[CorrectionReason] = []
+    raw_by_field = pick_columns(
+        mapped_headers,
+        raw_values,
+        _REQUIRED_FIELDS | _DEFAULTED_FIELDS | {"lifting_hours", "vehicle"},
+        _REQUIRED_FIELDS,
+        _FIELD_LABELS,
+        issues,
+    )
+    columns = read_operation_columns(raw_by_field, issues, vehicle_catalog)
     prepared_fuel_liters = (
         parse_number(
             raw_by_field["prepared_fuel_liters"], "prepared_fuel_liters", issues, required=True
@@ -254,39 +330,23 @@ def _validate_row(
         if "prepared_fuel_liters" in raw_by_field
         else None
     )
-    distance_source = (
-        parse_distance_source(raw_by_field["distance_source"], issues)
-        if not is_blank(raw_by_field.get("distance_source"))
-        else DistanceSource.MANUAL
-    )
-
-    if total_distance_km is not None and total_distance_km <= 0:
-        issues.append(
-            CorrectionReason("total_distance_km", "Jarak total harus lebih besar dari 0.")
-        )
     if prepared_fuel_liters is not None and prepared_fuel_liters <= 0:
         issues.append(
             CorrectionReason(
                 "prepared_fuel_liters", "Bahan bakar disiapkan harus lebih besar dari 0."
             )
         )
-    if issues:
+    if issues or columns is None or prepared_fuel_liters is None:
         return None, issues
-
-    assert vehicle_category is not None
-    assert activity_mode is not None
-    assert total_distance_km is not None
-    assert prepared_fuel_liters is not None
-    assert distance_source is not None
     try:
         operation = DailyOperation(
             operation_id=operation_id_factory(),
-            vehicle_category=vehicle_category,
-            vehicle=vehicle,
-            activity_mode=activity_mode,
-            lifting_hours=lifting_hours,
-            total_distance_km=total_distance_km,
-            distance_source=distance_source,
+            vehicle_category=columns.vehicle_category,
+            vehicle=columns.vehicle,
+            activity_mode=columns.activity_mode,
+            lifting_hours=columns.lifting_hours,
+            total_distance_km=columns.total_distance_km,
+            distance_source=columns.distance_source,
         )
     except DailyOperationValidationError as error:
         return None, [CorrectionReason(error.field, error.message)]
@@ -315,14 +375,29 @@ def parse_vehicle(
         # been loaded.
         return written
     assert catalog is not None
-    match = catalog.find(written)
-    if match is None:
-        valid = ", ".join(option.name for option in known)
-        issues.append(
-            CorrectionReason("vehicle", f"Kendaraan tidak dikenali. Gunakan salah satu: {valid}.")
-        )
+    # The same forgiving lookup an agent's words get. History is what the
+    # model learns from, so a unit the fleet does not know is a row to fix.
+    try:
+        return resolve_vehicle(catalog, written).name
+    except UnknownVehicleError as error:
+        issues.append(CorrectionReason("vehicle", _unknown_vehicle(error, known)))
         return None
-    return match.name
+
+
+def _unknown_vehicle(error: UnknownVehicleError, fleet: Sequence[VehicleOption]) -> str:
+    """What was written, then the nearest units - or, with none near, the fleet."""
+    if error.ambiguous:
+        return (
+            f'Kendaraan "{error.written}" cocok dengan lebih dari satu unit: '
+            f"{', '.join(error.candidates)}. Tulis salah satunya persis."
+        )
+    if error.candidates:
+        return (
+            f'Kendaraan "{error.written}" tidak ada di Armada. '
+            f"Mungkin maksud Anda: {', '.join(error.candidates)}?"
+        )
+    names = ", ".join(option.name for option in fleet)
+    return f'Kendaraan "{error.written}" tidak ada di Armada. Gunakan salah satu: {names}.'
 
 
 def parse_vehicle_category(

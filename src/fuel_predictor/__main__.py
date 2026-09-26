@@ -15,7 +15,6 @@ from typing import Any
 from fuel_predictor.application.monitoring_runs import RunScheduledMonitoring
 from fuel_predictor.configuration import ApplicationSettings
 from fuel_predictor.infrastructure.database import build_engine, build_session_factory
-from fuel_predictor.infrastructure.evidently_drift import EvidentlyFeatureDriftAnalyzer
 from fuel_predictor.infrastructure.sqlalchemy_monitoring import SqlAlchemyMonitoringRepository
 from fuel_predictor.infrastructure.sqlalchemy_monitoring_runs import (
     SqlAlchemyMonitoringRunRepository,
@@ -326,8 +325,8 @@ def _record_backup(
 
 
 def _run_monitoring(trigger: str) -> int:
-    from fuel_predictor.application.monitoring import GetMonitoringDashboard
     from fuel_predictor.infrastructure.sqlalchemy_vehicles import SqlAlchemyVehicleRepository
+    from fuel_predictor.monitoring_wiring import build_monitoring_dashboard
 
     settings = ApplicationSettings()
     try:
@@ -348,16 +347,11 @@ def _run_monitoring(trigger: str) -> int:
         return 1
 
     run = RunScheduledMonitoring(
-        dashboard=GetMonitoringDashboard(
+        dashboard=build_monitoring_dashboard(
+            settings,
             monitoring_repository,
             prediction_repository,
             monitoring_repository,
-            EvidentlyFeatureDriftAnalyzer(),
-            settings.missing_actual_after_days,
-            settings.monitoring_drift_share_threshold,
-            settings.monitoring_rolling_error_window,
-            settings.max_active_model_mae_liters,
-            settings.monitoring_min_matched_outcomes,
             vehicle_repository,
         ),
         runs=SqlAlchemyMonitoringRunRepository(session_factory),

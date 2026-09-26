@@ -23,6 +23,7 @@ from fuel_predictor.infrastructure.database import (
     SessionFactory,
 )
 from fuel_predictor.infrastructure.sqlalchemy_daily_operations import stops_for
+from fuel_predictor.infrastructure.sqlalchemy_queries import latest_prediction_id
 
 
 class SqlAlchemyActualFuelRepository:
@@ -59,14 +60,7 @@ class SqlAlchemyActualFuelRepository:
     def get_operations_awaiting_actual(
         self, limit: int | None
     ) -> tuple[OperationAwaitingActualFuel, ...]:
-        latest_prediction_id = (
-            select(PredictionRow.prediction_id)
-            .where(PredictionRow.operation_id == DailyOperationRow.operation_id)
-            .order_by(PredictionRow.created_at.desc(), PredictionRow.prediction_id.desc())
-            .limit(1)
-            .correlate(DailyOperationRow)
-            .scalar_subquery()
-        )
+        latest = latest_prediction_id()
         with self._session_factory() as session:
             rows = session.execute(
                 select(
@@ -79,7 +73,7 @@ class SqlAlchemyActualFuelRepository:
                     PredictionRow.recommended_allocation_liters,
                 )
                 .select_from(DailyOperationRow)
-                .join(PredictionRow, PredictionRow.prediction_id == latest_prediction_id)
+                .join(PredictionRow, PredictionRow.prediction_id == latest)
                 .outerjoin(
                     ActualFuelRecordRow,
                     ActualFuelRecordRow.operation_id == DailyOperationRow.operation_id,
@@ -110,14 +104,7 @@ class SqlAlchemyActualFuelRepository:
         )
 
     def get_prediction_outcomes(self) -> tuple[PredictionOutcome, ...]:
-        latest_prediction_id = (
-            select(PredictionRow.prediction_id)
-            .where(PredictionRow.operation_id == ActualFuelRecordRow.operation_id)
-            .order_by(PredictionRow.created_at.desc(), PredictionRow.prediction_id.desc())
-            .limit(1)
-            .correlate(ActualFuelRecordRow)
-            .scalar_subquery()
-        )
+        latest = latest_prediction_id(ActualFuelRecordRow.operation_id)
         with self._session_factory() as session:
             rows = session.execute(
                 select(
@@ -133,7 +120,7 @@ class SqlAlchemyActualFuelRepository:
                     DailyOperationRow,
                     DailyOperationRow.operation_id == ActualFuelRecordRow.operation_id,
                 )
-                .join(PredictionRow, PredictionRow.prediction_id == latest_prediction_id)
+                .join(PredictionRow, PredictionRow.prediction_id == latest)
             ).all()
         return tuple(
             PredictionOutcome(
