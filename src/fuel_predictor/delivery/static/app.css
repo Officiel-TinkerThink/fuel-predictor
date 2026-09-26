@@ -773,6 +773,11 @@ legend {
   color: var(--color-text-muted);
 }
 
+/* The line under a sign-in form: "Lupa kata sandi?", "Kembali ke halaman masuk". */
+.auth-card__aside {
+  margin-top: var(--space-5);
+}
+
 /* A checkbox reads as one line: box, then its meaning, then the code. */
 .field--checkbox label {
   display: flex;

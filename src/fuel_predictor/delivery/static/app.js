@@ -230,6 +230,15 @@
     show();
   });
 
+  // "Cetak slip" on a single slip. A handler here rather than an onclick
+  // attribute, which the page's Content-Security-Policy does not run.
+  var printSlip = document.querySelector("[data-print]");
+  if (printSlip) {
+    printSlip.addEventListener("click", function () {
+      window.print();
+    });
+  }
+
   // "Print all slips" on a bulk result: print the slips section alone.
   var printSlips = document.querySelector("[data-print-slips]");
   if (printSlips && document.querySelector("[data-slip-batch]")) {

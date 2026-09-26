@@ -7,6 +7,7 @@
   <script src="/statis/theme.js?v={{ static_version('theme.js') }}"></script>
   <link rel="stylesheet" href="/statis/app.css?v={{ static_version('app.css') }}">
   <link rel="icon" href="/statis/favicon.svg?v={{ static_version('favicon.svg') }}" type="image/svg+xml">
+  <script src="/statis/app.js?v={{ static_version('app.js') }}" defer></script>
 </head>
 {# A paper slip, always light: it is printed, and on screen it previews the
    paper. The code is what the operator carries to the fuel point and types
@@ -17,7 +18,7 @@
   {# Read out as the page's name; on paper the sheet's own header says it. #}
   <h1 class="visually-hidden">Slip BBM {{ operation.operation_code or operation.operation_id }}</h1>
   <div class="slip__actions" data-print-actions>
-    <button type="button" class="button" data-print onclick="window.print()">Cetak slip</button>
+    <button type="button" class="button" data-print>Cetak slip</button>
     <a class="button button--secondary" href="/operasi-harian/{{ operation.operation_id }}">Kembali ke estimasi</a>
   </div>
 

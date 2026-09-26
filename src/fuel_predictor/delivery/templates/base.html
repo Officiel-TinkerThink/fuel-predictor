@@ -10,7 +10,7 @@
   <link rel="icon" href="/statis/favicon.svg?v={{ static_version('favicon.svg') }}" type="image/svg+xml">
   {# The phone-width menu folds away only when the script that unfolds it is
      running; without JavaScript every link stays in view. #}
-  <script>document.documentElement.classList.add("js");</script>
+  <script nonce="{{ csp_nonce() }}">document.documentElement.classList.add("js");</script>
 </head>
 <body>
 <a class="skip-link" href="#konten-utama">Lewati ke konten utama</a>
@@ -78,7 +78,7 @@
      half-folded menu is clamped to a smaller maximum and lands short, which
      reads as the sidebar jumping to a fixed point rather than staying put.
      Inline, so all of it happens before the first paint. #}
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     (function () {
       var nav = document.querySelector("[data-nav-scroll]");
       if (!nav) {

@@ -141,6 +141,7 @@ from fuel_predictor.delivery.security import (
     install_session_middleware,
     register_security_error_handlers,
 )
+from fuel_predictor.delivery.security_headers import SecurityHeadersMiddleware
 from fuel_predictor.delivery.user_pages import build_user_pages_router
 from fuel_predictor.domain.daily_operation import (
     ActivityMode,
@@ -581,6 +582,8 @@ def create_app(
     register_identity_error_handlers(app)
     register_security_error_handlers(app)
     install_session_middleware(app, resolve_session)
+    # Added last, so it wraps everything: every response gets the headers.
+    app.add_middleware(SecurityHeadersMiddleware)
     app.mount("/statis", StaticFiles(directory=STATIC_DIRECTORY), name="statis")
     app.include_router(
         build_authentication_router(

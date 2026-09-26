@@ -16,6 +16,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoes
 
 from fuel_predictor.application.identity import ActiveCaller
 from fuel_predictor.delivery.security import may_open
+from fuel_predictor.delivery.security_headers import csp_nonce
 from fuel_predictor.domain.identity import Capability, UserRole
 
 TEMPLATE_DIRECTORY = Path(__file__).parent / "templates"
@@ -119,6 +120,7 @@ def build_environment() -> Environment:
     environment.filters["waktu"] = format_datetime
     environment.filters["tanggal"] = format_day
     environment.globals["static_version"] = static_version
+    environment.globals["csp_nonce"] = csp_nonce
     return environment
 
 
