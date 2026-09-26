@@ -7,8 +7,11 @@
 {{ ui.banner('warning', 'Operasi belakangan ini berbeda dari data latih', 'Sebagian besar ciri operasi yang diprediksi belakangan ini sudah tidak menyerupai data yang dipakai melatih model. Estimasinya mungkin kurang tepat; pertimbangkan melatih ulang.') }}
 {% elif drift.status == 'ready' %}
 {{ ui.banner('success', 'Data operasi masih mirip data latih', 'Operasi yang diprediksi belakangan ini masih menyerupai data yang dipakai melatih model, jadi estimasinya bisa dipercaya seperti biasa.') }}
+{% elif drift.status == 'no_active_model' %}
+{{ ui.banner('info', 'Belum ada model aktif', 'Belum dihitung: pergeseran diukur terhadap data latih model aktif.') }}
 {% else %}
-{{ ui.banner('info', 'Belum cukup data', 'Belum dihitung: perlu data latih model aktif dan cukup banyak operasi terkini untuk dibandingkan.') }}
+{# The tiles below give the counts; the banner says what they must reach. #}
+{{ ui.banner('info', 'Belum cukup data', 'Belum dihitung: perlu data latih model aktif dan operasi terkini masing-masing ' ~ drift.minimum_row_count ~ ' operasi.') }}
 {% endif %}
 
 <div class="grid grid--metrics">

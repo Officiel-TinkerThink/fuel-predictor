@@ -31,6 +31,7 @@ class EvidentlyFeatureDriftAnalyzer(FeatureDriftAnalyzer):
                 None,
                 drift_share_threshold,
                 (),
+                minimum_row_count=self._minimum_row_count,
             )
         definition = DataDefinition(
             numerical_columns=["total_distance_km", "lifting_hours"],
@@ -51,6 +52,7 @@ class EvidentlyFeatureDriftAnalyzer(FeatureDriftAnalyzer):
             drift_share,
             drift_share_threshold,
             drifting_features,
+            minimum_row_count=self._minimum_row_count,
         )
 
 

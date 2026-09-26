@@ -67,6 +67,9 @@ class FeatureDriftSummary:
     drift_share: float | None
     threshold: float
     drifting_features: tuple[str, ...]
+    # How many operations each side needs before drift is measured, so a page
+    # can say what is short rather than only that something is.
+    minimum_row_count: int = 0
 
 
 @dataclass(frozen=True, slots=True)

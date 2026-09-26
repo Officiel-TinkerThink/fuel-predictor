@@ -25,6 +25,7 @@ from fuel_predictor.delivery.rendering import format_datetime, format_decimal, r
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.alert_remediation import remediation_for, urgency_for
 from fuel_predictor.domain.monitoring import (
+    FeatureDriftSummary,
     MonitoringAlert,
     MonitoringAlertKind,
     MonitoringAlertSeverity,
@@ -261,12 +262,30 @@ def health_checks(dashboard: MonitoringDashboard) -> list[HealthCheck]:
         if dashboard.feature_drift.status == "ready":
             checks.append(HealthCheck("Pola operasi masih sesuai data latih model."))
         else:
-            checks.append(
-                HealthCheck("Pergeseran data belum dihitung: prediksi baru belum cukup.", False)
-            )
+            checks.append(HealthCheck(_drift_not_measured(dashboard.feature_drift), False))
     if MonitoringAlertKind.DATA_QUALITY not in alerting:
         checks.append(HealthCheck("Tidak ada baris impor yang perlu diperbaiki."))
     return checks
+
+
+def _drift_not_measured(drift: FeatureDriftSummary) -> str:
+    """Why drift has no figure yet, naming the side that is short - it was
+    "prediksi baru belum cukup" even when the training data was."""
+    if drift.status == "no_active_model":
+        return "Pergeseran data belum dihitung: belum ada model aktif."
+    need = drift.minimum_row_count
+    short = [
+        f"{count} operasi {side}"
+        for side, count in (
+            ("data latih", drift.reference_row_count),
+            ("terkini", drift.current_row_count),
+        )
+        if count < need
+    ]
+    if not short:
+        return "Pergeseran data belum dihitung."
+    each = "masing-masing perlu" if len(short) > 1 else "perlu"
+    return f"Pergeseran data belum dihitung: baru {' dan '.join(short)}, {each} {need}."
 
 
 # Plot geometry for the rolling-error line: a fixed viewBox the CSS scales,
@@ -274,6 +293,8 @@ def health_checks(dashboard: MonitoringDashboard) -> list[HealthCheck]:
 _CHART_WIDTH = 640
 _CHART_HEIGHT = 200
 _PAD_LEFT, _PAD_RIGHT, _PAD_TOP, _PAD_BOTTOM = 48, 16, 12, 28
+# Where the top value sits, and how far apart two gutter ticks must be.
+_TOP_TICK_Y, _TICK_GAP = 16, 14
 
 
 def trend_chart(
@@ -295,10 +316,31 @@ def trend_chart(
     def y_of(value: float) -> float:
         return round(_PAD_TOP + plot_height - (value / top) * plot_height, 1)
 
+    ys = [y_of(point.mae_liters) for point in points]
+
+    threshold_y = y_of(threshold_liters)
+
+    def value_y(index: int) -> float:
+        """Where the first or last value's label sits: above its point unless
+        the line or the threshold would run through the number there, then
+        below. The label reaches about 30 units inward from the point."""
+        here = ys[index]
+        above, below = here - 10, min(here + 18, y_of(0) - 4)
+        if len(ys) == 1:
+            return above
+        neighbour = ys[1] if index == 0 else ys[-2]
+        line_under_label = here + (neighbour - here) * min(1.0, 30 / step)
+        for baseline in (above, below):
+            top, bottom = baseline - 11, baseline + 2
+            if not (top <= line_under_label <= bottom or top - 2 <= threshold_y <= bottom + 2):
+                return baseline
+        return above
+
     plotted = [
         {
             "x": round(_PAD_LEFT + index * step, 1) if step else _PAD_LEFT + plot_width / 2,
-            "y": y_of(point.mae_liters),
+            "y": ys[index],
+            "value_y": value_y(index) if index in (0, len(points) - 1) else ys[index],
             "label": (
                 f"{format_datetime(point.observed_at)}: MAE {format_decimal(point.mae_liters)} L "
                 f"({point.matched_record_count} data cocok)"
@@ -313,9 +355,18 @@ def trend_chart(
         "points": plotted,
         "path": " ".join(f"{p['x']},{p['y']}" for p in plotted),
         "baseline_y": y_of(0),
-        "threshold_y": y_of(threshold_liters),
-        "threshold_label": f"Ambang {format_decimal(threshold_liters)} L",
+        "threshold_y": threshold_y,
+        # A tick in the left gutter like 0 L and the top: a label on the line
+        # itself sat on the latest point and its value. Left out where it
+        # would crowd those two; the page says the threshold in words too.
+        "threshold_tick": (
+            f"{format_decimal(threshold_liters)} L"
+            if y_of(0) - y_of(threshold_liters) >= _TICK_GAP
+            and y_of(threshold_liters) - _TOP_TICK_Y >= _TICK_GAP
+            else None
+        ),
         "top_label": f"{format_decimal(round(top, 1))} L",
+        "top_tick_y": _TOP_TICK_Y,
         "first_date": format_datetime(points[0].observed_at)[:10],
         "last_date": format_datetime(points[-1].observed_at)[:10],
         "left": _PAD_LEFT,
