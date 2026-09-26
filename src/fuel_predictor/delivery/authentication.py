@@ -74,9 +74,18 @@ class AuditListResponse(BaseModel):
 
 
 # Why someone is back at the sign-in page, when the reason was their own doing.
+# (tone, words): a done thing is good news; an ended session is a heads-up.
 _SIGN_IN_NOTICES = {
-    "kata-sandi": "Kata sandi Anda sudah diubah. Masuk lagi dengan kata sandi yang baru.",
-    "atur-ulang": "Kata sandi baru tersimpan. Masuk dengan kata sandi itu.",
+    "kata-sandi": (
+        "success",
+        "Kata sandi Anda sudah diubah. Masuk lagi dengan kata sandi yang baru.",
+    ),
+    "atur-ulang": ("success", "Kata sandi baru tersimpan. Masuk dengan kata sandi itu."),
+    "sesi": (
+        "warning",
+        "Sesi Anda sudah berakhir, jadi isian tadi belum terkirim. Masuk lagi, lalu kirim "
+        "ulang formulirnya.",
+    ),
 }
 
 

@@ -8,7 +8,7 @@ authorization rule lives in the domain and the route only names what it needs.
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from secrets import compare_digest, token_urlsafe
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse, Response
@@ -230,6 +230,14 @@ class _SessionMiddleware:
         caller = self.resolve_session.execute(request.cookies.get(SESSION_COOKIE))
         state["caller"] = caller
 
+        # Before the forgery check: a request with no session does nothing
+        # but get sent to sign in, and a form sent after the session expired
+        # was otherwise refused as a forgery - "Akses ditolak" for what was
+        # only an ended sign-in. Public forms (sign-in itself) keep their check.
+        if not _is_public(request.url.path) and caller is None:
+            await _authentication_required_response(request)(scope, receive, send)
+            return
+
         downstream_receive = receive
         if _requires_csrf(request):
             body = await request.body()
@@ -244,10 +252,6 @@ class _SessionMiddleware:
             if not expected or not supplied or not compare_digest(expected, supplied):
                 await _csrf_failure_response(request)(scope, receive, send)
                 return
-
-        if not _is_public(request.url.path) and caller is None:
-            await _authentication_required_response(request)(scope, receive, send)
-            return
 
         required = _required_capability(request.method, request.url.path)
         if required is not None and caller is not None and not caller.allows(required):
@@ -369,13 +373,31 @@ def _authentication_required_response(request: Request) -> Response:
                 }
             },
         )
-    # Path *and* query: an OAuth authorization request arrives as query
-    # parameters, and dropping them would sign the user in to a blank page.
-    target = request.url.path
-    if request.url.query:
-        target = f"{target}?{request.url.query}"
+    if request.method in ("GET", "HEAD"):
+        # Path *and* query: an OAuth authorization request arrives as query
+        # parameters, and dropping them would sign the user in to a blank page.
+        target = request.url.path
+        if request.url.query:
+            target = f"{target}?{request.url.query}"
+        notice = ""
+    else:
+        # A form sent without a session: its session ended while it was open.
+        # Back to the page the form was on - the address it posted to has no
+        # page of its own - and the sign-in page says what happened.
+        target = _same_origin_referrer(request) or "/"
+        notice = "&pesan=sesi"
     destination = quote(target, safe="")
-    return RedirectResponse(f"/masuk?tujuan={destination}", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(
+        f"/masuk?tujuan={destination}{notice}", status_code=status.HTTP_303_SEE_OTHER
+    )
+
+
+def _same_origin_referrer(request: Request) -> str | None:
+    """The referring page's path, when it is one of ours."""
+    referrer = urlsplit(request.headers.get("referer", ""))
+    if referrer.netloc != request.url.netloc or not referrer.path.startswith("/"):
+        return None
+    return f"{referrer.path}?{referrer.query}" if referrer.query else referrer.path
 
 
 def _authorization_denied_response(request: Request) -> Response:

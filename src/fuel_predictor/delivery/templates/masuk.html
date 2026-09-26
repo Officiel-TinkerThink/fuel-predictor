@@ -13,7 +13,7 @@
     <h1>Masuk</h1>
 
     {% if notice %}
-    <div class="banner banner--success" role="status"><p>{{ notice }}</p></div>
+    <div class="banner banner--{{ notice[0] }}" role="status"><p>{{ notice[1] }}</p></div>
     {% endif %}
     {% if error %}
     <div class="error-summary" role="alert" tabindex="-1" id="ringkasan-kesalahan">
