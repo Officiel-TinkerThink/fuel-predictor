@@ -106,5 +106,5 @@ jobs:
           # compose file and outside this pipeline's control. Naming services
           # explicitly here means this can never start, stop, or recreate it.
           docker compose -f compose.prod.yaml pull app mlflow monitor
-          docker compose -f compose.prod.yaml up -d --remove-orphans app db mlflow monitor
+          docker compose -f compose.prod.yaml up -d --remove-orphans app db mlflow monitor backup
           docker image prune -f

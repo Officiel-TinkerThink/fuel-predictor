@@ -248,6 +248,24 @@ starting clean. Configure `FUEL_PREDICTOR_ALERT_WEBHOOK_URL`, or the SMTP variab
 
 ---
 
+## 8a. Restore from the local daily dump
+
+The `backup` service (`deploy/local-backup.sh`) dumps the database every day into the
+`db_backups` volume and keeps seven days. It does not survive losing the machine - that is what the
+encrypted off-site backup below is for - but it covers a mistaken deletion, a bad migration or a
+corrupted table, and it needs nothing configured.
+
+```bash
+docker compose -f compose.prod.yaml exec backup ls -l /backups          # pick a dump
+docker compose -f compose.prod.yaml stop app monitor                     # nothing writes meanwhile
+docker compose -f compose.prod.yaml exec backup \
+  pg_restore --clean --if-exists --no-owner --dbname fuel_predictor /backups/fuel_predictor-<STAMP>.dump
+docker compose -f compose.prod.yaml start app monitor
+```
+
+Then run the checks at the end of §8: a restore that loads rows but leaves the active model
+unloadable is not a successful restore (the dump holds the database, not the model packages).
+
 ## 8. Restore from backup
 
 An untested backup is not a backup. Rehearse this on a clean machine — do not let the first

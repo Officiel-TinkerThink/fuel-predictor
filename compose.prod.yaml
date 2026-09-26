@@ -161,8 +161,30 @@ services:
       db:
         condition: service_healthy
 
+  # A daily database dump kept seven days on this machine (deploy/local-backup.sh).
+  # Until the encrypted off-site backup (deploy/backup.sh, ADR 0012) has its
+  # key and remote, nothing else backs the database up; this survives a
+  # mistaken deletion, a bad migration or a corrupted table, not the loss of
+  # the machine. The postgres image, so pg_dump matches the server.
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    entrypoint: ["sh", "/deploy/local-backup.sh"]
+    environment:
+      PGHOST: db
+      PGUSER: fuel_predictor
+      PGDATABASE: fuel_predictor
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - ./deploy/local-backup.sh:/deploy/local-backup.sh:ro
+      - db_backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   postgres_data:
+  db_backups:
   mlflow_data:
   model_packages:
   caddy_data:

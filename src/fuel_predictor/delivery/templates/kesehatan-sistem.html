@@ -97,8 +97,9 @@
       {%- else %}{{ freshness.status_text }} — terakhir berhasil {{ freshness.last_success | waktu }}{% endif %}</dd>
     <dt>Cadangan data</dt>
     <dd>{% if last_backup is none %}Belum pernah dibuat
-      <span class="hint">Jalankan <code>deploy/backup.sh</code> di server; hasilnya tercatat di sini.</span>
-      {%- else %}{{ 'Berhasil' if last_backup.succeeded else 'Gagal' }} — {{ last_backup.finished_at | waktu }}{% endif %}</dd>
+      <span class="hint">Layanan <code>backup</code> di <code>compose.prod.yaml</code> mencadangkan basis data tiap hari; hasilnya tercatat di sini.</span>
+      {%- else %}{{ 'Berhasil' if last_backup.succeeded else 'Gagal' }} — {{ last_backup.finished_at | waktu }}
+      <span class="hint">Ke {{ last_backup.destination }}.</span>{% endif %}</dd>
     <dt>Pemberitahuan</dt>
     <dd>{% if alert_channel_configured %}Peringatan baru dikirim ke saluran pemberitahuan yang dikonfigurasi.
       {%- else %}Saluran pemberitahuan belum dikonfigurasi, jadi peringatan hanya terlihat di halaman ini.{% endif %}</dd>
