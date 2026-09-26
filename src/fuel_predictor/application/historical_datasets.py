@@ -1,5 +1,5 @@
 import re
-from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from math import isfinite
 from typing import Protocol
@@ -33,6 +33,50 @@ class SourceSheet:
 
 class HistoricalDatasetSourceReader(Protocol):
     def read(self, filename: str, content: bytes) -> Sequence[SourceSheet]: ...
+
+
+NO_KNOWN_COLUMNS = (
+    "Berkas tidak memuat satu pun kolom yang dikenali. Gunakan templat dari halaman ini."
+)
+
+
+@dataclass(frozen=True, slots=True)
+class DataRow:
+    """One row a sheet holds data in, with the columns its sheet was read by."""
+
+    sheet_name: str
+    row_number: int
+    raw_values: dict[str, RawValue]
+    mapped_headers: dict[str, str]
+
+
+@dataclass
+class SheetRows:
+    """The rows of every sheet that has a known column, blank ones counted
+    and skipped; the plan, actual-fuel and history uploads all read so.
+
+    A sheet with none of the columns - a template's instructions - is not
+    data: reading it quarantined every instruction line. A file with no such
+    sheet at all is refused once its sheets are read."""
+
+    aliases: Mapping[str, set[str]]
+    blank_row_count: int = 0
+
+    def read(self, sheets: Iterable[SourceSheet]) -> Iterator[DataRow]:
+        data_sheets = 0
+        for sheet in sheets:
+            mapped_headers = map_headers(sheet.headers, self.aliases)
+            if not mapped_headers:
+                continue
+            data_sheets += 1
+            for row_number, values in sheet.rows:
+                raw_values = dict(zip(sheet.headers, values, strict=True))
+                if is_blank_row(raw_values, mapped_headers):
+                    self.blank_row_count += 1
+                    continue
+                yield DataRow(sheet.name, row_number, raw_values, mapped_headers)
+        if data_sheets == 0:
+            raise HistoricalDatasetImportError(NO_KNOWN_COLUMNS)
 
 
 class HistoricalDatasetWriter(Protocol):
@@ -90,45 +134,27 @@ class ImportHistoricalDataset:
 
         valid_operations: list[HistoricalDailyOperation] = []
         issues: list[DataQualityIssue] = []
-        ignored_blank_row_count = 0
-        data_sheets = 0
-        for sheet in self._source_reader.read(source_filename, content):
-            mapped_headers = map_headers(sheet.headers, _HEADER_ALIASES)
-            # A sheet with none of the columns - a template's instructions -
-            # is not data; reading it quarantined every instruction line.
-            if not mapped_headers:
-                continue
-            data_sheets += 1
-            for row_number, values in sheet.rows:
-                raw_values = dict(zip(sheet.headers, values, strict=True))
-                if is_blank_row(raw_values, mapped_headers):
-                    ignored_blank_row_count += 1
-                    continue
-
-                provenance = SourceProvenance(
-                    sheet_name=sheet.name,
-                    row_number=row_number,
-                    original_headers=_lifting_header_provenance(mapped_headers),
-                    raw_values=raw_values,
-                    source_filename=source_filename,
-                )
-                operation, row_issues = _validate_row(
-                    mapped_headers,
-                    raw_values,
-                    provenance,
-                    self._operation_id_factory,
-                    self._vehicle_catalog,
-                )
-                if row_issues:
-                    issues.append(DataQualityIssue(source=provenance, reasons=tuple(row_issues)))
-                elif operation is not None:
-                    valid_operations.append(operation)
-
-        if data_sheets == 0:
-            raise HistoricalDatasetImportError(
-                "Berkas tidak memuat satu pun kolom yang dikenali. "
-                "Gunakan template dari halaman ini."
+        rows = SheetRows(_HEADER_ALIASES)
+        for row in rows.read(self._source_reader.read(source_filename, content)):
+            provenance = SourceProvenance(
+                sheet_name=row.sheet_name,
+                row_number=row.row_number,
+                original_headers=_lifting_header_provenance(row.mapped_headers),
+                raw_values=row.raw_values,
+                source_filename=source_filename,
             )
+            operation, row_issues = _validate_row(
+                row.mapped_headers,
+                row.raw_values,
+                provenance,
+                self._operation_id_factory,
+                self._vehicle_catalog,
+            )
+            if row_issues:
+                issues.append(DataQualityIssue(source=provenance, reasons=tuple(row_issues)))
+            elif operation is not None:
+                valid_operations.append(operation)
+        ignored_blank_row_count = rows.blank_row_count
         dataset_version = self._repository.create(
             source_filename=source_filename,
             valid_operations=valid_operations,

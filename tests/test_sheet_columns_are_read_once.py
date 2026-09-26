@@ -6,8 +6,13 @@ each a copy of header matching and blank-row detection. They now share
 `map_headers`, `is_blank_row`, `pick_columns` and `read_operation_columns`.
 """
 
+import pytest
+
 from fuel_predictor.application.historical_datasets import (
+    HistoricalDatasetImportError,
     OperationColumns,
+    SheetRows,
+    SourceSheet,
     is_blank_row,
     map_headers,
     pick_columns,
@@ -98,3 +103,32 @@ def test_without_an_activity_column_there_is_no_operation_but_no_second_reason()
 
     assert columns is None
     assert issues == []
+
+
+def test_rows_are_read_from_data_sheets_with_blank_ones_counted() -> None:
+    sheets = [
+        # A template's instructions: no known column, not data.
+        SourceSheet("Petunjuk", ("Kolom", "Arti"), ((2, ("Aktivitas", "wajib")),)),
+        SourceSheet(
+            "Operasi Harian",
+            ("Aktivitas (wajib)", "Jarak Total (km) (wajib)"),
+            ((2, ("Mobilisasi", 30)), (3, (None, " ")), (4, ("Mobilisasi", 12))),
+        ),
+    ]
+    rows = SheetRows(_ALIASES)
+
+    read = list(rows.read(sheets))
+
+    assert [(row.sheet_name, row.row_number) for row in read] == [
+        ("Operasi Harian", 2),
+        ("Operasi Harian", 4),
+    ]
+    assert read[0].raw_values["Aktivitas (wajib)"] == "Mobilisasi"
+    assert rows.blank_row_count == 1
+
+
+def test_a_file_with_no_known_column_points_to_the_template() -> None:
+    rows = SheetRows(_ALIASES)
+
+    with pytest.raises(HistoricalDatasetImportError, match="Gunakan templat dari halaman ini"):
+        list(rows.read([SourceSheet("Lain", ("Nama", "Umur"), ((2, ("Budi", 30)),))]))

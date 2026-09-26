@@ -14,9 +14,8 @@ from fuel_predictor.application.daily_operations import (
 from fuel_predictor.application.historical_datasets import (
     HistoricalDatasetImportError,
     HistoricalDatasetSourceReader,
+    SheetRows,
     is_blank,
-    is_blank_row,
-    map_headers,
     normalize_header,
 )
 from fuel_predictor.application.wording import liters
@@ -67,74 +66,59 @@ class BulkActualFuel:
 
         accepted_rows: list[BulkActualFuelAcceptedRow] = []
         issues: list[DataQualityIssue] = []
-        ignored_blank_row_count = 0
         unfilled_row_count = 0
         already_recorded_row_count = 0
-        data_sheets = 0
-        for sheet in self._source_reader.read(source_filename, content):
-            mapped_headers = map_headers(sheet.headers, _HEADER_ALIASES)
-            # A sheet with none of the columns - a template's instructions -
-            # is not data; reading it quarantined every instruction line.
-            if not mapped_headers:
+        rows = SheetRows(_HEADER_ALIASES)
+        for row in rows.read(self._source_reader.read(source_filename, content)):
+            raw_values, mapped_headers = row.raw_values, row.mapped_headers
+            if _is_unfilled_row(raw_values, mapped_headers):
+                unfilled_row_count += 1
                 continue
-            data_sheets += 1
-            for row_number, values in sheet.rows:
-                raw_values = dict(zip(sheet.headers, values, strict=True))
-                if is_blank_row(raw_values, mapped_headers):
-                    ignored_blank_row_count += 1
-                    continue
-                if _is_unfilled_row(raw_values, mapped_headers):
-                    unfilled_row_count += 1
-                    continue
-                source = SourceProvenance(
-                    source_filename=source_filename,
-                    sheet_name=sheet.name,
-                    row_number=row_number,
-                    original_headers=dict(mapped_headers),
-                    raw_values=raw_values,
-                )
-                command, row_issues = _command_for_row(mapped_headers, raw_values, source)
-                if row_issues:
-                    issues.append(DataQualityIssue(source, tuple(row_issues)))
-                    continue
-                assert command is not None
-                try:
-                    record = self._record_actual_fuel.execute(replace(command, recorded_by=actor))
-                except DailyOperationNotFoundError:
-                    issues.append(
-                        DataQualityIssue(
-                            source,
-                            (CorrectionReason("operation_id", "Kode operasi tidak ditemukan."),),
-                        )
-                    )
-                except OperationCancelledError:
-                    issues.append(
-                        DataQualityIssue(
-                            source,
-                            (CorrectionReason("operation_id", "Operasi ini sudah dibatalkan."),),
-                        )
-                    )
-                except ActualFuelAlreadyRecordedError as error:
-                    if error.repeats(command.actual_fuel_liters):
-                        already_recorded_row_count += 1
-                        continue
-                    issues.append(
-                        DataQualityIssue(
-                            source,
-                            (CorrectionReason("actual_fuel_liters", _conflict(error, command)),),
-                        )
-                    )
-                else:
-                    accepted_rows.append(
-                        BulkActualFuelAcceptedRow(
-                            source, record, self._record_actual_fuel.code_for(record)
-                        )
-                    )
-        if data_sheets == 0:
-            raise HistoricalDatasetImportError(
-                "Berkas tidak memuat satu pun kolom yang dikenali. "
-                "Gunakan template dari halaman ini."
+            source = SourceProvenance(
+                source_filename=source_filename,
+                sheet_name=row.sheet_name,
+                row_number=row.row_number,
+                original_headers=dict(mapped_headers),
+                raw_values=raw_values,
             )
+            command, row_issues = _command_for_row(mapped_headers, raw_values, source)
+            if row_issues:
+                issues.append(DataQualityIssue(source, tuple(row_issues)))
+                continue
+            assert command is not None
+            try:
+                record = self._record_actual_fuel.execute(replace(command, recorded_by=actor))
+            except DailyOperationNotFoundError:
+                issues.append(
+                    DataQualityIssue(
+                        source,
+                        (CorrectionReason("operation_id", "Kode operasi tidak ditemukan."),),
+                    )
+                )
+            except OperationCancelledError:
+                issues.append(
+                    DataQualityIssue(
+                        source,
+                        (CorrectionReason("operation_id", "Operasi ini sudah dibatalkan."),),
+                    )
+                )
+            except ActualFuelAlreadyRecordedError as error:
+                if error.repeats(command.actual_fuel_liters):
+                    already_recorded_row_count += 1
+                    continue
+                issues.append(
+                    DataQualityIssue(
+                        source,
+                        (CorrectionReason("actual_fuel_liters", _conflict(error, command)),),
+                    )
+                )
+            else:
+                accepted_rows.append(
+                    BulkActualFuelAcceptedRow(
+                        source, record, self._record_actual_fuel.code_for(record)
+                    )
+                )
+        ignored_blank_row_count = rows.blank_row_count
         return BulkActualFuelResult(
             accepted_rows=tuple(accepted_rows),
             correction_report=tuple(issues),

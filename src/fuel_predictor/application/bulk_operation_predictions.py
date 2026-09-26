@@ -9,9 +9,8 @@ from fuel_predictor.application.daily_operations import (
 from fuel_predictor.application.historical_datasets import (
     HistoricalDatasetImportError,
     HistoricalDatasetSourceReader,
+    SheetRows,
     is_blank,
-    is_blank_row,
-    map_headers,
     pick_columns,
     read_operation_columns,
 )
@@ -71,56 +70,39 @@ class BulkOperationPrediction:
         self._generate_fuel_prediction.ensure_model_available()
         accepted_rows: list[BulkPredictionAcceptedRow] = []
         issues: list[DataQualityIssue] = []
-        ignored_blank_row_count = 0
-        data_sheets = 0
-        for sheet in self._source_reader.read(source_filename, content):
-            mapped_headers = map_headers(sheet.headers, _HEADER_ALIASES)
-            # A sheet with none of the columns - a template's instructions -
-            # is not data; reading it quarantined every instruction line.
-            if not mapped_headers:
-                continue
-            data_sheets += 1
-            for row_number, values in sheet.rows:
-                raw_values = dict(zip(sheet.headers, values, strict=True))
-                if is_blank_row(raw_values, mapped_headers):
-                    ignored_blank_row_count += 1
-                    continue
-                source = SourceProvenance(
-                    source_filename=source_filename,
-                    sheet_name=sheet.name,
-                    row_number=row_number,
-                    original_headers=dict(mapped_headers),
-                    raw_values=raw_values,
-                )
-                # The unit is resolved to its fleet name by CreateDailyOperation, as
-                # for every plan; a unit the fleet does not know is planned as written.
-                command, row_issues = _command_for_row(mapped_headers, raw_values)
-                if row_issues:
-                    issues.append(DataQualityIssue(source=source, reasons=tuple(row_issues)))
-                    continue
-
-                assert command is not None
-                try:
-                    operation = self._create_daily_operation.execute(
-                        replace(command, created_by=actor)
-                    )
-                except DailyOperationValidationError as error:
-                    issues.append(
-                        DataQualityIssue(
-                            source=source,
-                            reasons=(CorrectionReason(error.field, error.message),),
-                        )
-                    )
-                    continue
-                self._source_writer.add_source(operation.operation_id, source)
-                prediction = self._generate_fuel_prediction.execute(operation.operation_id)
-                accepted_rows.append(BulkPredictionAcceptedRow(source, operation, prediction))
-
-        if data_sheets == 0:
-            raise HistoricalDatasetImportError(
-                "Berkas tidak memuat satu pun kolom yang dikenali. "
-                "Gunakan template dari halaman ini."
+        rows = SheetRows(_HEADER_ALIASES)
+        for row in rows.read(self._source_reader.read(source_filename, content)):
+            source = SourceProvenance(
+                source_filename=source_filename,
+                sheet_name=row.sheet_name,
+                row_number=row.row_number,
+                original_headers=dict(row.mapped_headers),
+                raw_values=row.raw_values,
             )
+            # The unit is resolved to its fleet name by CreateDailyOperation, as
+            # for every plan; a unit the fleet does not know is planned as written.
+            command, row_issues = _command_for_row(row.mapped_headers, row.raw_values)
+            if row_issues:
+                issues.append(DataQualityIssue(source=source, reasons=tuple(row_issues)))
+                continue
+
+            assert command is not None
+            try:
+                operation = self._create_daily_operation.execute(
+                    replace(command, created_by=actor)
+                )
+            except DailyOperationValidationError as error:
+                issues.append(
+                    DataQualityIssue(
+                        source=source,
+                        reasons=(CorrectionReason(error.field, error.message),),
+                    )
+                )
+                continue
+            self._source_writer.add_source(operation.operation_id, source)
+            prediction = self._generate_fuel_prediction.execute(operation.operation_id)
+            accepted_rows.append(BulkPredictionAcceptedRow(source, operation, prediction))
+        ignored_blank_row_count = rows.blank_row_count
         return BulkOperationPredictionResult(
             accepted_rows=tuple(accepted_rows),
             correction_report=tuple(issues),

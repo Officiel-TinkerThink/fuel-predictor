@@ -100,4 +100,4 @@ def test_a_file_with_none_of_the_columns_is_refused_with_a_reason(tmp_path: Path
         )
 
     assert response.status_code == 422
-    assert "template" in response.text.lower()
+    assert "templat" in response.text.lower()
