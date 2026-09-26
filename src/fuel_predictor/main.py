@@ -267,6 +267,10 @@ def _warm_active_model(models: SqlAlchemyPredictionRepository, scorer: StoredMod
         _logger.warning("Model aktif gagal dimuat saat aplikasi mulai.", exc_info=True)
 
 
+# What /docs describes: what a program talks to.
+_DOCUMENTED_PATHS = ("/api/", "/mcp", "/oauth/", "/.well-known/", "/sehat")
+
+
 def create_app(
     database_path: Path | None = None,
     database_url: str | None = None,
@@ -575,6 +579,11 @@ def create_app(
     app = FastAPI(
         title="Fuel Matrix Calculation",
         version="1.0.0",
+        description=(
+            "Antarmuka program untuk agen dan integrasi: operasi harian, estimasi BBM, BBM "
+            "aktual, dan pemantauan model. Aplikasi webnya dipakai lewat /masuk; token untuk "
+            "agen dibuat di halaman Integrasi Agen atau lewat OAuth."
+        ),
         lifespan=application_lifespan,
     )
     register_error_handlers(app)
@@ -765,7 +774,30 @@ def create_app(
             release=settings.release,
         )
     )
+    _document_only_what_programs_use(app)
     return app
+
+
+def _document_only_what_programs_use(app: FastAPI) -> None:
+    """The API documentation is for programs: the browser pages and their
+    forms are left out of it (they were 58 of its 77 paths)."""
+    generate = app.openapi
+    # The complete route table stays reachable: the route-capability test
+    # enumerates every route through it.
+    app.state.complete_openapi = generate
+
+    def openapi_for_programs() -> dict[str, Any]:
+        schema = generate()  # complete, and cached by FastAPI; not changed here
+        return {
+            **schema,
+            "paths": {
+                path: operations
+                for path, operations in schema["paths"].items()
+                if path.startswith(_DOCUMENTED_PATHS)
+            },
+        }
+
+    app.openapi = openapi_for_programs  # type: ignore[method-assign]
 
 
 def _split_setting(value: str) -> tuple[str, ...]:

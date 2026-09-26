@@ -29,7 +29,8 @@ def _declared_routes(tmp_path: Path) -> list[tuple[str, str]]:
     actually registered.
     """
     app = create_app(database_path=tmp_path / "operations.sqlite3")
-    paths = app.openapi()["paths"]
+    # The complete table: /docs itself lists only what programs use.
+    paths = app.state.complete_openapi()["paths"]
     return [
         (method.upper(), path)
         for path, operations in paths.items()
