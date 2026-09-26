@@ -345,10 +345,12 @@ def issue_pre_session_csrf_token(
 ) -> str:
     """Double-submit token for forms shown before a session exists, such as sign-in."""
     resolved = token or request.cookies.get(CSRF_COOKIE) or new_csrf_token()
+    # HttpOnly: the server compares the form's copy with this one, and no
+    # script ever reads it - so no injected script may either.
     response.set_cookie(
         CSRF_COOKIE,
         resolved,
-        httponly=False,
+        httponly=True,
         samesite="lax",
         secure=request.url.scheme == "https",
         path="/",

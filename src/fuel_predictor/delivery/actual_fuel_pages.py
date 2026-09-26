@@ -24,6 +24,7 @@ from fuel_predictor.delivery.http import ActualFuelRequest, translate_validation
 from fuel_predictor.delivery.recent_results import RecentResults, result_gone
 from fuel_predictor.delivery.rendering import format_decimal, render, site_time
 from fuel_predictor.delivery.security import SecurityGuard
+from fuel_predictor.delivery.uploads import read_sheet
 from fuel_predictor.domain.daily_operation import DailyOperationValidationError
 from fuel_predictor.infrastructure.actual_fuel_template import waiting_xlsx
 
@@ -179,7 +180,7 @@ def build_actual_fuel_pages_router(
     async def submit_bulk_form(request: Request, file: UploadFile = _UPLOAD_FILE) -> Response:
         caller = guard.require_caller(request)
         filename = file.filename or "berkas-bbm-aktual"
-        content = await file.read()
+        content = await read_sheet(file)
         digest = uploads.digest(content)
         # The same bytes again, moments later, is a refresh or a double tap;
         # it leads to the result already made rather than a page of

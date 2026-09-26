@@ -24,6 +24,7 @@ from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.delivery.listing import ListingQuery, SortOption, paginate
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
+from fuel_predictor.delivery.uploads import read_bounded
 from fuel_predictor.domain.model_package import ModelPackageValidationError
 from fuel_predictor.domain.prediction import ModelLifecycleStatus, ModelVersion
 
@@ -61,6 +62,7 @@ def build_model_upload_pages_router(
     guard: SecurityGuard,
     *,
     events: ImportantEvents,
+    max_archive_bytes: int = 64 * 1024 * 1024,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -71,7 +73,7 @@ def build_model_upload_pages_router(
     @router.post("/model/unggah", response_class=HTMLResponse)
     async def submit_upload(request: Request, file: UploadFile = _UPLOAD_FILE) -> HTMLResponse:
         caller = guard.require_caller(request)
-        archive_bytes = await file.read()
+        archive_bytes = await read_bounded(file, max_archive_bytes)
         validation_id = f"VAL-{uuid4().hex[:20]}"
         now = datetime.now(UTC)
 

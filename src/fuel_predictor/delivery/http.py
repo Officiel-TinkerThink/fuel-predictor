@@ -52,6 +52,7 @@ from fuel_predictor.application.model_lifecycle import (
 from fuel_predictor.application.monitoring import GetMonitoringDashboard, MonitoringDashboard
 from fuel_predictor.application.vehicles import VehicleCatalog
 from fuel_predictor.delivery.events import ImportantEvents
+from fuel_predictor.delivery.uploads import read_sheet
 from fuel_predictor.domain.actual_fuel import ActualFuelMeasurementSource, ActualFuelRecord
 from fuel_predictor.domain.daily_operation import (
     ActivityMode,
@@ -482,7 +483,7 @@ def build_router(
         http_request: Request, file: UploadFile = _UPLOAD_FILE
     ) -> HistoricalDatasetImportResponse:
         result = import_historical_dataset.execute(
-            file.filename or "berkas-impor", await file.read()
+            file.filename or "berkas-impor", await read_sheet(file)
         )
         events.historical_dataset_imported(actor_of(http_request), result.dataset_version)
         return _historical_dataset_import_response(result)
@@ -524,7 +525,7 @@ def build_router(
     ) -> BulkOperationPredictionResponse:
         filename = file.filename or "berkas-prediksi-operasi"
         result = bulk_operation_prediction.execute(
-            filename, await file.read(), actor=actor_of(http_request)
+            filename, await read_sheet(file), actor=actor_of(http_request)
         )
         events.bulk_prediction_imported(actor_of(http_request), filename, result)
         return _bulk_prediction_response(result)
@@ -554,7 +555,8 @@ def build_router(
         http_request: Request, file: UploadFile = _UPLOAD_FILE
     ) -> BulkActualFuelResponse:
         filename = file.filename or "berkas-bbm-aktual"
-        result = bulk_actual_fuel.execute(filename, await file.read(), actor=actor_of(http_request))
+        content = await read_sheet(file)
+        result = bulk_actual_fuel.execute(filename, content, actor=actor_of(http_request))
         events.bulk_actual_imported(actor_of(http_request), filename, result)
         return _bulk_actual_fuel_response(result)
 

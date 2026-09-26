@@ -91,3 +91,19 @@ def test_the_page_says_the_file_is_too_big(tmp_path: Path) -> None:
 
     assert page.status_code == 422
     assert "Berkas terlalu besar: maksimal 10 MB" in page.text
+
+
+def test_an_upload_is_read_no_further_than_one_byte_past_its_limit() -> None:
+    """The reader refuses what is too large; it never needs the rest."""
+    import asyncio
+    from io import BytesIO
+
+    from fastapi import UploadFile
+
+    from fuel_predictor.delivery.uploads import read_bounded, read_sheet
+
+    huge = UploadFile(BytesIO(b"x" * (MAX_UPLOAD_BYTES + 5000)), filename="besar.csv")
+    small = UploadFile(BytesIO(b"abc"), filename="kecil.csv")
+
+    assert len(asyncio.run(read_sheet(huge))) == MAX_UPLOAD_BYTES + 1
+    assert asyncio.run(read_bounded(small, 10)) == b"abc"

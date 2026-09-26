@@ -21,6 +21,7 @@ from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.delivery.recent_results import RecentResults, result_gone
 from fuel_predictor.delivery.rendering import render
 from fuel_predictor.delivery.security import SecurityGuard
+from fuel_predictor.delivery.uploads import read_sheet
 
 if TYPE_CHECKING:
     from fuel_predictor.application.identity import ActiveCaller
@@ -65,7 +66,7 @@ def build_historical_dataset_pages_router(
     async def submit_import(request: Request, file: UploadFile = _UPLOAD_FILE) -> Response:
         caller = guard.require_caller(request)
         filename = file.filename or "berkas-impor"
-        content = await file.read()
+        content = await read_sheet(file)
         digest = uploads.digest(content)
         # The same history again, moments later, is a refresh or a double
         # tap: it would become a second, identical dataset version.

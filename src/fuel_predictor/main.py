@@ -708,6 +708,7 @@ def create_app(
             register_ingested_package,
             guard,
             events=events,
+            max_archive_bytes=settings.model_package_max_archive_bytes,
         )
     )
     app.include_router(

@@ -103,3 +103,16 @@ def test_the_api_documentation_keeps_working_without_the_page_policy(tmp_path: P
     assert "content-security-policy" not in docs.headers
     assert docs.headers["x-content-type-options"] == "nosniff"
     assert api.headers["x-content-type-options"] == "nosniff"
+
+
+def test_the_sign_in_form_s_token_cookie_is_out_of_scripts_reach(tmp_path: Path) -> None:
+    app = create_app(
+        database_path=tmp_path / "operations.sqlite3",
+        bootstrap_administrator=("admin", "kata-sandi-admin-1"),
+    )
+    with TestClient(app, base_url="https://testserver") as client:
+        sign_in = client.get("/masuk")
+
+    cookie = sign_in.headers["set-cookie"].lower()
+    assert "fp_csrf=" in cookie
+    assert "httponly" in cookie and "secure" in cookie and "samesite=lax" in cookie

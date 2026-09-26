@@ -19,6 +19,7 @@ from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.delivery.recent_results import RecentResults, result_gone
 from fuel_predictor.delivery.rendering import ACTIVITY_LABELS, render
 from fuel_predictor.delivery.security import SecurityGuard
+from fuel_predictor.delivery.uploads import read_sheet
 from fuel_predictor.infrastructure.bulk_prediction_template import (
     BULK_PREDICTION_TEMPLATE_HEADERS,
 )
@@ -53,7 +54,7 @@ def build_bulk_prediction_pages_router(
     async def submit_form(request: Request, file: UploadFile = _UPLOAD_FILE) -> Response:
         caller = guard.require_caller(request)
         filename = file.filename or "berkas-prediksi-operasi"
-        content = await file.read()
+        content = await read_sheet(file)
         digest = uploads.digest(content)
         # The same file again, moments later, is a refresh or a double tap:
         # every row would be planned twice. It leads to the result it has.
