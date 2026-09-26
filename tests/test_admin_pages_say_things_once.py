@@ -87,3 +87,14 @@ def test_the_user_list_counts_in_a_line_and_opens_each_person_once(tmp_path: Pat
     assert ">Buka</a>" not in main
     # Everyone listed is active: no badge repeating it on every row.
     assert ">✓ Aktif<" not in main and "Nonaktif</span>" not in main
+
+
+def test_a_model_s_algorithm_is_named_in_words_on_the_pages(tmp_path: Path) -> None:
+    """The model tables showed "linear_regression", a code, in an Indonesian page."""
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        _train_baseline(client)
+        models = client.get("/pengelolaan-model").text
+        performance = client.get("/pemantauan/kinerja-model").text
+
+    assert "Regresi linear" in models
+    assert "linear_regression" not in models and "linear_regression" not in performance

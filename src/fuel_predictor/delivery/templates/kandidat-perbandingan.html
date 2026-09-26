@@ -11,7 +11,7 @@
 <dl class="detail-list">
   <dt>Kode model</dt><dd>{{ ui.model_name(model) }}</dd>
   <dt>Versi</dt><dd><code class="mono-id">{{ model.model_version_id }}</code></dd>
-  <dt>Algoritma</dt><dd>{{ model.algorithm }}</dd>
+  <dt>Algoritma</dt><dd>{{ model.algorithm | algoritma }}</dd>
   <dt>Dilatih</dt><dd>{{ model.trained_at | waktu }} · {{ model.training_row_count }} baris</dd>
   <dt>Dataset</dt><dd>{{ model.dataset_version_id }}</dd>
   <dt>Diuji pada</dt><dd>{{ matched }} operasi dengan aktual</dd>

@@ -23,7 +23,7 @@
         {% for item in performance.by_model %}
         {% set metrics = item.metrics %}
         <tr>
-          <td>{{ ui.model_name(item.model) }}<br><span class="hint">{{ item.model.algorithm }}</span></td>
+          <td>{{ ui.model_name(item.model) }}<br><span class="hint">{{ item.model.algorithm | algoritma }}</span></td>
           <td>{% if item.model.lifecycle_status.value == 'active' %}{{ ui.badge('Aktif', 'success') }}{% elif item.model.lifecycle_status.value == 'candidate' %}{{ ui.badge('Kandidat', 'warning') }}{% else %}{{ ui.badge('Pensiun', 'neutral') }}{% endif %}</td>
           <td class="numeric">{{ metrics.matched_record_count }}</td>
           {% if metrics.mae_liters is not none %}

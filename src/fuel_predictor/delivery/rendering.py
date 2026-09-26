@@ -117,6 +117,7 @@ def build_environment() -> Environment:
     )
     environment.filters["angka"] = format_decimal
     environment.filters["aktivitas"] = activity_label
+    environment.filters["algoritma"] = algorithm_label
     environment.filters["waktu"] = format_datetime
     environment.filters["tanggal"] = format_day
     environment.globals["static_version"] = static_version
@@ -217,6 +218,15 @@ ACTIVITY_LABELS = {
 
 def activity_label(value: str) -> str:
     return ACTIVITY_LABELS.get(value, value)
+
+
+# How a model was made, in words; an uploaded package already says so
+# ("paket-eksternal (onnx)"). The API keeps the codes, for programs.
+ALGORITHM_LABELS = {"linear_regression": "Regresi linear"}
+
+
+def algorithm_label(value: str) -> str:
+    return ALGORITHM_LABELS.get(value, value)
 
 
 def format_decimal(value: float | None, digits: int = 2) -> str:
