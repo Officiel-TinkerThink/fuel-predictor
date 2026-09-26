@@ -230,7 +230,7 @@ def test_the_form_offers_the_fleet_and_records_the_choice(tmp_path: Path) -> Non
     # The stop sequence and its route map are untouched by this change.
     assert 'name="stop_sequence"' in form.text
     assert 'id="route-map"' in form.text
-    assert saved.status_code == 201, saved.text
+    assert saved.status_code == 200, saved.text
     assert "Wheel Crane" in saved.text
 
 

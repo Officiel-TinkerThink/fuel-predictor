@@ -80,7 +80,7 @@ def test_a_typed_stop_is_resolved_to_its_catalogued_spelling(tmp_path: Path) -> 
     ) as client:
         response = _post_operation(client, "pool limau", "km 001")
 
-    assert response.status_code == 201, response.text
+    assert response.status_code == 200, response.text
     assert provider.submitted_sequences == [("POOL LIMAU", "KM-001")]
 
 
@@ -106,7 +106,7 @@ def test_saving_an_operation_goes_straight_to_the_estimate_when_a_model_is_activ
         _train_baseline(client)
         response = _post_operation(client)
 
-    assert response.status_code == 201
+    assert response.status_code == 200
     text = response.text
     assert "Estimasi kebutuhan bahan bakar" in text
     assert "Alokasi rekomendasi" in text
@@ -120,7 +120,7 @@ def test_saving_without_an_active_model_still_records_the_operation_and_says_why
     with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
         response = _post_operation(client)
 
-    assert response.status_code == 201
+    assert response.status_code == 200
     text = response.text
     assert "Operasi harian tersimpan" in text
     assert "belum ada model aktif" in text.lower()
@@ -169,7 +169,7 @@ def test_with_routing_the_distance_can_still_simply_be_typed(tmp_path: Path) -> 
 
     assert 'name="total_distance_km"' in form
     assert "data-route-distance" in form
-    assert typed.status_code == 201, typed.text
+    assert typed.status_code == 200, typed.text
     assert "40 km" in typed.text
 
 

@@ -294,7 +294,7 @@ def test_demo_flow_downloads_imports_and_manually_trains_the_baseline(tmp_path: 
     assert "MDL-" in trained.text
     assert promoted.status_code == 200
     assert "Model aktif diperbarui" in promoted.text
-    assert operation.status_code == 201
+    assert operation.status_code == 200
     assert prediction.status_code == 201
     assert "Estimasi kebutuhan bahan bakar" in prediction.text
     assert "Alokasi rekomendasi" in prediction.text

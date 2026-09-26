@@ -490,8 +490,8 @@ def test_the_estimate_page_lists_similar_operations_with_why_they_are_shown(
         first = _save_operation(client, "Truck Crane 02", "35")
         second = _save_operation(client, "Truck Crane 02", "36")
 
-    assert first.status_code == 201, first.text
-    assert second.status_code == 201, second.text
+    assert first.status_code == 200, first.text
+    assert second.status_code == 200, second.text
     assert "Operasi serupa sebelumnya" in first.text
     assert "Grup yang sama" in first.text  # Truck Crane 01 rows from the dataset
     assert "Unit yang sama" not in first.text
@@ -524,7 +524,7 @@ def test_a_unit_with_no_kin_in_history_is_told_so_rather_than_shown_other_machin
         )
         page = _save_operation(client, "Forklift SCM")
 
-    assert page.status_code == 201, page.text
+    assert page.status_code == 200, page.text
     # No forklift has ever been recorded. Cranes and a prime mover are not
     # comparable, so the page says there is nothing yet instead of listing them.
     assert "Operasi serupa sebelumnya" in page.text

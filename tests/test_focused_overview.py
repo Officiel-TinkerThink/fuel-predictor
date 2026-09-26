@@ -47,7 +47,7 @@ def test_prediction_keeps_actions_visible_before_optional_comparisons(tmp_path: 
                 "distance_source": "manual",
             },
         )
-    assert response.status_code == 201, response.text
+    assert response.status_code == 200, response.text
     html = response.text
     fold_start = html.rindex('<details')
     fold_tag = html[fold_start:html.index('>', fold_start)]

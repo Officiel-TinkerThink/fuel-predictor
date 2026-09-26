@@ -45,7 +45,7 @@ def test_the_saved_operation_shows_its_code(tmp_path: Path) -> None:
             },
         )
 
-    assert saved.status_code == 201, saved.text
+    assert saved.status_code == 200, saved.text
     assert "Kode operasi — catat kode ini" in saved.text
 
 

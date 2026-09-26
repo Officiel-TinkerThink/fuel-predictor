@@ -64,7 +64,7 @@ def test_an_operation_and_its_actual_record_name_the_person(tmp_path: Path) -> N
     finally:
         client.__exit__(None, None, None)
 
-    assert saved.status_code == 201, saved.text
+    assert saved.status_code == 200, saved.text
     assert recorded.status_code == 201, recorded.text
     url = f"sqlite+pysqlite:///{(tmp_path / 'operations.sqlite3').as_posix()}"
     with create_engine(url).connect() as db:

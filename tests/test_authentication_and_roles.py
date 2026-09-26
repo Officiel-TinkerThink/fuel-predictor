@@ -181,5 +181,5 @@ def test_legacy_form_pages_carry_a_working_csrf_token_once_provisioned(tmp_path:
             },
         )
 
-    assert with_token.status_code == 201
+    assert with_token.status_code == 200
     assert without_token.status_code == 403

@@ -185,7 +185,7 @@ def test_indonesian_form_exposes_ordered_stop_controls_and_submits_them(tmp_path
     # the departure point cannot be moved out of first place.
     assert 'data-action="drag"' in form.text
     assert "Hapus pemberhentian" in form.text
-    assert response.status_code == 201
+    assert response.status_code == 200
     assert provider.submitted_sequences == [("Depo", "Site A", "Depo")]
     assert "42 km" in response.text
 
@@ -295,5 +295,5 @@ def test_submitting_a_dropdown_stop_reaches_the_routing_provider_unchanged(
             headers={"content-type": "application/x-www-form-urlencoded"},
         )
 
-    assert response.status_code == 201
+    assert response.status_code == 200
     assert provider.submitted_sequences == [("Depo", "Tambang")]

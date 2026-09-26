@@ -38,7 +38,7 @@ def _plan(client: TestClient, *extra: tuple[str, str]) -> str:
         ),
         headers=_FORM,
     )
-    assert response.status_code == 201, response.text
+    assert response.status_code == 200, response.text
     page: str = response.text
     return page
 
@@ -112,7 +112,7 @@ def _plan_unit(client: TestClient, vehicle: str, distance: str = "50") -> str:
         ),
         headers=_FORM,
     )
-    assert response.status_code == 201, response.text
+    assert response.status_code == 200, response.text
     page: str = response.text
     return page
 

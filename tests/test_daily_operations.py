@@ -88,7 +88,7 @@ def test_indonesian_form_creates_daily_operation_with_same_behavior(tmp_path: Pa
     assert form.status_code == 200
     # The page carries the name of the menu entry that opens it.
     assert "<h1>Buat Prediksi</h1>" in form.text
-    assert response.status_code == 201
+    assert response.status_code == 200
     assert "Operasi harian tersimpan" in response.text
     assert "ANGBER" in response.text
     assert "Mobilisasi + lifting" in response.text
@@ -156,7 +156,7 @@ def test_form_asks_for_one_activity_and_lifting_total_for_the_whole_operation(
     # The route itself is unchanged: stops are still ordered locations, and a
     # row left blank is simply not a stop.
     assert form.text.count('name="stop_sequence"') == 2
-    assert response.status_code == 201
+    assert response.status_code == 200
     assert "Mobilisasi + lifting" in response.text
     assert "Depo" in response.text
     assert "Site A" in response.text

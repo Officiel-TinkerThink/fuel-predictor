@@ -187,7 +187,7 @@ def build_prediction_pages_router(
         return JSONResponse({"jarak_km": round(preview.total_distance_km, 1)})
 
     @router.post("/operasi-harian", response_class=HTMLResponse)
-    async def submit_form(request: Request) -> HTMLResponse:
+    async def submit_form(request: Request) -> Response:
         caller = guard.require_caller(request)
         form_data = await request.form()
         submitted: dict[str, Any] = {
@@ -259,31 +259,18 @@ def build_prediction_pages_router(
         # directly. The operation is stored either way (ADR 0001); only the
         # page differs when no model can produce a number for it yet.
         try:
-            prediction = generate_fuel_prediction.execute(operation.operation_id)
-        except BaselineModelNotFoundError:
-            events.operation_planned(caller.user.username, operation, None)
-            return HTMLResponse(
-                _render_saved_operation(
-                    caller,
-                    operation,
-                    no_active_model=True,
-                    vehicle=_vehicle(operation),
-                    can_cancel=_can_cancel(operation),
-                ),
-                status_code=status.HTTP_201_CREATED,
+            prediction: FuelPrediction | None = generate_fuel_prediction.execute(
+                operation.operation_id
             )
+        except BaselineModelNotFoundError:
+            prediction = None
         events.operation_planned(caller.user.username, operation, prediction)
-        return HTMLResponse(
-            _render_estimate(
-                caller,
-                prediction,
-                operation,
-                similar=_similar(operation),
-                vehicle=_vehicle(operation),
-                can_cancel=_can_cancel(operation),
-                routing_configured=route_preview is not None,
-            ),
-            status_code=status.HTTP_201_CREATED,
+        # Answered with a redirect to the operation's own page, not the page
+        # itself: a refresh of a POST's answer sends the form again, and a
+        # reload on a phone planned the operation a second time.
+        return RedirectResponse(
+            f"/operasi-harian/{operation.operation_code or operation.operation_id}?dibuat=1",
+            status_code=status.HTTP_303_SEE_OTHER,
         )
 
     @router.get("/riwayat-prediksi", response_class=HTMLResponse)
@@ -418,13 +405,16 @@ def build_prediction_pages_router(
                 ),
                 status_code=status.HTTP_404_NOT_FOUND,
             )
+        # Arriving from the form that just saved it (`?dibuat=1`): the page
+        # says so, and an operation saved without an estimate says why.
+        just_created = request.query_params.get("dibuat") == "1"
         prediction = get_latest_prediction.execute(operation.operation_id)
         if prediction is None:
             return HTMLResponse(
                 _render_saved_operation(
                     caller,
                     operation,
-                    no_active_model=False,
+                    no_active_model=just_created,
                     vehicle=_vehicle(operation),
                     can_cancel=_can_cancel(operation),
                 )
@@ -435,7 +425,7 @@ def build_prediction_pages_router(
                 prediction,
                 operation,
                 similar=_similar(operation),
-                just_created=False,
+                just_created=just_created,
                 vehicle=_vehicle(operation),
                 can_cancel=_can_cancel(operation),
                 routing_configured=route_preview is not None,

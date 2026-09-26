@@ -46,7 +46,7 @@ def test_overview_and_model_page_still_render(tmp_path: Path) -> None:
         overview = client.get("/")
         governance = client.get("/pengelolaan-model")
 
-    assert saved.status_code == 201, saved.text
+    assert saved.status_code == 200, saved.text
     assert recorded.status_code == 201, recorded.text
     assert overview.status_code == 200, overview.text
     assert "Ringkasan" in overview.text
