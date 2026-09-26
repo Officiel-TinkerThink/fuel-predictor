@@ -50,6 +50,12 @@ def build_model_governance_pages_router(
     def show_governance(request: Request) -> HTMLResponse:
         caller = guard.require_caller(request)
         dashboard = get_model_governance_dashboard.execute()
+        # Arriving from training a candidate (`?dilatih=`): the page names it.
+        trained_id = request.query_params.get("dilatih")
+        just_trained = next(
+            (model for model in dashboard.all_versions if model.model_version_id == trained_id),
+            None,
+        )
         return HTMLResponse(
             render(
                 "pengelolaan-model.html",
@@ -58,6 +64,7 @@ def build_model_governance_pages_router(
                 active_path="/pengelolaan-model",
                 eyebrow="TATA KELOLA MODEL",
                 dashboard=dashboard,
+                just_trained=just_trained,
                 versions=paginate(
                     dashboard.all_versions,
                     ListingQuery.from_params(request.query_params),

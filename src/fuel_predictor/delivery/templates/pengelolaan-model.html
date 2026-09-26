@@ -3,6 +3,9 @@
 
 {% block content %}
 
+{% if just_trained %}
+{{ ui.banner('success', 'Kandidat ' ~ (just_trained.model_code or just_trained.model_version_id) ~ ' dilatih', 'Dari ' ~ just_trained.dataset_version_id ~ ', ' ~ just_trained.training_row_count ~ ' operasi valid. Belum dipakai untuk prediksi: bandingkan lalu promosikan di bawah bila disetujui.') }}
+{% endif %}
 {% if dashboard.retraining_recommended %}
 {{ ui.banner('warning', 'Perlu ditinjau', dashboard.recommendation) }}
 {% else %}

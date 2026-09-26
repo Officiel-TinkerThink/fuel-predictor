@@ -6,7 +6,7 @@ from pathlib import PurePath
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, File, Request, UploadFile, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from fuel_predictor.application.baseline_predictions import BaselineModelNotFoundError
 from fuel_predictor.application.bulk_operation_predictions import (
@@ -16,6 +16,7 @@ from fuel_predictor.application.bulk_operation_predictions import (
 from fuel_predictor.application.historical_datasets import HistoricalDatasetImportError
 from fuel_predictor.application.vehicles import VehicleCatalog
 from fuel_predictor.delivery.events import ImportantEvents
+from fuel_predictor.delivery.recent_results import RecentResults, result_gone
 from fuel_predictor.delivery.rendering import ACTIVITY_LABELS, render
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.infrastructure.bulk_prediction_template import (
@@ -46,13 +47,22 @@ def build_bulk_prediction_pages_router(
     def show_form(request: Request) -> HTMLResponse:
         return HTMLResponse(_render_form(guard.require_caller(request), None))
 
+    uploads: RecentResults[BulkOperationPredictionResult] = RecentResults()
+
     @router.post("/prediksi-operasi-massal", response_class=HTMLResponse)
-    async def submit_form(request: Request, file: UploadFile = _UPLOAD_FILE) -> HTMLResponse:
+    async def submit_form(request: Request, file: UploadFile = _UPLOAD_FILE) -> Response:
         caller = guard.require_caller(request)
+        filename = file.filename or "berkas-prediksi-operasi"
+        content = await file.read()
+        digest = uploads.digest(content)
+        # The same file again, moments later, is a refresh or a double tap:
+        # every row would be planned twice. It leads to the result it has.
+        earlier = uploads.same_file(caller.user.username, digest)
+        if earlier is not None:
+            return _to_result(earlier.token, repeated=True)
         try:
-            filename = file.filename or "berkas-prediksi-operasi"
             result = bulk_operation_prediction.execute(
-                filename, await file.read(), actor=caller.user.username
+                filename, content, actor=caller.user.username
             )
             events.bulk_prediction_imported(caller.user.username, filename, result)
         except HistoricalDatasetImportError as error:
@@ -69,7 +79,21 @@ def build_bulk_prediction_pages_router(
                 ),
                 status_code=status.HTTP_409_CONFLICT,
             )
+        kept = uploads.keep(caller.user.username, digest, filename, result)
+        return _to_result(kept.token, repeated=False)
 
+    @router.get("/prediksi-operasi-massal/hasil/{token}", response_class=HTMLResponse)
+    def show_result(token: str, request: Request) -> HTMLResponse:
+        caller = guard.require_caller(request)
+        kept = uploads.get(token, caller.user.username)
+        if kept is None:
+            return result_gone(
+                caller,
+                "/prediksi-operasi-massal",
+                "Prediksi Massal",
+                "operasi yang dibuat ada di Riwayat Prediksi.",
+            )
+        result = kept.result
         return HTMLResponse(
             render(
                 "prediksi-massal-selesai.html",
@@ -77,10 +101,11 @@ def build_bulk_prediction_pages_router(
                 page_title="Prediksi Operasi Massal Selesai",
                 active_path="/prediksi-operasi-massal",
                 result=result,
+                repeated_at=kept.kept_at if request.query_params.get("ulang") == "1" else None,
                 results_csv=_results_csv(result),
-                results_filename=_results_filename(file.filename),
+                results_filename=_results_filename(kept.filename),
                 corrections_csv=_corrections_csv(result),
-                corrections_filename=_results_filename(file.filename).replace(
+                corrections_filename=_results_filename(kept.filename).replace(
                     "hasil-prediksi-", "perbaiki-"
                 ),
                 accepted_count=len(result.accepted_rows),
@@ -92,8 +117,14 @@ def build_bulk_prediction_pages_router(
                     for row in result.accepted_rows
                     if vehicle_catalog is not None and row.operation.vehicle
                 },
-            ),
-            status_code=status.HTTP_201_CREATED,
+            )
+        )
+
+    def _to_result(token: str, *, repeated: bool) -> RedirectResponse:
+        suffix = "?ulang=1" if repeated else ""
+        return RedirectResponse(
+            f"/prediksi-operasi-massal/hasil/{token}{suffix}",
+            status_code=status.HTTP_303_SEE_OTHER,
         )
 
     return router

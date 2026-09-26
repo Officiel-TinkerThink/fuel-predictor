@@ -3,7 +3,7 @@
 from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, File, Request, UploadFile, status
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from pydantic import ValidationError
 
 from fuel_predictor.application.actual_fuel import (
@@ -13,7 +13,7 @@ from fuel_predictor.application.actual_fuel import (
     RecordActualFuel,
     RecordActualFuelCommand,
 )
-from fuel_predictor.application.bulk_actual_fuel import BulkActualFuel
+from fuel_predictor.application.bulk_actual_fuel import BulkActualFuel, BulkActualFuelResult
 from fuel_predictor.application.daily_operations import (
     DailyOperationNotFoundError,
     OperationCancelledError,
@@ -21,6 +21,7 @@ from fuel_predictor.application.daily_operations import (
 from fuel_predictor.application.historical_datasets import HistoricalDatasetImportError
 from fuel_predictor.delivery.events import ImportantEvents
 from fuel_predictor.delivery.http import ActualFuelRequest, translate_validation_errors
+from fuel_predictor.delivery.recent_results import RecentResults, result_gone
 from fuel_predictor.delivery.rendering import format_decimal, render, site_time
 from fuel_predictor.delivery.security import SecurityGuard
 from fuel_predictor.domain.daily_operation import DailyOperationValidationError
@@ -172,21 +173,43 @@ def build_actual_fuel_pages_router(
     def show_bulk_form(request: Request) -> HTMLResponse:
         return HTMLResponse(_render_bulk_form(guard.require_caller(request), None))
 
+    uploads: RecentResults[BulkActualFuelResult] = RecentResults()
+
     @router.post("/bahan-bakar-aktual-massal", response_class=HTMLResponse)
-    async def submit_bulk_form(request: Request, file: UploadFile = _UPLOAD_FILE) -> HTMLResponse:
+    async def submit_bulk_form(request: Request, file: UploadFile = _UPLOAD_FILE) -> Response:
         caller = guard.require_caller(request)
+        filename = file.filename or "berkas-bbm-aktual"
+        content = await file.read()
+        digest = uploads.digest(content)
+        # The same bytes again, moments later, is a refresh or a double tap;
+        # it leads to the result already made rather than a page of
+        # "sudah tercatat" for every row.
+        earlier = uploads.same_file(caller.user.username, digest)
+        if earlier is not None:
+            return _to_bulk_result(earlier.token, repeated=True)
         try:
-            filename = file.filename or "berkas-bbm-aktual"
-            result = bulk_actual_fuel.execute(
-                filename, await file.read(), actor=caller.user.username
-            )
+            result = bulk_actual_fuel.execute(filename, content, actor=caller.user.username)
             events.bulk_actual_imported(caller.user.username, filename, result)
         except HistoricalDatasetImportError as error:
             return HTMLResponse(
                 _render_bulk_form(caller, error.message),
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             )
+        kept = uploads.keep(caller.user.username, digest, filename, result)
+        return _to_bulk_result(kept.token, repeated=False)
 
+    @router.get("/bahan-bakar-aktual-massal/hasil/{token}", response_class=HTMLResponse)
+    def show_bulk_result(token: str, request: Request) -> HTMLResponse:
+        caller = guard.require_caller(request)
+        kept = uploads.get(token, caller.user.username)
+        if kept is None:
+            return result_gone(
+                caller,
+                "/bahan-bakar-aktual-massal",
+                "Impor Massal",
+                "BBM aktual yang dicatat ada di Riwayat Prediksi.",
+            )
+        result = kept.result
         return HTMLResponse(
             render(
                 "bbm-aktual-massal-selesai.html",
@@ -194,12 +217,19 @@ def build_actual_fuel_pages_router(
                 page_title="Impor Bahan Bakar Aktual Selesai",
                 active_path="/bahan-bakar-aktual-massal",
                 result=result,
+                repeated_at=kept.kept_at if request.query_params.get("ulang") == "1" else None,
                 accepted_count=len(result.accepted_rows),
                 quarantined_count=len(result.correction_report),
                 unfilled_count=result.unfilled_row_count,
                 already_count=result.already_recorded_row_count,
-            ),
-            status_code=status.HTTP_201_CREATED,
+            )
+        )
+
+    def _to_bulk_result(token: str, *, repeated: bool) -> RedirectResponse:
+        suffix = "?ulang=1" if repeated else ""
+        return RedirectResponse(
+            f"/bahan-bakar-aktual-massal/hasil/{token}{suffix}",
+            status_code=status.HTTP_303_SEE_OTHER,
         )
 
     return router

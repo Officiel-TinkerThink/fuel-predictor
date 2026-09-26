@@ -33,7 +33,7 @@ def test_result_page_offers_the_accepted_rows_as_csv(tmp_path: Path) -> None:
             files={"file": ("rencana.csv", _SHEET.encode(), "text/csv")},
         )
 
-    assert page.status_code == 201, page.text
+    assert page.status_code == 200, page.text
     marker = 'href="data:text/csv;charset=utf-8,'
     # The results link, not the one for the rows to fix.
     results = page.text.index('download="hasil-prediksi-rencana.csv"')

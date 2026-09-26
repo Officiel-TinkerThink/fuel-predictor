@@ -254,7 +254,7 @@ def test_indonesian_upload_form_shows_dataset_summary_and_correction_guidance(
 
     assert form.status_code == 200
     assert "Impor Data Historis" in form.text
-    assert response.status_code == 201
+    assert response.status_code == 200
     assert "Dataset versi 1 berhasil dibuat" in response.text
     assert "1 operasi valid siap digunakan untuk pelatihan" in response.text
     assert "1 baris dikarantina" in response.text
@@ -269,8 +269,11 @@ def test_demo_flow_downloads_imports_and_manually_trains_the_baseline(tmp_path: 
             "/impor-data-historis",
             files={"file": ("riwayat-angber-demo.csv", sample.content, "text/csv")},
         )
-        trained = client.post("/dataset-versions/DSV-000001/latih-kandidat-baseline")
-        model_version_id = trained.text.split("<dt>ID model</dt><dd>", 1)[1].split("</dd>", 1)[0]
+        training = client.post(
+            "/dataset-versions/DSV-000001/latih-kandidat-baseline", follow_redirects=False
+        )
+        model_version_id = training.headers["location"].split("dilatih=", 1)[1]
+        trained = client.get(training.headers["location"])
         promoted = client.post(f"/kandidat-model/{model_version_id}/promosikan")
         operation = client.post(
             "/operasi-harian",
@@ -287,10 +290,12 @@ def test_demo_flow_downloads_imports_and_manually_trains_the_baseline(tmp_path: 
 
     assert sample.status_code == 200
     assert "Bahan Bakar Disiapkan (L)" in sample.text
-    assert imported.status_code == 201
+    assert imported.status_code == 200
     assert "Latih kandidat baseline secara manual" in imported.text
-    assert trained.status_code == 201
-    assert "Kandidat baseline siap digunakan" in trained.text
+    # Training lands on Pengelolaan Model, naming the candidate beside the
+    # buttons that compare and promote it.
+    assert trained.status_code == 200
+    assert "dilatih" in trained.text and "Pengelolaan Model" in trained.text
     assert "MDL-" in trained.text
     assert promoted.status_code == 200
     assert "Model aktif diperbarui" in promoted.text

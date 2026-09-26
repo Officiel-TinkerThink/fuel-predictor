@@ -3,6 +3,10 @@
 
 {% block content %}
 
+{% if repeated_at %}
+{{ ui.banner('info', 'Berkas ini sudah diproses', 'Berkas yang sama sudah diunggah ' ~ (repeated_at | waktu) ~ ', jadi tidak diproses lagi. Hasilnya di bawah.') }}
+{% endif %}
+
 {# What happened, in the order it matters; nothing that is zero. #}
 {% set parts = [] %}
 {% if accepted_count %}{% set _ = parts.append(accepted_count ~ ' BBM aktual tersimpan.') %}{% endif %}

@@ -3,6 +3,10 @@
 
 {% block content %}
 
+{% if repeated_at %}
+{{ ui.banner('info', 'Berkas ini sudah diimpor', 'Berkas yang sama sudah diimpor ' ~ (repeated_at | waktu) ~ ', jadi tidak menjadi versi dataset kedua. Hasilnya di bawah.') }}
+{% endif %}
+
 {% set summary = dataset.valid_operation_count ~ ' operasi valid siap digunakan untuk pelatihan.' %}
 {% if dataset.quarantined_row_count %}{% set summary = summary ~ ' ' ~ dataset.quarantined_row_count ~ ' baris dikarantina — lihat laporan koreksi di bawah.' %}{% endif %}
 {% if dataset.ignored_blank_row_count %}{% set summary = summary ~ ' ' ~ dataset.ignored_blank_row_count ~ ' baris kalender kosong diabaikan.' %}{% endif %}

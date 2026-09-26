@@ -33,7 +33,7 @@ def _upload(client: TestClient, name: str, content: str) -> str:
         "/prediksi-operasi-massal",
         files={"file": (name, content.encode(), "text/csv")},
     )
-    assert response.status_code == 201, response.text
+    assert response.status_code == 200, response.text
     page: str = response.text
     return page
 

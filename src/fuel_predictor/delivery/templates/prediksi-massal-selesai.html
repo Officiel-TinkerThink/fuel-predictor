@@ -4,6 +4,9 @@
 
 {% block content %}
 
+{% if repeated_at %}
+{{ ui.banner('info', 'Berkas ini sudah diproses', 'Berkas yang sama sudah diunggah ' ~ (repeated_at | waktu) ~ ', jadi tidak diproses lagi dan tidak ada operasi yang tergandakan. Hasilnya di bawah.') }}
+{% endif %}
 {% set parts = [] %}
 {% if accepted_count %}{% set _ = parts.append(accepted_count ~ ' operasi mendapat kode dan estimasi.') %}{% endif %}
 {% if quarantined_count %}{% set _ = parts.append(quarantined_count ~ ' baris perlu diperbaiki, lihat di bawah.') %}{% endif %}
