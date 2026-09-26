@@ -15,7 +15,7 @@ three jobs in sequence:
 |---|---|---|
 | `test` | GitHub-hosted | `ruff`, `mypy --strict`, `pytest --collect-only` - see "Why collection, not the full suite" below |
 | `build-and-push` | GitHub-hosted | Builds the image from [`Dockerfile`](../../Dockerfile), pushes it to GHCR tagged `latest` and with the commit SHA |
-| `deploy` | **your home server** | Resets its checkout to `origin/local`, pulls the new image, `docker compose up -d` for `app db mlflow monitor` only |
+| `deploy` | **your home server** | Resets its checkout to `origin/local`, pulls the new image, `docker compose up -d --wait` for `app db mlflow monitor backup` only - the job fails if they are not running and healthy within five minutes |
 
 ### Why collection, not the full suite
 
@@ -31,7 +31,7 @@ tests (`@pytest.mark.slow`) and running `pytest -m "not slow"` here - worth doin
 
 This home server runs **one shared Caddy instance in front of several projects**, not one per app.
 It was started outside this compose file and outside this pipeline, so `deploy` names services
-explicitly (`app db mlflow monitor`) rather than bringing up everything `compose.prod.yaml`
+explicitly (`app db mlflow monitor backup`) rather than bringing up everything `compose.prod.yaml`
 defines - `caddy` stays completely untouched. The `caddy` service still exists in
 `compose.prod.yaml` as the ADR 0012 default for a deployment that doesn't already have a proxy;
 this VM just isn't that case. Don't add `caddy` back to the `deploy` job's service list without

@@ -106,5 +106,9 @@ jobs:
           # compose file and outside this pipeline's control. Naming services
           # explicitly here means this can never start, stop, or recreate it.
           docker compose -f compose.prod.yaml pull app mlflow monitor
-          docker compose -f compose.prod.yaml up -d --remove-orphans app db mlflow monitor backup
+          # --wait: the job succeeds only once every service is running and
+          # the app and MLflow pass their health checks. Without it a release
+          # whose migration or startup failed still reported a green deploy.
+          docker compose -f compose.prod.yaml up -d --wait --wait-timeout 300 \
+            --remove-orphans app db mlflow monitor backup
           docker image prune -f
