@@ -1,10 +1,12 @@
 """Audit records as a page shows them: actions in words, details listed."""
 
+from collections.abc import Mapping
+
 from fuel_predictor.delivery.rendering import format_decimal
 from fuel_predictor.domain.identity import AuditRecord
 
-# What each recorded action means, in words. The code itself stays on the
-# page in small type so a log line can still be matched against it.
+# What each recorded action means, in words. The code itself is on hover and
+# found by the page's search, so a log line can still be matched against it.
 _ACTION_LABELS = {
     "sign_in_failed": "Masuk gagal",
     "operation_planned": "Operasi direncanakan dan diestimasi",
@@ -92,10 +94,18 @@ def action_label(action: str) -> str:
     return action.replace("_", " ").capitalize()
 
 
-def audit_row(record: AuditRecord) -> dict[str, object]:
+def audit_row(
+    record: AuditRecord, model_codes: Mapping[str, str] | None = None
+) -> dict[str, object]:
     # An operation is named by its code where the record has it; the code is
-    # then the subject, not repeated among the details.
-    code = record.details.get("kode") if (record.subject or "").startswith("OPR-") else None
+    # then the subject, not repeated among the details. A model is named by
+    # its code (M-260925-01) where one is known.
+    subject = record.subject or ""
+    code = (
+        record.details.get("kode")
+        if subject.startswith("OPR-")
+        else (model_codes or {}).get(subject)
+    )
     return {
         "occurred_at": record.occurred_at,
         "actor": record.actor,

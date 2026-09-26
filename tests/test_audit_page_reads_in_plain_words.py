@@ -80,3 +80,20 @@ def test_every_detail_an_event_writes_has_a_word() -> None:
 
     labels = [label for label, _value in row["details"]]  # type: ignore[attr-defined]
     assert labels == ["dataset", "baris data latih", "model sebelumnya", "alamat kembali"]
+
+
+def test_a_model_is_named_by_its_code_with_the_id_on_hover(tmp_path: Path) -> None:
+    from tests.test_two_roles import _ADMIN as _ADMIN_2
+    from tests.test_two_roles import _sign_in, _train_baseline_with_csrf
+
+    app = create_app(
+        database_path=tmp_path / "operations.sqlite3", bootstrap_administrator=_ADMIN_2
+    )
+    with TestClient(app) as client:
+        _sign_in(client, *_ADMIN_2)
+        _train_baseline_with_csrf(client)
+        model = client.get("/api/v1/model-governance-dashboard").json()["active_model"]
+        page = client.get("/audit").text
+
+    code, model_id = model["model_code"], model["model_version_id"]
+    assert f'<span title="{model_id}">{code}</span>' in page

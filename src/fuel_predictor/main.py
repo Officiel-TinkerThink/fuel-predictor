@@ -620,6 +620,7 @@ def create_app(
             guard,
             monitoring_run_repository,
             settings.monitoring_stale_after_hours,
+            models=prediction_repository,
         )
     )
     app.include_router(

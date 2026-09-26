@@ -12,7 +12,10 @@ from fastapi.responses import HTMLResponse
 
 from fuel_predictor.application.actual_fuel import ListOperationsAwaitingActualFuel
 from fuel_predictor.application.identity import ListAuditRecords
-from fuel_predictor.application.model_lifecycle import GetModelGovernanceDashboard
+from fuel_predictor.application.model_lifecycle import (
+    GetModelGovernanceDashboard,
+    ModelVersionReader,
+)
 from fuel_predictor.application.monitoring import GetMonitoringDashboard
 from fuel_predictor.application.monitoring_runs import (
     MonitoringFreshness,
@@ -41,6 +44,7 @@ def build_dashboard_router(
     guard: SecurityGuard,
     monitoring_runs: MonitoringRunRepository,
     monitoring_stale_after_hours: int = 26,
+    models: ModelVersionReader | None = None,
 ) -> APIRouter:
     def _freshness() -> MonitoringFreshness:
         latest = monitoring_runs.latest()
@@ -113,7 +117,15 @@ def build_dashboard_router(
     def show_audit(request: Request) -> HTMLResponse:
         caller = guard.require_caller(request)
         outcome = request.query_params.get("hasil", "")
-        rows = [audit_row(record) for record in list_audit_records.execute(_AUDIT_MAX)]
+        # A model is named by its code, as everywhere else; the id is on hover.
+        model_codes = {
+            model.model_version_id: model.model_code
+            for model in (models.list_all() if models else ())
+            if model.model_code
+        }
+        rows = [
+            audit_row(record, model_codes) for record in list_audit_records.execute(_AUDIT_MAX)
+        ]
         if outcome in ("succeeded", "failed", "denied"):
             rows = [row for row in rows if row["outcome"] == outcome]
         listing = paginate(
