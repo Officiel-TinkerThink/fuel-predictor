@@ -496,7 +496,7 @@ def build_router(
                 content=csv_template(),
                 media_type="text/csv; charset=utf-8",
                 headers={
-                    "Content-Disposition": 'attachment; filename="template-prediksi-operasi.csv"'
+                    "Content-Disposition": 'attachment; filename="templat-prediksi-operasi.csv"'
                 },
             )
         # The fleet as it is today, so the unit column is a dropdown of real names.
@@ -509,7 +509,7 @@ def build_router(
             content=xlsx_template(fleet),
             media_type=("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
             headers={
-                "Content-Disposition": 'attachment; filename="template-prediksi-operasi.xlsx"'
+                "Content-Disposition": 'attachment; filename="templat-prediksi-operasi.xlsx"'
             },
         )
 
@@ -537,12 +537,12 @@ def build_router(
             return Response(
                 content=actual_fuel_csv_template(),
                 media_type="text/csv; charset=utf-8",
-                headers={"Content-Disposition": 'attachment; filename="template-bbm-aktual.csv"'},
+                headers={"Content-Disposition": 'attachment; filename="templat-bbm-aktual.csv"'},
             )
         return Response(
             content=actual_fuel_xlsx_template(),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": 'attachment; filename="template-bbm-aktual.xlsx"'},
+            headers={"Content-Disposition": 'attachment; filename="templat-bbm-aktual.xlsx"'},
         )
 
     @router.post(

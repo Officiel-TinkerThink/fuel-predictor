@@ -2226,8 +2226,8 @@ dialog::backdrop {
     border-bottom: 0;
   }
 
-  /* A single card needs no sort bar: its labels are on the card itself. */
-  .table--sortable[data-single-row] thead {
+  /* A few cards need no sort bar: their labels are on the cards themselves. */
+  .table--sortable[data-few-rows] thead {
     display: none;
   }
 

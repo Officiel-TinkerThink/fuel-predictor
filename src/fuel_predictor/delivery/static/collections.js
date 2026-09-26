@@ -82,8 +82,9 @@
     if (preferred && Array.from(size.options).some(function (o) { return o.value === preferred; })) {
       size.value = preferred;
     }
-    // A handful of rows needs no search box and no pager: they only push the
-    // rows themselves down. Column sorting stays, it costs no space.
+    // A handful of rows is read at a glance: no search box, no pager and no
+    // sorting. Sorting looked free on a wide screen, but on a phone the
+    // headers become a strip of buttons taller than the rows it would order.
     var small = rows.length <= 5;
 
     var pager = element("nav", "pagination collection-pagination");
@@ -116,7 +117,7 @@
     if (isTable && collection.tHead) {
       headers = Array.from(collection.tHead.rows[0].cells);
       collection.classList.add("table--sortable");
-      if (rows.length < 2) collection.dataset.singleRow = "";
+      if (small) collection.dataset.fewRows = "";
       headers.forEach(function (header, column) {
         var label = header.textContent.trim();
         var sortable = !header.hasAttribute("data-no-sort");
@@ -127,9 +128,7 @@
           if (sortable) cell.dataset.label = label;
           record.values[column] = valueFor(cell, numeric);
         });
-        // One row has no order to change; on a phone its sort chips were a
-        // screenful of buttons above a single card.
-        if (!sortable || rows.length < 2) return;
+        if (!sortable || small) return;
         header.setAttribute("aria-sort", "none");
         var button = element("button", "collection-sort", label);
         button.type = "button";

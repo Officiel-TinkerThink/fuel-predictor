@@ -101,3 +101,19 @@ def test_a_file_with_none_of_the_columns_is_refused_with_a_reason(tmp_path: Path
 
     assert response.status_code == 422
     assert "templat" in response.text.lower()
+
+
+def test_a_downloaded_template_is_named_as_its_button_says(tmp_path: Path) -> None:
+    """The buttons say "Unduh templat"; the files arrived as template-*.xlsx."""
+    with TestClient(create_app(database_path=tmp_path / "operations.sqlite3")) as client:
+        names = [
+            client.get(path).headers["content-disposition"]
+            for path in (
+                "/api/v1/bulk-operation-predictions/template?format=xlsx",
+                "/api/v1/bulk-operation-predictions/template?format=csv",
+                "/api/v1/bulk-actual-fuel/template?format=xlsx",
+                "/api/v1/bulk-actual-fuel/template?format=csv",
+            )
+        ]
+
+    assert all('filename="templat-' in name for name in names), names
