@@ -774,11 +774,14 @@ Built with the operators' day in mind; each item has tests, and the ADRs hold th
 - **Said once, and said fully** — the estimate and the fuel slip name a unit's type and group in
   the code's legend only; Pergeseran Data and Kesehatan Sistem say how much data drift needs and
   which side is short; the error chart's threshold is a gutter tick and its end labels stay clear
-  of the line.
+  of the line; the audit trail names models by code, keeps raw action codes on hover and badges
+  only what failed; a list of five rows or fewer drops its sort controls.
+- **No copied blocks** — the plan, actual-fuel and history uploads read rows through one
+  `SheetRows`; a duplicate-code scan of `src` finds no copied block of eight lines or more.
 
 ## Notes for whoever picks this up next
 
-- Full test suite (810 tests as of 26 September 2026, about 20 minutes serially) passes; `ruff
+- Full test suite (815 tests as of 26 September 2026, about 20 minutes serially) passes; `ruff
   check` and `mypy --strict` are clean. CI runs the linters and only *collects* the tests, so run
   the suite yourself before pushing - keep all three clean.
 - Manual browser smoke-testing caveat: in this sandboxed environment the Browser pane sometimes
